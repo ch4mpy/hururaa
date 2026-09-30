@@ -1,0 +1,236 @@
+cn: host.docker.internal
+reverse-proxy-uri: https://${cn}
+issuer: ${reverse-proxy-uri}/auth/realms/public-facing
+rest-api-client-id: hururaa-api
+rest-api-client-secret: secret
+roles-namespace: hururaa-api
+
+# The admin API's URL is that of the keycloak-client REST client (com.c4-soft.springaddons.rest)
+keycloak-admin-api:
+  realm-name: public-facing
+  # an application registered with the "escales" prefix has the escales-bff and escales-api clients
+  api-client-suffix: -api
+  bff-client-suffix: -bff
+  # granted to the service account of the <prefix>-api clients Hurura'a creates: reading users and
+  # the organizations they belong to (Hurura'a's own service account holds these roles, which Keycloak
+  # requires to grant them)
+  api-service-account-roles:
+    - view-users
+    - query-users
+    - view-organizations
+    - query-organizations
+
+uaa:
+  # the only organization in which the hururaa.* roles (roles-namespace) take effect
+  platform-organization: dsi
+
+server:
+  port: 8080
+  shutdown: immediate
+  ssl:
+    enabled: true
+    bundle: self-signed
+
+spring:
+  application:
+    name: hururaa-api
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=300s
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    # No persistence context spanning the request: the entities resolved from path variables are
+    # detached by the time the endpoint runs, so every association it needs is mapped eager (a
+    # lazy one would fail loudly instead of silently querying during JSON serialisation).
+    open-in-view: false
+    properties:
+      hibernate:
+        # the eager element collections (questions, answers) of a page of entities are loaded in
+        # batches of this size instead of one select per entity
+        default_batch_fetch_size: 32
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    # "dev" loads the applications and delegations matching the dev realm's users
+    # (1790700000001-1-dev-data.xml): set LIQUIBASE_CONTEXTS to anything else outside dev
+    contexts: ${LIQUIBASE_CONTEXTS:dev}
+  data:
+    web:
+      pageable:
+        # Meme plafond que PageParams.MAX_SIZE pour les endpoints adosses a Keycloak. Sans cette
+        # valeur, les endpoints JPA retombent sur le defaut Spring Data de 2000.
+        max-page-size: 200
+  mvc:
+    problemdetails:
+      enabled: true
+  profiles:
+    active:
+      - postgresql
+  security:
+    oauth2:
+      client:
+        provider:
+          sso:
+            issuer-uri: ${issuer}
+        registration:
+          rest-api:
+            provider: sso
+            authorization-grant-type: client_credentials
+            client-id: ${rest-api-client-id}
+            client-secret: ${rest-api-client-secret}
+  ssl:
+    bundle:
+      pem:
+        self-signed:
+          keystore:
+            certificate: classpath:${cn}.crt
+            private-key: classpath:${cn}.key
+          truststore:
+            certificate: classpath:${cn}.crt
+  web:
+    error:
+      # Exceptions nothing handles reach /error: their message is for the logs (an unreachable
+      # Keycloak names its internal URL, for instance). Handled problems carry their own detail.
+      include-message: never
+  rabbitmq:
+    host: ${cn}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:user}
+    password: ${RABBITMQ_PASSWORD:secret}
+
+resource-events:
+  exchange-name: resource-events.${spring.application.name}
+
+com:
+  c4-soft:
+    springaddons:
+      oidc:
+        ops:
+          - iss: ${issuer}
+            authorities:
+              - path: $.realm_access.roles
+        resourceserver:
+          permit-all:
+            - /actuator/health
+            - /actuator/health/readiness
+            - /actuator/health/liveness
+            - /v3/api-docs/**
+            - /swagger-ui/**
+      rest:
+        client:
+          keycloak-client:
+            base-url: https://${cn}:3643/auth
+            ssl-bundle: self-signed
+            # Sans borne, un Keycloak lent (et non en panne) retient les threads Tomcat jusqu'a
+            # epuisement du pool, transaction JDBC ouverte comprise. Ces valeurs ont la precedence
+            # la plus haute et s'appliquent aussi au groupe keycloak-group qui reference ce client.
+            http:
+              connect-timeout-millis: 2000
+              read-timeout-millis: 5000
+            headers:
+              Accept:
+                - application/json
+                - application/problem+json
+            authorization:
+              oauth2:
+                oauth2-registration-id: rest-api
+        group:
+          keycloak-group:
+            client: keycloak-client
+management:
+  server:
+    # Dedicated port, routed by the reverse proxy (docs/decisions/0004): the actuator is
+    # reachable from the host and the Docker network only, whatever its exposure below.
+    port: 8081
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        # Surface minimale : les endpoints de diagnostic (heapdump, env, threaddump, loggers,
+        # beans, mappings) ne sont plus exposes du tout. La route BFF /bff/api/v1/** est un
+        # proxy generique : tout endpoint expose ici est joignable depuis Internet.
+        include: health,info
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  observations:
+    key-values:
+      application: ${spring.application.name}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://host.docker.internal:4318/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: http://host.docker.internal:4318/v1/logs
+  otlp:
+    metrics:
+      export:
+        url: http://host.docker.internal:4318/v1/metrics
+
+logging:
+  level:
+    "[org.springframework]": INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:mem:hururaa
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+---
+spring:
+  config:
+    activate:
+      on-profile: postgresql
+  datasource:
+    url: jdbc:postgresql://host.docker.internal:${REST_API_DB_PORT}/rest_api
+    username: rest-api
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+---
+spring:
+  config:
+    activate:
+      on-profile: no-observability
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: false
+  health:
+    livenessstate:
+      enabled: false
+    readinessstate:
+      enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
+  tracing:
+    export:
+      enabled: false
+  opentelemetry:
+    enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false

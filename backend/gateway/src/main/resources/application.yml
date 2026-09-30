@@ -1,0 +1,212 @@
+cn: host.docker.internal
+gateway-client-id: hururaa-bff
+gateway-client-secret: secret
+reverse-proxy-uri: https://${cn}
+issuer: ${reverse-proxy-uri}/auth/realms/public-facing
+rest-api-v1: https://${cn}:8080
+roles-namespace: hururaa-api
+
+server:
+  port: 7080
+  servlet:
+    context-path: /gateway
+  shutdown: immediate
+  ssl:
+    enabled: true
+    bundle: self-signed
+
+spring:
+  application:
+    name: gateway
+  security:
+    oauth2:
+      client:
+        provider:
+          sso:
+            issuer-uri: ${issuer}
+        registration:
+          hururaa-bff:
+            client-name: ${gateway-client-id}
+            provider: sso
+            client-id: ${gateway-client-id}
+            client-secret: ${gateway-client-secret}
+            authorization-grant-type: authorization_code
+            # the (default) "organization" scope maps a single organization: nothing for members of several
+            scope:
+            - openid
+            - "organization:*"
+  ssl:
+    bundle:
+      pem:
+        self-signed:
+          keystore:
+            certificate: classpath:${cn}.crt
+            private-key: classpath:${cn}.key
+          truststore:
+            certificate: classpath:${cn}.crt
+          reload-on-update: true
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            # Applies the OAuth2 BFF pattern (oauth2Login SecurityFilterChain and TokenRelay= filter to replace the session cookie with the access token in session)
+            - id: rest-api-v1-bff
+              uri: ${rest-api-v1}
+              predicates:
+                - Path=/bff/api/v1/**
+              filters:
+                # replace the session cookie with the access token in session
+                - TokenRelay=
+                # remove the /gateway/bff/api/v1 prefix (the context path counts: hururaa-api has no path prefix)
+                - StripPrefix=4
+    refresh:
+      enabled: false
+  web:
+    error:
+      # Exceptions nothing handles reach /error: their message is for the logs (an unreachable
+      # Keycloak names its internal URL, for instance). Handled problems carry their own detail.
+      include-message: never
+  rabbitmq:
+    host: ${cn}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:user}
+    password: ${RABBITMQ_PASSWORD:secret}
+
+resource-events:
+  subscribed-exchanges:
+    - resource-events.hururaa-api
+
+springdoc:
+  # currently broken (boot 4.1.0, springdoc-openapi 3.0.3)
+  # workaround: SpringDocAuthenticationConfiguration
+  show-login-endpoint: true
+
+# See https://github.com/ch4mpy/spring-addons/blob/master/spring-addons-starter-oidc/README.MD
+com:
+  c4-soft:
+    springaddons:
+      oidc:
+        ops:
+          - iss: ${issuer}
+        client:
+          client-uri: ${reverse-proxy-uri}
+          pkce-forced: true
+          post-login-allowed-uri-patterns:
+            - ${reverse-proxy-uri}/(fr|en)(/.*)?
+          post-login-redirect-host: ${reverse-proxy-uri}
+          post-login-redirect-path: /fr/
+          post-logout-allowed-uri-patterns:
+            - ${reverse-proxy-uri}/(fr|en)(/.*)?
+          post-logout-redirect-host: ${reverse-proxy-uri}
+          post-logout-redirect-path: /fr/
+          security-matchers:
+            - /login/**
+            - /oauth2/**
+            - /logout/**
+            - /bff/**
+            - /me/**
+          permit-all:
+            - /login/**
+            - /oauth2/**
+            - /logout/connect/back-channel/hururaa-bff
+            - /bff/**
+            - /me/**
+          csrf: cookie-accessible-from-js
+          # the CSRF cookie must be accessible to both the BFF and the SPA code
+          # while not colliding with other apps CSRF cookies
+          csrf-cookie-path: /
+          oauth2-redirections:
+            authentication-entry-point: UNAUTHORIZED
+            pre-authorization-code: OK
+            rp-initiated-logout: ACCEPTED
+          back-channel-logout:
+            enabled: true
+            internal-logout-uri: ${reverse-proxy-uri}${server.servlet.context-path}/logout/connect/back-channel/hururaa-bff
+        resourceserver:
+          permit-all:
+            - /actuator/health
+            - /actuator/health/readiness
+            - /actuator/health/liveness
+            # This endpoint is exposed only with the Maven "openapi" profile
+            - /v3/api-docs
+
+management:
+  server:
+    # Dedicated port, routed by the reverse proxy (docs/decisions/0004): the actuator is
+    # reachable from the host and the Docker network only, whatever its exposure below.
+    port: 7081
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        # Surface minimale : voir le commentaire equivalent dans hururaa-api.
+        include: health,info
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  observations:
+    key-values:
+      application: ${spring.application.name}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://host.docker.internal:4318/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: http://host.docker.internal:4318/v1/logs
+  otlp:
+    metrics:
+      export:
+        url: http://host.docker.internal:4318/v1/metrics
+
+logging:
+  level:
+    "[org.springframework]": INFO
+    # Back-channel logout only. Named class by class rather than by package: the enclosing
+    # configurers package also holds OAuth2LoginConfigurer, which has nothing to do with it.
+    # TRACE is where it becomes useful, DEBUG only reports failures.
+    "[org.springframework.security.config.annotation.web.configurers.oauth2.client.OidcBackChannelLogoutFilter]": TRACE
+    "[org.springframework.security.config.annotation.web.configurers.oauth2.client.OidcBackChannelLogoutHandler]": TRACE
+    "[org.springframework.security.config.annotation.web.configurers.oauth2.client.OidcLogoutAuthenticationConverter]": TRACE
+    # the registry the handler queries to find the sessions to kill: its "none matched" message is
+    # what tells a back-channel logout that silently does nothing from one that worked
+    "[org.springframework.security.oauth2.client.oidc.session.InMemoryOidcSessionRegistry]": TRACE
+---
+spring:
+  config:
+    activate:
+      on-profile: no-observability
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: false
+  health:
+    livenessstate:
+      enabled: false
+    readinessstate:
+      enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
+  tracing:
+    export:
+      enabled: false
+  opentelemetry:
+    enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false

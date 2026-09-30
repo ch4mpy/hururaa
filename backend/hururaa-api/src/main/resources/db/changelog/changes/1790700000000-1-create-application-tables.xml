@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1790700000000-0" author="ch4mp">
+        <comment>Sequence backing Revinfo's REVINFO_SEQ generator, missing from the changeset creating the revinfo table</comment>
+        <createSequence sequenceName="revinfo_seq" startValue="1" incrementBy="1"/>
+    </changeSet>
+
+    <changeSet id="1790700000000-1" author="ch4mp">
+        <createSequence sequenceName="applications_seq" startValue="1" incrementBy="1"/>
+        <createSequence sequenceName="direction_admins_seq" startValue="1" incrementBy="1"/>
+
+        <createTable tableName="applications">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_applications"/>
+            </column>
+            <column name="version" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="client_prefix" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_applications_client_prefix"/>
+            </column>
+            <column name="direction" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="applications" indexName="idx_applications_direction">
+            <column name="direction"/>
+        </createIndex>
+
+        <createTable tableName="application_managers">
+            <column name="application_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_application_managers"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_application_managers"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="application_managers" baseColumnNames="application_id"
+                                 constraintName="fk_application_managers_on_applications"
+                                 referencedTableName="applications" referencedColumnNames="id"/>
+        <createIndex tableName="application_managers" indexName="idx_application_managers_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createTable tableName="direction_admins">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_direction_admins"/>
+            </column>
+            <column name="direction" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="direction_admins" columnNames="direction, user_id"
+                             constraintName="uk_direction_admins_direction_user_id"/>
+        <createIndex tableName="direction_admins" indexName="idx_direction_admins_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="1790700000000-2" author="ch4mp">
+        <createTable tableName="applications_aud">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_applications_aud"/>
+            </column>
+            <column name="rev" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_applications_aud"/>
+            </column>
+            <column name="revtype" type="SMALLINT"/>
+            <column name="client_prefix" type="VARCHAR(255)"/>
+            <column name="direction" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="applications_aud" baseColumnNames="rev"
+                                 constraintName="fk_applications_aud_on_revinfo"
+                                 referencedTableName="revinfo" referencedColumnNames="rev"/>
+
+        <createTable tableName="application_managers_aud">
+            <column name="application_id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_application_managers_aud"/>
+            </column>
+            <column name="rev" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_application_managers_aud"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_application_managers_aud"/>
+            </column>
+            <column name="revtype" type="SMALLINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="application_managers_aud" baseColumnNames="rev"
+                                 constraintName="fk_application_managers_aud_on_revinfo"
+                                 referencedTableName="revinfo" referencedColumnNames="rev"/>
+
+        <createTable tableName="direction_admins_aud">
+            <column name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_direction_admins_aud"/>
+            </column>
+            <column name="rev" type="BIGINT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_direction_admins_aud"/>
+            </column>
+            <column name="revtype" type="SMALLINT"/>
+            <column name="direction" type="VARCHAR(255)"/>
+            <column name="user_id" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="direction_admins_aud" baseColumnNames="rev"
+                                 constraintName="fk_direction_admins_aud_on_revinfo"
+                                 referencedTableName="revinfo" referencedColumnNames="rev"/>
+    </changeSet>
+
+</databaseChangeLog>

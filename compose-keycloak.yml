@@ -1,0 +1,43 @@
+name: ${REPO_NAME}
+
+volumes:
+  keycloak:
+    driver: local
+
+services:
+  keycloak-server:
+    container_name: ${REPO_NAME}.keycloak-server
+    image: ${REPO_GROUP_ID}.${REPO_NAME}/keycloak:${KC_VERSION}
+    command:
+      - start
+      - --https-certificate-file=/opt/keycloak/certs/${CN}.crt
+      - --https-certificate-key-file=/opt/keycloak/certs/${CN}.key
+      - --import-realm
+      - --optimized
+      - --cache=local
+    restart: unless-stopped
+    ports:
+      - ${KC_HTTPS_PORT}:${KC_HTTPS_PORT}
+      - 9000:9000
+    volumes:
+      # The TLS key pair is mounted, never baked into the image: a private key in a published
+      # image layer is both a Trivy secret finding and a bad habit. The demo image serves plain
+      # HTTP behind Caddy and mounts nothing here.
+      - ./certs/${CN}.crt:/opt/keycloak/certs/${CN}.crt:ro
+      - ./certs/${CN}.key:/opt/keycloak/certs/${CN}.key:ro
+      - keycloak:/opt/keycloak/data/h2/
+      - ./keycloak/import/:/opt/keycloak/data/import/:ro
+      - ./keycloak/providers/:/opt/keycloak/providers/:ro
+      - ./keycloak/HealthCheck.java:/tmp/HealthCheck.java:ro
+    environment:
+      # environment rather than --bootstrap-admin-* arguments: not readable in `docker inspect`
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_PROXY_HEADERS: xforwarded
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: ['CMD-SHELL', 'java /tmp/HealthCheck.java https://localhost:9000/auth/health/ready']
+      interval: 5s
+      timeout: 5s
+      retries: 10

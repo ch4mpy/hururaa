@@ -1,0 +1,14 @@
+{
+  "sub": "1f0644a3-d3e2-45fe-a153-a50491afe35c",
+  "preferred_username": "dpam.agent",
+  "organization": {
+    "dpam": {
+      "resource_access": {
+        "escales-api": {
+          "roles": ["escales.stopovers.read", "escales.stopovers.edit"]
+        }
+      },
+      "groups": ["/escales-agents"]
+    }
+  }
+}

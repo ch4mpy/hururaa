@@ -1,0 +1,25 @@
+// The design system of the Polynesian administration: pf-ui's styles pull PrimeFlex (utility classes,
+// used instead of Tailwind CSS), PrimeIcons (used by pf-ui's own components), its layout classes
+// (`pf-page-center-container`...) and its fonts. PrimeNG's theme itself is the pf-ui preset
+// registered by `providePFTheme()` (see `app.config.ts`). Functional icons of this app are Remix
+// Icon's (`<i class="ri-...">`, stylesheet declared in `angular.json`).
+@use 'pf-ui/assets/styles/styles.scss';
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+// visually hidden, still read by screen readers (table action column headers...)
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

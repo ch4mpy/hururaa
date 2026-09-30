@@ -1,0 +1,16 @@
+README.md
+api.base.service.ts
+api.module.ts
+api/api.ts
+api/gateway.service.ts
+api/gateway.serviceInterface.ts
+configuration.ts
+encoder.ts
+index.ts
+model/models.ts
+model/resourceEvent.ts
+model/userResponse.ts
+param.ts
+provide-api.ts
+query.params.ts
+variables.ts

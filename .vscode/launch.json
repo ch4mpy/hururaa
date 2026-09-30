@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "API REST",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "pf.hururaa.RestApiApplication",
+      "projectName": "hururaa-api",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env",
+      "shortenCommandLine": "jarmanifest",
+      "console": "internalConsole"
+    },
+    {
+      "type": "java",
+      "name": "gateway",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "pf.hururaa.GatewayApplication",
+      "projectName": "gateway",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "internalConsole"
+    },
+    {
+      "type": "node-terminal",
+      "name": "frontend",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend/angular",
+      "command": "npm run start"
+    }
+  ]
+}

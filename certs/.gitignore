@@ -1,0 +1,6 @@
+*.config
+*.crt
+*.jks
+*.key
+*.p12
+*.password.txt

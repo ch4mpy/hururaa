@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>4.1.1</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>pf.hururaa</groupId>
+	<artifactId>hururaa-backend-parent</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>${project.groupId}:${project.artifactId}</name>
+	<description>Parent pom of a backend with a REST API and an OAuth2 BFF</description>
+	<packaging>pom</packaging>
+	<url />
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>ch4mpy</id>
+			<name>Jerome Wacongne</name>
+			<email>ch4mp@c4-soft.com</email>
+			<url>https://github.com/ch4mpy</url>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection />
+		<developerConnection />
+		<tag />
+		<url />
+	</scm>
+
+	<properties>
+		<java.version>26</java.version>
+		<!-- Overrides of versions managed by spring-boot-starter-parent 4.1.1, each raising a
+		dependency past a fixable CVE that would otherwise fail ci.yml's Trivy dependency scan
+		(CRITICAL,HIGH, unfixed ones excluded). Versions are Maven Central's <release> for their
+		line. Drop an override once a Spring Boot release manages a version at
+		least as high, rather than pinning it forever:
+		tomcat 11.0.24 -> CVE-2026-65182, CVE-2026-65905, CVE-2026-68525
+		amqp-client 5.30.0 -> CVE-2026-69220, CVE-2026-75516 -->
+		<tomcat.version>11.0.26</tomcat.version>
+		<rabbit-amqp-client.version>5.36.0</rabbit-amqp-client.version>
+
+		<spring-cloud.version>2025.1.3</spring-cloud.version>
+
+		<com.c4-soft.springaddons.version>9.4.1</com.c4-soft.springaddons.version>
+
+		<openapi-generator-maven-plugin.version>7.25.0</openapi-generator-maven-plugin.version>
+		<swagger-annotations.version>2.2.55</swagger-annotations.version>
+		<springdoc-openapi.version>3.1.1</springdoc-openapi.version>
+		<springdoc-openapi-maven-plugin.version>1.5</springdoc-openapi-maven-plugin.version>
+		<!-- the apps started by the openapi profile serve plain HTTP (SERVER_SSL_ENABLED=false):
+		scraping /v3/api-docs over TLS would require the self-signed certificate to be trusted by
+		the JRE running the build, which is true on a dev machine (build-0-env.sh) but not on CI -->
+		<integration-tests.scheme>http</integration-tests.scheme>
+		<integration-tests.hostname>localhost</integration-tests.hostname>
+		<integration-tests.port>7080</integration-tests.port>
+		<spring.profiles.active></spring.profiles.active>
+		<springdoc-openapi.output-dir>${project.basedir}/../openapi/out</springdoc-openapi.output-dir>
+		<fmt-maven-plugin.version>2.29</fmt-maven-plugin.version>
+		<mapstruct.version>1.7.0.Beta2</mapstruct.version>
+		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+		<therapi.version>0.15.0</therapi.version>
+
+		<ca-certificates.binding>${project.basedir}/../certs/host.docker.internal.jks</ca-certificates.binding>
+
+		<imageName>c4-soft.com/${project.artifactId}:${project.version}</imageName>
+
+		<!-- must match the opentelemetry-sdk version managed by the Spring Boot BOM (1.62.0 in Boot
+		4.1.1): the appender pulls opentelemetry-api-incubator transitively, an alpha artifact the Boot BOM
+		does not manage, and the SDK needs the incubator of its own version (2.31.x brings 1.65.0-alpha, which
+		dropped ExtendedAttributes: NoClassDefFoundError in BatchLogRecordProcessor at run time). Check
+		`mvnw dependency:tree -Dincludes=io.opentelemetry*` when bumping it or Boot; Dependabot ignores it. -->
+		<opentelemetry-logback-appender-1.0.version>2.28.0-alpha</opentelemetry-logback-appender-1.0.version>
+
+		<error_prone_core.version>2.50.0</error_prone_core.version>
+		<nullaway.version>0.14.1</nullaway.version>
+		<nullability-maven-plugin.version>0.5.1</nullability-maven-plugin.version>
+
+		<wiremock-standalone.version>4.0.0-beta.38</wiremock-standalone.version>
+		<wiremock-maven-plugin.version>7.3.0</wiremock-maven-plugin.version>
+		<wiremock-spring-boot.version>4.4.2</wiremock-spring-boot.version>
+
+		<!-- 0.8.15 is the first release supporting Java 26 class files -->
+		<jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
+		<!-- Filled by jacoco:prepare-agent (see its propertyName below). Declared empty so that
+		the surefire argLine below still resolves when JaCoCo does not run (a build skipping it,
+		or a Maven run from an IDE that never reaches the initialize phase). -->
+		<jacocoArgLine></jacocoArgLine>
+	</properties>
+
+	<modules>
+		<module>common-events-starter</module>
+		<module>common-security-starter</module>
+		<module>gateway</module>
+		<module>hururaa-api</module>
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>pf.hururaa</groupId>
+				<artifactId>common-events-starter</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>pf.hururaa</groupId>
+				<artifactId>common-security-starter</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.opentelemetry.instrumentation</groupId>
+				<artifactId>opentelemetry-logback-appender-1.0</artifactId>
+				<version>${opentelemetry-logback-appender-1.0.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.swagger.core.v3</groupId>
+				<artifactId>swagger-annotations</artifactId>
+				<version>${swagger-annotations.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.mapstruct</groupId>
+				<artifactId>mapstruct</artifactId>
+				<version>${mapstruct.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springdoc</groupId>
+				<artifactId>springdoc-openapi-starter-common</artifactId>
+				<version>${springdoc-openapi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springdoc</groupId>
+				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+				<version>${springdoc-openapi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springdoc</groupId>
+				<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+				<version>${springdoc-openapi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.github.therapi</groupId>
+				<artifactId>therapi-runtime-javadoc</artifactId>
+				<version>${therapi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.github.therapi</groupId>
+				<artifactId>therapi-runtime-javadoc-scribe</artifactId>
+				<version>${therapi.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.c4-soft.springaddons</groupId>
+				<artifactId>spring-addons-starter-oidc</artifactId>
+				<version>${com.c4-soft.springaddons.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.c4-soft.springaddons</groupId>
+				<artifactId>spring-addons-starter-oidc-test</artifactId>
+				<version>${com.c4-soft.springaddons.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.c4-soft.springaddons</groupId>
+				<artifactId>spring-addons-starter-rest</artifactId>
+				<version>${com.c4-soft.springaddons.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.c4-soft.springaddons</groupId>
+				<artifactId>spring-addons-starter-openapi</artifactId>
+				<version>${com.c4-soft.springaddons.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.google.errorprone</groupId>
+				<artifactId>error_prone_core</artifactId>
+				<version>${error_prone_core.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.uber.nullaway</groupId>
+				<artifactId>nullaway</artifactId>
+				<version>${nullaway.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.wiremock</groupId>
+				<artifactId>wiremock-standalone</artifactId>
+				<version>${wiremock-standalone.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.wiremock.integrations</groupId>
+				<artifactId>wiremock-spring-boot</artifactId>
+				<version>${wiremock-spring-boot.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.jacoco</groupId>
+					<artifactId>jacoco-maven-plugin</artifactId>
+					<version>${jacoco-maven-plugin.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<configuration>
+						<fork>true</fork>
+						<parameters>true</parameters>
+						<compilerArgs combine.children="append">
+							<arg>-XDaddTypeAnnotationsToSymbol=true</arg>
+							<arg>-XDcompilePolicy=simple</arg>
+							<arg>--should-stop=ifError=FLOW</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+							<arg>
+								-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+						</compilerArgs>
+						<annotationProcessorPaths combine.children="append">
+							<path>
+								<groupId>org.projectlombok</groupId>
+								<artifactId>lombok</artifactId>
+							</path>
+							<path>
+								<groupId>org.mapstruct</groupId>
+								<artifactId>mapstruct-processor</artifactId>
+								<version>${mapstruct.version}</version>
+							</path>
+							<path>
+								<groupId>org.projectlombok</groupId>
+								<artifactId>lombok-mapstruct-binding</artifactId>
+								<version>${lombok-mapstruct-binding.version}</version>
+							</path>
+							<path>
+								<groupId>org.springframework.boot</groupId>
+								<artifactId>spring-boot-configuration-processor</artifactId>
+							</path>
+							<path>
+								<groupId>com.github.therapi</groupId>
+								<artifactId>therapi-runtime-javadoc-scribe</artifactId>
+							</path>
+						</annotationProcessorPaths>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-maven-plugin</artifactId>
+					<configuration>
+						<image>
+							<bindings>
+								<binding>
+									${ca-certificates.binding}:/platform/bindings/ca-certificates:ro</binding>
+							</bindings>
+							<env>
+								<BP_JVM_VERSION>${java.version}</BP_JVM_VERSION>
+							</env>
+						</image>
+						<imageName>${imageName}</imageName>
+						<excludes>
+							<exclude>
+								<groupId>org.projectlombok</groupId>
+								<artifactId>lombok</artifactId>
+							</exclude>
+						</excludes>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.springdoc</groupId>
+					<artifactId>springdoc-openapi-maven-plugin</artifactId>
+					<version>${springdoc-openapi-maven-plugin.version}</version>
+					<configuration>
+						<apiDocsUrl>
+							${integration-tests.scheme}://${integration-tests.hostname}:${integration-tests.port}/v3/api-docs</apiDocsUrl>
+						<outputFileName>${project.artifactId}.openapi.json</outputFileName>
+						<outputDir>${springdoc-openapi.output-dir}</outputDir>
+						<skip>false</skip>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.openapitools</groupId>
+					<artifactId>openapi-generator-maven-plugin</artifactId>
+					<version>${openapi-generator-maven-plugin.version}</version>
+					<configuration>
+						<generatorName>spring</generatorName>
+						<cleanupOutput>false</cleanupOutput>
+						<skipIfSpecIsUnchanged>true</skipIfSpecIsUnchanged>
+						<generateApiTests>false</generateApiTests>
+						<generateModelDocumentation>false</generateModelDocumentation>
+						<generateModelTests>false</generateModelTests>
+						<generateSupportingFiles>false</generateSupportingFiles>
+						<configOptions>
+							<documentationProvider>none</documentationProvider>
+							<annotationLibrary>none</annotationLibrary>
+							<ensureUniqueParams>true</ensureUniqueParams>
+							<generateBuilders>false</generateBuilders>
+							<interfaceOnly>true</interfaceOnly>
+							<library>spring-http-interface</library>
+							<openApiNullable>false</openApiNullable>
+							<serializableModel>true</serializableModel>
+							<skipDefaultInterface>true</skipDefaultInterface>
+							<useJakartaEe>true</useJakartaEe>
+							<useOptional>true</useOptional>
+						</configOptions>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>com.spotify.fmt</groupId>
+					<artifactId>fmt-maven-plugin</artifactId>
+					<version>${fmt-maven-plugin.version}</version>
+					<configuration>
+						<sourceDirectory>target/generated-sources</sourceDirectory>
+						<verbose>true</verbose>
+						<filesNamePattern>.*\.java</filesNamePattern>
+						<skip>false</skip>
+						<skipSourceDirectory>false</skipSourceDirectory>
+						<skipTestSourceDirectory>true</skipTestSourceDirectory>
+						<skipSortingImports>false</skipSortingImports>
+						<style>google</style>
+					</configuration>
+					<executions>
+						<execution>
+							<goals>
+								<goal>format</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>uk.co.automatictester</groupId>
+					<artifactId>wiremock-maven-plugin</artifactId>
+					<version>${wiremock-maven-plugin.version}</version>
+					<dependencies>
+						<dependency>
+							<groupId>org.wiremock</groupId>
+							<artifactId>wiremock-standalone</artifactId>
+							<version>${wiremock-standalone.version}</version>
+						</dependency>
+					</dependencies>
+				</plugin>
+				<plugin>
+					<groupId>am.ik.maven</groupId>
+					<artifactId>nullability-maven-plugin</artifactId>
+					<version>${nullability-maven-plugin.version}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- Mockito's inline mock maker self-attaches a java agent at runtime (JEP
+					451). This flag silences the JDK warning today and is the same flag that
+					will be required once the JDK disallows dynamic agent loading by default.
+					It is a plain literal (no Maven property to resolve), so it works the same
+					way whether tests run through Maven or through an IDE's native JUnit
+					launcher. Do NOT replace this with a property-based
+					"-javaagent:${org.mockito:mockito-core:jar}" argLine: that requires the
+					maven-dependency-plugin "properties" goal to run first, which only happens
+					during a real Maven build - IDEs that launch JUnit tests natively (e.g.
+					Eclipse's own JUnit runner, bypassing the Maven lifecycle) leave the
+					property unresolved, producing a bare "-javaagent:" with no path and a
+					JVM startup failure ("Error opening zip file or JAR manifest missing"). -->
+					<!-- @{jacocoArgLine}: late evaluation by surefire, so that the value set by
+					jacoco:prepare-agent during the build is seen (a ${...} reference would be
+					interpolated, empty, when the model is read). See the property's declaration. -->
+					<argLine>@{jacocoArgLine} -XX:+EnableDynamicAgentLoading</argLine>
+				</configuration>
+			</plugin>
+			<plugin>
+				<!-- Coverage measurement only: no threshold yet, measure before demanding.
+				Per-module HTML/XML reports in target/site/jacoco/ after "verify". -->
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<!-- the Keycloak admin client generated by openapi-generator (hururaa-api):
+						nearly 10 000 lines of DTOs that would drown the figures of the code we write -->
+						<exclude>org/keycloak/**</exclude>
+					</excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+						<configuration>
+							<propertyName>jacocoArgLine</propertyName>
+						</configuration>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>openapi</id>
+			<dependencies>
+				<dependency>
+					<groupId>com.github.therapi</groupId>
+					<artifactId>therapi-runtime-javadoc</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>org.springdoc</groupId>
+					<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
+	<repositories>
+		<repository>
+			<id>spring-snapshots</id>
+			<name>Spring Snapshots</name>
+			<url>https://repo.spring.io/snapshot</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-snapshots</id>
+			<name>Spring Snapshots</name>
+			<url>https://repo.spring.io/snapshot</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</pluginRepository>
+	</pluginRepositories>
+
+</project>

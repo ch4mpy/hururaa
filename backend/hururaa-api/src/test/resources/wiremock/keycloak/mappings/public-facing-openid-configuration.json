@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/auth/realms/public-facing/.well-known/openid-configuration"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "issuer": "http://localhost:8089/auth/realms/public-facing",
+      "authorization_endpoint": "http://localhost:8089/auth/realms/public-facing/protocol/openid-connect/auth",
+      "token_endpoint": "http://localhost:8089/auth/realms/public-facing/protocol/openid-connect/token",
+      "jwks_uri": "http://localhost:8089/auth/realms/public-facing/protocol/openid-connect/certs",
+      "subject_types_supported": [
+        "public",
+        "pairwise"
+      ]
+    }
+  }
+}

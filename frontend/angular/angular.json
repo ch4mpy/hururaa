@@ -1,0 +1,228 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm",
+    "schematicCollections": [
+      "angular-eslint"
+    ],
+    "analytics": false
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "hururaa": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "inlineTemplate": true,
+          "inlineStyle": true,
+          "style": "scss"
+        }
+      },
+      "root": "projects/hururaa",
+      "sourceRoot": "projects/hururaa/src",
+      "prefix": "app",
+      "i18n": {
+        "sourceLocale": {
+          "code": "fr-PF",
+          "subPath": "fr"
+        },
+        "locales": {
+          "en-US": {
+            "translation": "projects/hururaa/src/locale/messages.en-US.xlf",
+            "subPath": "en"
+          }
+        }
+      },
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "projects/hururaa/src/main.ts",
+            "tsConfig": "projects/hururaa/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/hururaa/public"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/pf-ui/assets/img",
+                "output": "assets/img"
+              }
+            ],
+            "styles": [
+              "node_modules/remixicon/fonts/remixicon.css",
+              "projects/hururaa/src/styles.scss"
+            ],
+            "polyfills": [
+              "@angular/localize/init"
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "node_modules"
+              ]
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.5MB",
+                  "maximumError": "2.5MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
+              "localize": true
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "baseHref": "/fr/"
+            },
+            "development-en": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "localize": [
+                "en-US"
+              ],
+              "baseHref": "/en/"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "host": "0.0.0.0",
+            "allowedHosts": [
+              "host.docker.internal"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "hururaa:build:production"
+            },
+            "development": {
+              "buildTarget": "hururaa:build:development"
+            },
+            "development-en": {
+              "buildTarget": "hururaa:build:development-en",
+              "prebundle": false
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
+        },
+        "extract-i18n": {
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "buildTarget": "hururaa:build",
+            "outputPath": "projects/hururaa/src/locale"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/hururaa/**/*.ts",
+              "projects/hururaa/**/*.html"
+            ],
+            "eslintConfig": "projects/hururaa/eslint.config.js"
+          }
+        }
+      }
+    },
+    "@api/gateway": {
+      "projectType": "library",
+      "root": "projects/api/gateway",
+      "sourceRoot": "projects/api/gateway/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/api/gateway/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/api/gateway/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/api/gateway/tsconfig.spec.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/api/gateway/**/*.ts",
+              "projects/api/gateway/**/*.html"
+            ],
+            "eslintConfig": "projects/api/gateway/eslint.config.js"
+          }
+        }
+      }
+    },
+    "@api/hururaa-api": {
+      "projectType": "library",
+      "root": "projects/api/hururaa-api",
+      "sourceRoot": "projects/api/hururaa-api/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/api/hururaa-api/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/api/hururaa-api/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/api/hururaa-api/tsconfig.spec.json"
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/api/hururaa-api/**/*.ts",
+              "projects/api/hururaa-api/**/*.html"
+            ],
+            "eslintConfig": "projects/api/hururaa-api/eslint.config.js"
+          }
+        }
+      }
+    }
+  }
+}

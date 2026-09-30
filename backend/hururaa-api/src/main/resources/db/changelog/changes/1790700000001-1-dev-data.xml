@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Dev environment only (Liquibase context "dev", see spring.liquibase.contexts): the applications of
+  the dev realm (keycloak/import/public-facing-realm.json) and the delegations of its users, whose
+  ids are fixed in that realm export.
+
+  | user         | direction | delegation                                             |
+  |==============|===========|========================================================|
+  | sipf.admin   | dsi       | platform admin: Keycloak group /sipf (hururaa.* roles) |
+  | dsi.admin    | dsi       | administrator of dsi                                   |
+  | dsi.manager  | dsi       | manager of Hurura'a and Te Fenua                       |
+  | dpam.admin   | dpam      | administrator of dpam                                  |
+  | dpam.manager | dpam      | manager of Escales                                     |
+  | daf.admin    | daf       | administrator of daf                                   |
+  | daf.manager  | daf       | manager of Anahei                                      |
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1790700000001-1" author="ch4mp" context="dev">
+        <insert tableName="applications">
+            <column name="id" valueSequenceNext="applications_seq"/>
+            <column name="version" valueNumeric="0"/>
+            <column name="client_prefix" value="hururaa"/>
+            <column name="direction" value="dsi"/>
+            <column name="name" value="Hurura'a"/>
+        </insert>
+        <insert tableName="applications">
+            <column name="id" valueSequenceNext="applications_seq"/>
+            <column name="version" valueNumeric="0"/>
+            <column name="client_prefix" value="te-fenua"/>
+            <column name="direction" value="dsi"/>
+            <column name="name" value="Te Fenua"/>
+        </insert>
+        <insert tableName="applications">
+            <column name="id" valueSequenceNext="applications_seq"/>
+            <column name="version" valueNumeric="0"/>
+            <column name="client_prefix" value="escales"/>
+            <column name="direction" value="dpam"/>
+            <column name="name" value="Escales"/>
+        </insert>
+        <insert tableName="applications">
+            <column name="id" valueSequenceNext="applications_seq"/>
+            <column name="version" valueNumeric="0"/>
+            <column name="client_prefix" value="anahei"/>
+            <column name="direction" value="daf"/>
+            <column name="name" value="Anahei"/>
+        </insert>
+
+        <sql>
+            insert into application_managers (application_id, user_id)
+            select id, 'c6bca76e-e2cb-45ee-bbfe-2538652279b1' from applications where client_prefix in ('hururaa', 'te-fenua');
+            insert into application_managers (application_id, user_id)
+            select id, 'b70c1bf6-e94f-439a-8f5d-50df5542e19f' from applications where client_prefix = 'escales';
+            insert into application_managers (application_id, user_id)
+            select id, '27a6b50b-7672-4399-89ae-35565a052203' from applications where client_prefix = 'anahei';
+        </sql>
+
+        <insert tableName="direction_admins">
+            <column name="id" valueSequenceNext="direction_admins_seq"/>
+            <column name="direction" value="dsi"/>
+            <column name="user_id" value="e6ff96c5-0d55-4a1e-8716-8e0210551d1a"/>
+        </insert>
+        <insert tableName="direction_admins">
+            <column name="id" valueSequenceNext="direction_admins_seq"/>
+            <column name="direction" value="dpam"/>
+            <column name="user_id" value="de10aa56-81e4-4e66-a1d7-824d4b6a33d1"/>
+        </insert>
+        <insert tableName="direction_admins">
+            <column name="id" valueSequenceNext="direction_admins_seq"/>
+            <column name="direction" value="daf"/>
+            <column name="user_id" value="457e0156-d64e-4c0c-b3e2-ee2548400419"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

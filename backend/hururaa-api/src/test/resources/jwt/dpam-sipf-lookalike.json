@@ -1,0 +1,14 @@
+{
+  "sub": "0d0c43b2-a3d6-4d4a-9a0b-6f7d0f3b0f6e",
+  "preferred_username": "dpam.lookalike",
+  "organization": {
+    "dpam": {
+      "resource_access": {
+        "hururaa-api": {
+          "roles": ["hururaa.applications.manage", "hururaa.direction-admins.manage"]
+        }
+      },
+      "groups": ["/sipf"]
+    }
+  }
+}

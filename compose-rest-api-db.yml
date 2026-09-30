@@ -1,0 +1,34 @@
+name: ${REPO_NAME}
+
+volumes:
+  rest_api_data:
+    driver: local
+
+secrets:
+  rest_api_db_password:
+    file: ./secrets/rest-api/postgres_password.txt
+
+services:
+  rest_api_db:
+    container_name: ${REPO_NAME}.rest-api-db
+    image: postgres:18
+    hostname: ${CN}
+    restart: unless-stopped
+    ports:
+      - "${REST_API_DB_PORT}:5432"
+    secrets:
+      - rest_api_db_password
+    environment:
+      POSTGRES_DB: rest_api
+      POSTGRES_USER: rest-api
+      POSTGRES_PASSWORD_FILE: /run/secrets/rest_api_db_password
+      TZ: "Pacific/Tahiti"
+    volumes:
+      - rest_api_data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d rest_api -U rest-api -p 5432" ]
+      interval: 3s
+      timeout: 60s
+      retries: 20
+    extra_hosts:
+      - host.docker.internal:host-gateway

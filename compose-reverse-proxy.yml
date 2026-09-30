@@ -1,0 +1,17 @@
+name: ${REPO_NAME}
+
+services:
+  reverse-proxy:
+    container_name: ${REPO_NAME}.reverse-proxy
+    image: ${REPO_GROUP_ID}.${REPO_NAME}/reverse-proxy
+    volumes:
+      - ./certs/${CN}.crt:/etc/nginx/certs/self_signed.crt
+      - ./certs/${CN}.key:/etc/nginx/certs/self_signed_req_key.pem
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      TZ: "Pacific/Tahiti"
+    extra_hosts:
+      - host.docker.internal:host-gateway

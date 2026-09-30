@@ -1,0 +1,28 @@
+name: ${REPO_NAME}
+
+volumes:
+  mailpit_data:
+
+services:
+  mailpit:
+    image: axllent/mailpit
+    container_name: ${REPO_NAME}.mailpit
+    restart: unless-stopped
+    volumes:
+      - mailpit_data:/data
+      - ./secrets/mail/auth.txt:/opt/mailpit/auth.txt:ro
+      - ./certs/$CN.crt:/opt/mailpit/$CN.crt:ro
+      - ./certs/$CN.key:/opt/mailpit/$CN.key:ro
+    ports:
+      - 8025:8025
+      - 1025:1025
+    environment:
+      TZ: "Pacific/Tahiti"
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_FILE: /opt/mailpit/auth.txt
+      MP_SMTP_TLS_CERT: /opt/mailpit/$CN.crt
+      MP_SMTP_TLS_KEY: /opt/mailpit/$CN.key
+      MP_WEBROOT: /mailpit/
+      MP_UI_TLS_CERT: /opt/mailpit/$CN.crt
+      MP_UI_TLS_KEY: /opt/mailpit/$CN.key

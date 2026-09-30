@@ -1,0 +1,52 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "paths": {
+      "@api/gateway": [
+        "./dist/api/gateway"
+      ],
+      "@api/hururaa-api": [
+        "./dist/api/hururaa-api"
+      ]
+    },
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve"
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./projects/hururaa/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/hururaa/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/api/gateway/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/api/gateway/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/api/hururaa-api/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/api/hururaa-api/tsconfig.spec.json"
+    }
+  ]
+}
