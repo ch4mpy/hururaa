@@ -38,7 +38,7 @@
     "google-libphonenumber": "^3.2.47",
     "language-name-map": "^0.3.0",
     "ng-circle-countdown": "^21.0.0",
-    "ngx-device-detector": "^11.0.0",
+    "ngx-device-detector": "^12.0.0",
     "ngx-image-compress": "^18.1.7",
     "ngx-image-cropper": "^9.1.7",
     "ngx-translate-messageformat-compiler": "^7.3.0",
