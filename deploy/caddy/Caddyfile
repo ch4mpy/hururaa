@@ -1,0 +1,61 @@
+# Edge of the demo deployment: Let's Encrypt certificate for {$DEMO_HOST}, then routing by path
+# prefix to the containers (same layout as nginx-reverse-proxy/nginx.conf in dev). Caddy sets
+# X-Forwarded-* itself and streams text/event-stream responses (the /bff/events SSE) unbuffered.
+
+# Only the SPA gets these. Keycloak serves its own pages under /auth/* and uses iframes for
+# session status, so a blanket frame-ancestors would be its problem, not ours.
+(spa-headers) {
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+	}
+}
+
+{$DEMO_HOST} {
+	encode zstd gzip
+
+	# Applied to every response of this site. Caddy does not send HSTS on its own.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
+	handle /gateway/* {
+		reverse_proxy gateway:7080
+	}
+
+	handle /mailpit/* {
+		basic_auth {
+			demo {$MAILPIT_UI_PASSWORD_HASH}
+		}
+		reverse_proxy mailpit:8025
+	}
+
+	handle /grafana/* {
+		reverse_proxy grafana-lgtm:3000
+	}
+
+	@locales path /fr/* /en/*
+	handle @locales {
+		import spa-headers
+		reverse_proxy frontend:80
+	}
+	redir /fr /fr/ permanent
+	redir /en /en/ permanent
+
+	# pf-ui loads its images with absolute paths (/assets/img/...)
+	handle /assets/* {
+		reverse_proxy frontend:80
+	}
+
+	handle {
+		redir * /fr/ temporary
+	}
+}

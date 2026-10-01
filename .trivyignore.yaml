@@ -1,0 +1,53 @@
+# Findings Trivy must not fail the pipeline on. Scoped as narrowly as the format allows: every
+# entry names a single CVE *and* the exact file it is reported from, so the same CVE in one of our
+# own images (the Spring apps bundle Netty too) still fails the scan.
+#
+# Everything listed here comes from jars bundled by the `quay.io/keycloak/keycloak` base image
+# (keycloak/Dockerfile). They are not ours to patch: the only fix would be a Keycloak release that
+# ships the newer jar. 26.7.4 — the newest release as of this writing, and what the `26.7` tag
+# resolves to — still bundles the vulnerable versions, which is why `--ignore-unfixed` does not
+# filter them out (upstream *has* published fixes, Keycloak has not picked them up yet).
+#
+# Re-check this file when bumping KC_VERSION: the paths carry the jar version, so an entry that no
+# longer matches means the base image moved and the exemption has to be re-assessed rather than
+# silently kept. `expired_at` forces that review even if nobody bumps the image.
+vulnerabilities:
+  # Bouncy Castle, fixed upstream in 1.85; Keycloak 26.7.4 ships 1.84.
+  - id: CVE-2026-8763
+    paths:
+      - opt/keycloak/bin/client/lib/bcprov-jdk18on-1.84.jar
+      - opt/keycloak/lib/lib/main/org.bouncycastle.bcprov-jdk18on-1.84.jar
+    statement: Bundled by the Keycloak base image; no Keycloak release ships bcprov 1.85 yet.
+    expired_at: 2026-12-31
+  - id: CVE-2026-13506
+    paths:
+      - opt/keycloak/bin/client/lib/bcprov-jdk18on-1.84.jar
+      - opt/keycloak/lib/lib/main/org.bouncycastle.bcprov-jdk18on-1.84.jar
+    statement: Bundled by the Keycloak base image; no Keycloak release ships bcprov 1.85 yet.
+    expired_at: 2026-12-31
+
+  # Netty, fixed upstream in 4.1.137.Final / 4.2.17.Final; Keycloak 26.7.4 ships 4.1.136.Final.
+  - id: CVE-2026-75595
+    paths:
+      - opt/keycloak/lib/lib/main/io.netty.netty-handler-4.1.136.Final.jar
+      - opt/keycloak/lib/lib/main/io.netty.netty-handler-proxy-4.1.136.Final.jar
+    statement: Bundled by the Keycloak base image; no Keycloak release ships Netty 4.1.137 yet.
+    expired_at: 2026-12-31
+
+  # FreeMarker, fixed upstream in 2.3.35; Keycloak 26.7.4 ships 2.3.32. Unlike the SQL Server
+  # driver below this is live code: Keycloak renders its login, account and e-mail themes with it,
+  # from locales the browser supplies (ui_locales, kc_locale, Accept-Language). Hence the shorter
+  # expiry: take the first Keycloak release that ships 2.3.35.
+  - id: CVE-2026-84939
+    paths:
+      - opt/keycloak/lib/lib/main/org.freemarker.freemarker-2.3.32.jar
+    statement: Bundled by the Keycloak base image; no Keycloak release ships FreeMarker 2.3.35 yet.
+    expired_at: 2026-10-31
+
+  # SQL Server JDBC driver. Bundled by Quarkus in the base image and dead code here: this
+  # deployment runs Keycloak on its embedded H2 database, it never loads a SQL Server driver.
+  - id: CVE-2025-59250
+    paths:
+      - opt/keycloak/lib/lib/main/com.microsoft.sqlserver.mssql-jdbc-13.2.1.jre11.jar
+    statement: Unused SQL Server driver bundled by the Keycloak base image; Keycloak runs on H2 here.
+    expired_at: 2026-12-31

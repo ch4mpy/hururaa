@@ -234,3 +234,41 @@ management:
     metrics:
       export:
         enabled: false
+---
+# Demo deployment (deploy/compose.yml): TLS is terminated by Caddy, every hop inside the Docker
+# network is plain HTTP and services are reached by their compose service name. The self-signed
+# SSL bundle stays declared but is unused (server TLS off, Keycloak called over HTTP).
+spring:
+  config:
+    activate:
+      on-profile: demo
+  datasource:
+    url: jdbc:postgresql://rest-api-db:5432/rest_api
+  rabbitmq:
+    host: rabbitmq
+reverse-proxy-uri: https://${DEMO_HOST}
+rest-api-client-secret: ${HURURAA_API_CLIENT_SECRET}
+server:
+  ssl:
+    enabled: false
+com:
+  c4-soft:
+    springaddons:
+      rest:
+        client:
+          keycloak-client:
+            base-url: http://keycloak:8080/auth
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://grafana-lgtm:4318/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: http://grafana-lgtm:4318/v1/logs
+  otlp:
+    metrics:
+      export:
+        url: http://grafana-lgtm:4318/v1/metrics

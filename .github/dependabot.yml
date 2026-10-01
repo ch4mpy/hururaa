@@ -1,0 +1,66 @@
+# Weekly update PRs, one per ecosystem, minor and patch updates grouped so that the noise stays
+# at a handful of PRs a week. Majors come one by one: they need a look.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      maven-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Its opentelemetry-api-incubator must match the OpenTelemetry SDK the Spring Boot BOM manages:
+      # bump it by hand along with Boot.
+      - dependency-name: "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0"
+
+  - package-ecosystem: npm
+    directory: /frontend/angular
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Angular stays on 21 until pf-ui 22 is published (docs/decisions/0006): PrimeNG 21 peer-depends
+      # on @angular/core ^21, and so do the 21 lines of pf-ui's own dependencies. pf-ui itself is a
+      # tarball URL, which Dependabot does not update: bump it by hand, then lift these together.
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "angular-eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "ng-packagr"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "primeng"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@primeng/themes"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@ngrx/signals"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "ng-circle-countdown"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "p-intl-input-tel"
+        update-types: ["version-update:semver-major"]
+      # The TypeScript and Vitest ranges Angular 21's compiler and unit-test builder accept
+      # (@angular/compiler-cli: typescript ">=5.9 <6.1", @angular/build: vitest "^4.0.8"): they
+      # move with the Angular major.
+      - dependency-name: "typescript"
+        versions: [">=6.1"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/coverage-v8"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directories:
+      - /deploy/backend
+      - /deploy/frontend
+      - /keycloak
+      - /nginx-reverse-proxy
+    schedule:
+      interval: weekly

@@ -1,0 +1,180 @@
+# Validation of pull requests and of every branch but master (which deploy-demo.yml builds and
+# deploys). Same build and test steps as the deploy workflow, plus coverage reports, a dependency
+# vulnerability scan and a secret scan. The images are scanned in deploy-demo.yml, once built.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend build, tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      # the apps booted by the openapi Maven profile connect to a broker like they do in dev
+      rabbitmq:
+        image: rabbitmq:4
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 20
+    env:
+      SPRING_RABBITMQ_HOST: localhost
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '26'
+          cache: maven
+
+      # the Spring apps embed a self-signed certificate (see deploy-demo.yml): throw-away here too
+      - name: Generate a throw-away self-signed certificate
+        run: |
+          SSL_PASSWORD=$(openssl rand -hex 16)
+          echo "::add-mask::$SSL_PASSWORD"
+          bash certs/self-signed.sh host.docker.internal "$SSL_PASSWORD" "$PWD/certs"
+
+      # regenerated rather than committed: this is what catches a spec drifting from the code
+      - name: Generate OpenAPI specs
+        run: ./mvnw -B clean verify -Popenapi,h2 -DskipTests
+        working-directory: backend
+
+      # Fails once a version backend/pom.xml pins above the Spring Boot BOM is no longer needed:
+      # such an override is there to outrun a CVE, and silently downgrades the dependency if it
+      # outlives the Boot release that caught up.
+      - name: Check the Spring Boot version overrides
+        run: bash backend/check-version-overrides.sh
+      - name: Build and test (JaCoCo reports in */target/site/jacoco)
+        run: ./mvnw -B clean verify
+        working-directory: backend
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: openapi-specs
+          path: backend/openapi/out/*.json
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/*/target/site/jacoco/
+          if-no-files-found: warn
+
+      # the detail of a failed test, which the job log truncates
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: backend-surefire-reports
+          path: backend/*/target/surefire-reports/
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend lint, tests, coverage and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: backend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/angular/package-lock.json
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: openapi-specs
+          path: backend/openapi/out
+
+      - name: Install dependencies and generate API clients
+        run: |
+          npm ci
+          npm run api
+        working-directory: frontend/angular
+
+      - name: Lint and test with coverage
+        run: |
+          npm run lint
+          npm run test:ci
+        working-directory: frontend/angular
+
+      # validates the production configuration (budgets included), same command as the deploy
+      - name: Production build
+        run: npx ng build hururaa --configuration production --base-href /
+        working-directory: frontend/angular
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/angular/coverage/
+          if-no-files-found: warn
+
+  security:
+    name: Dependency and secret scans
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks scans the history, not only the checkout
+          fetch-depth: 0
+
+      # a personal account needs no GITLEAKS_LICENSE (an organization would)
+      - uses: gitleaks/gitleaks-action@v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Maven (pom.xml, transitive dependencies resolved from Central) and npm (package-lock.json).
+      # Unfixed vulnerabilities are skipped: nothing can be done about them. The fixable ones do
+      # not fail the job either -- they are published to the run summary and to a single issue by
+      # the step below. A dependency CVE lands on its own schedule, unrelated to the change being
+      # validated, so failing here would block every open pull request until someone remediates.
+      # The images of deploy-demo.yml are a different matter: that scan gates a deployment.
+      - name: Scan dependencies
+        id: deps
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+          output: trivy-deps.txt
+          skip-dirs: node_modules,target,dist
+
+      - name: Publish the dependency findings
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SCAN_OUTCOME: ${{ steps.deps.outcome }}
+          CAN_WRITE: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork != true) }}
+        run: bash .github/scripts/report-dependency-cves.sh

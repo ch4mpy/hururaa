@@ -1,6 +1,10 @@
-# Shared by the images built from the repository root (keycloak/Dockerfile):
+# Shared by the images built from the repository root (keycloak/Dockerfile, deploy/*/Dockerfile):
 # only what they COPY is sent to the Docker daemon. No private key belongs here: keycloak/Dockerfile
 # imports the certificate alone, and the key pair Keycloak serves TLS with is mounted at run time.
 *
 !certs/*.crt
 !keycloak/themes/
+!deploy/
+!frontend/angular/dist/
+!backend/gateway/target/*.jar
+!backend/hururaa-api/target/*.jar

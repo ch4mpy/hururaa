@@ -1,0 +1,301 @@
+# Builds, tests and publishes the demo images to GHCR, then deploys them on the demo VPS with
+# Docker Compose (see deploy/README.md for the one-time setup and the secrets).
+name: Deploy demo
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    name: Build, test and push images
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: demo
+    permissions:
+      contents: read
+      packages: write
+    services:
+      # the apps booted by the openapi Maven profile connect to a broker like they do in dev
+      rabbitmq:
+        image: rabbitmq:4
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 20
+    env:
+      # the public host name, overridable by a DEMO_HOST variable of the demo environment
+      DEMO_HOST: ${{ vars.DEMO_HOST || 'hururaa.c4-soft.com' }}
+      SPRING_RABBITMQ_HOST: localhost
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    steps:
+      - uses: actions/checkout@v7
+
+      # GHCR wants a lowercase image owner
+      - name: Compute the image owner
+        run: echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '26'
+          cache: maven
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/angular/package-lock.json
+
+      # The Spring apps embed a self-signed certificate (../../certs is a Maven resource dir and the
+      # application.yml SSL bundles point at it), and keycloak/Dockerfile imports one into the image
+      # truststore (the certificate only -- no private key ever goes into an image).
+      # Both are throw-away here: the demo terminates TLS at Caddy with a Let's Encrypt cert.
+      - name: Generate throw-away self-signed certificates
+        run: |
+          SSL_PASSWORD=$(openssl rand -hex 16)
+          echo "::add-mask::$SSL_PASSWORD"
+          echo "SSL_PASSWORD=$SSL_PASSWORD" >> "$GITHUB_ENV"
+          bash certs/self-signed.sh host.docker.internal "$SSL_PASSWORD" "$PWD/certs"
+          bash certs/self-signed.sh "$DEMO_HOST" "$SSL_PASSWORD" "$PWD/certs"
+
+      - name: Generate OpenAPI specs
+        run: ./mvnw -B clean verify -Popenapi,h2 -DskipTests
+        working-directory: backend
+
+      - name: Build and test backend
+        run: ./mvnw -B clean verify
+        working-directory: backend
+
+      - name: Install frontend dependencies and generate API clients
+        run: |
+          npm ci
+          npm run api
+        working-directory: frontend/angular
+
+      - name: Lint and test frontend
+        run: |
+          npm run lint
+          npm run test -- --watch=false
+        working-directory: frontend/angular
+
+      # Localized under /fr/ and /en/ (the production configuration sets localize).
+      - name: Build frontend
+        run: npx ng build hururaa --configuration production --base-href /
+        working-directory: frontend/angular
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push hururaa-keycloak
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: keycloak/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-keycloak:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-keycloak:latest
+          build-args: |
+            KC_VERSION=${{ vars.KC_VERSION || '26.7' }}
+            CN=${{ env.DEMO_HOST }}
+            KC_HEALTH_ENABLED=true
+            KC_METRICS_ENABLED=true
+            KC_HTTP_ENABLED=true
+          cache-from: type=gha,scope=keycloak
+          cache-to: type=gha,scope=keycloak,mode=max
+
+      - name: Push hururaa-gateway
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-gateway:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-gateway:latest
+          build-args: |
+            JAR=backend/gateway/target/gateway-*.jar
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,scope=gateway,mode=max
+
+      - name: Push hururaa-api
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-api:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-api:latest
+          build-args: |
+            JAR=backend/hururaa-api/target/hururaa-api-*.jar
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: Push hururaa-frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-frontend:latest
+          # No layer cache: a cached `apk upgrade` would keep serving the packages of its first
+          # run, and the other layers (the dist/ copies) change on every commit anyway.
+          pull: true
+
+      # The images are in GHCR by now, tagged with this commit: a finding here stops the
+      # deployment, not the push. Unfixed vulnerabilities (nothing to do about them) are listed
+      # but do not fail the job, and .trivyignore.yaml exempts the findings that come from the
+      # Keycloak base image and have no upstream fix yet. The dependency and secret scans are in
+      # ci.yml.
+      - name: Scan the pushed images
+        uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: v0.74.0
+      - run: |
+          for image in hururaa-keycloak hururaa-gateway hururaa-api hururaa-frontend; do
+            trivy image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+              --ignorefile .trivyignore.yaml \
+              "$REGISTRY/$IMAGE_OWNER/$image:$GITHUB_SHA"
+          done
+
+  deploy:
+    name: Deploy on the VPS
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: demo
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEMO_HOST: ${{ vars.DEMO_HOST || 'hururaa.c4-soft.com' }}
+      VPS: hururaa@${{ secrets.VPS_HOST }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compute the image owner
+        run: echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - name: Render the Keycloak realm for the demo host
+        run: bash deploy/keycloak/render-realms.sh
+        env:
+          HURURAA_BFF_CLIENT_SECRET: ${{ secrets.HURURAA_BFF_CLIENT_SECRET }}
+          HURURAA_API_CLIENT_SECRET: ${{ secrets.HURURAA_API_CLIENT_SECRET }}
+          MAILPIT_SMTP_PASSWORD: ${{ secrets.MAILPIT_SMTP_PASSWORD }}
+
+      - name: Write the compose .env
+        run: |
+          # fail here, by name, rather than deploy a Grafana without admin password or a Caddy
+          # basic_auth with an empty hash because one repository secret was never created
+          missing=()
+          for name in KC_ADMIN_PASSWORD HURURAA_BFF_CLIENT_SECRET HURURAA_API_CLIENT_SECRET POSTGRES_PASSWORD \
+              RABBITMQ_PASSWORD MAILPIT_SMTP_PASSWORD MAILPIT_UI_PASSWORD_HASH GRAFANA_ADMIN_PASSWORD; do
+            [ -n "${!name:-}" ] || missing+=("$name")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing repository secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+          # compose interpolates $ in .env values: escape it (the Mailpit bcrypt hash has some)
+          esc() { printf '%s' "${!1}" | sed 's/\$/$$/g'; }
+          {
+            echo "DEMO_HOST=$DEMO_HOST"
+            echo "IMAGE_OWNER=$IMAGE_OWNER"
+            echo "IMAGE_TAG=$GITHUB_SHA"
+            echo "KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN_USERNAME:-admin}"
+            echo "KC_BOOTSTRAP_ADMIN_PASSWORD=$(esc KC_ADMIN_PASSWORD)"
+            echo "HURURAA_BFF_CLIENT_SECRET=$(esc HURURAA_BFF_CLIENT_SECRET)"
+            echo "HURURAA_API_CLIENT_SECRET=$(esc HURURAA_API_CLIENT_SECRET)"
+            echo "POSTGRES_PASSWORD=$(esc POSTGRES_PASSWORD)"
+            echo "RABBITMQ_USER=hururaa-api"
+            echo "RABBITMQ_PASSWORD=$(esc RABBITMQ_PASSWORD)"
+            echo "MAILPIT_SMTP_PASSWORD=$(esc MAILPIT_SMTP_PASSWORD)"
+            echo "MAILPIT_UI_PASSWORD_HASH=$(esc MAILPIT_UI_PASSWORD_HASH)"
+            echo "GRAFANA_ADMIN_PASSWORD=$(esc GRAFANA_ADMIN_PASSWORD)"
+          } > deploy/.env
+          # rsync -a preserves the mode: the file holding every secret must not be world-readable on the host
+          chmod 600 deploy/.env
+        env:
+          KC_ADMIN_USERNAME: ${{ vars.KC_ADMIN_USERNAME }}
+          KC_ADMIN_PASSWORD: ${{ secrets.KC_ADMIN_PASSWORD }}
+          HURURAA_BFF_CLIENT_SECRET: ${{ secrets.HURURAA_BFF_CLIENT_SECRET }}
+          HURURAA_API_CLIENT_SECRET: ${{ secrets.HURURAA_API_CLIENT_SECRET }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          MAILPIT_SMTP_PASSWORD: ${{ secrets.MAILPIT_SMTP_PASSWORD }}
+          MAILPIT_UI_PASSWORD_HASH: ${{ secrets.MAILPIT_UI_PASSWORD_HASH }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+
+      - uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Trust the VPS host key
+        # Pinned when the VPS_KNOWN_HOSTS secret holds the host's known_hosts line(s), so that a
+        # host answering with another key fails the deployment instead of receiving every secret.
+        # Without it, trust-on-first-use on each run (the runner is new every time).
+        run: |
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          else
+            echo "::warning::VPS_KNOWN_HOSTS is not set: trusting whatever host key $VPS_HOST presents"
+            ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          fi
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+
+      - name: Upload the deployment files
+        run: |
+          rsync -az --delete deploy/ "$VPS:~/hururaa/deploy/"
+          rsync -az keycloak/HealthCheck.java "$VPS:~/hururaa/deploy/keycloak/HealthCheck.java"
+
+      - name: Pull and restart the stack
+        run: |
+          # unquoted heredoc: the credentials are expanded here and travel on stdin, not on a
+          # command line visible in the VPS process list
+          ssh "$VPS" bash -s <<EOT
+          set -euo pipefail
+          cd ~/hururaa/deploy
+          echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USER' --password-stdin
+          docker compose pull --quiet
+          # --wait: the job fails, with the state printed below, unless every service with a
+          # healthcheck reports healthy (the gateway and the API included) within the timeout
+          docker compose up -d --remove-orphans --wait --wait-timeout 300 || { docker compose ps; exit 1; }
+          # up -d leaves Caddy running when only its Caddyfile changed: reload it (graceful, and
+          # an invalid Caddyfile fails the job while the previous config keeps serving)
+          docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+          docker logout ghcr.io
+          docker image prune -f > /dev/null
+          docker compose ps
+          # nightly backup (see deploy/backup.sh and README.md), idempotent. The "|| true" keep
+          # set -e / pipefail from aborting on an empty crontab (crontab -l and grep -v both return 1).
+          { crontab -l 2> /dev/null || true; } | { grep -vF './backup.sh' || true; } > /tmp/crontab.new
+          # (through bash: the script's mode depends on how it was committed)
+          echo '15 3 * * * cd ~/hururaa/deploy && bash ./backup.sh >> ~/backups/backup.log 2>&1' >> /tmp/crontab.new
+          crontab /tmp/crontab.new && rm /tmp/crontab.new
+          EOT
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}

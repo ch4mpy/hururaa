@@ -1,0 +1,27 @@
+# Gitleaks configuration. CI runs gitleaks over the full history (`fetch-depth: 0` in ci.yml), and
+# gitleaks picks this file up automatically from the repository root.
+#
+# keycloak/import/*-realm.json are the development realm exports (Keycloak on host.docker.internal)
+# and carry client secrets on purpose. The demo deployment never uses their values:
+# deploy/keycloak/render-realms.sh replaces every client secret at deploy time.
+#
+# Rewriting them would not silence the scan anyway: the values are already in the git history that
+# CI scans. Should one of these ever become a real credential, rotate it in Keycloak rather than
+# widening this file.
+#
+# Scoped deliberately narrowly: only the `generic-api-key` rule is allowlisted, and only in those
+# paths. Every other rule (private keys, cloud credentials, provider tokens...) still fails the
+# scan in those same files, and `generic-api-key` still fails everywhere else.
+title = "Hurura'a gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Dev-only Keycloak realm exports"
+  paths = [
+    '''keycloak/import/[^/]+-realm\.json''',
+  ]

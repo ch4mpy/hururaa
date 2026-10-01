@@ -210,3 +210,45 @@ management:
     metrics:
       export:
         enabled: false
+---
+# Demo deployment (deploy/compose.yml): TLS is terminated by Caddy, every hop inside the Docker
+# network is plain HTTP and services are reached by their compose service name. Placeholders
+# built on reverse-proxy-uri (issuer, post-login/logout hosts, internal-logout-uri...) follow.
+spring:
+  config:
+    activate:
+      on-profile: demo
+  rabbitmq:
+    host: rabbitmq
+  ssl:
+    bundle:
+      pem:
+        self-signed:
+          # the bundle is unused (server TLS off) and, packaged in the jar, not watchable
+          reload-on-update: false
+reverse-proxy-uri: https://${DEMO_HOST}
+gateway-client-secret: ${HURURAA_BFF_CLIENT_SECRET}
+rest-api-v1: http://hururaa-api:8080
+server:
+  ssl:
+    enabled: false
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: http://grafana-lgtm:4318/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: http://grafana-lgtm:4318/v1/logs
+  otlp:
+    metrics:
+      export:
+        url: http://grafana-lgtm:4318/v1/metrics
+logging:
+  level:
+    "[org.springframework.security.config.annotation.web.configurers.oauth2.client.OidcBackChannelLogoutFilter]": INFO
+    "[org.springframework.security.config.annotation.web.configurers.oauth2.client.OidcBackChannelLogoutHandler]": INFO
+    "[org.springframework.security.config.annotation.web.configurers.oauth2.client.OidcLogoutAuthenticationConverter]": INFO
+    "[org.springframework.security.oauth2.client.oidc.session.InMemoryOidcSessionRegistry]": INFO

@@ -1,0 +1,202 @@
+# Demo deployment: the whole stack on a single host, TLS terminated by Caddy, plain HTTP inside
+# the Docker network. Variables come from ./.env (written by .github/workflows/deploy-demo.yml,
+# see README.md). Images are built by that workflow and pulled from GHCR: nothing is built here.
+name: hururaa-demo
+
+# The default json-file driver never rotates: on a host that runs for months this is the most
+# likely way for the demo to fall over. Every service below references this anchor.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+volumes:
+  caddy_data:
+  caddy_config:
+  keycloak_data:
+  rest_api_data:
+  mailpit_data:
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: hururaa.caddy
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DEMO_HOST: ${DEMO_HOST}
+      MAILPIT_UI_PASSWORD_HASH: ${MAILPIT_UI_PASSWORD_HASH}
+    volumes:
+      # the directory, not the file: rsync replaces the Caddyfile with a new inode, which a
+      # single-file bind mount never shows to the running container
+      - ./caddy/:/etc/caddy/:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      default:
+        # The other containers reach the public origin (OIDC issuer, back-channel logout) through
+        # Caddy directly rather than through the public IP, with the Let's Encrypt cert.
+        aliases:
+          - ${DEMO_HOST}
+
+  # one build, under /fr/ and /en/ (and /assets/ for pf-ui's images)
+  frontend:
+    image: ghcr.io/${IMAGE_OWNER}/hururaa-frontend:${IMAGE_TAG}
+    container_name: hururaa.frontend
+    restart: unless-stopped
+    logging: *default-logging
+
+  keycloak:
+    image: ghcr.io/${IMAGE_OWNER}/hururaa-keycloak:${IMAGE_TAG}
+    container_name: hururaa.keycloak
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - start
+      - --optimized
+      - --import-realm
+    environment:
+      # As environment rather than --bootstrap-admin-* arguments: a command line is readable in
+      # `docker inspect` and in the host's process list. Only read on the very first start.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_HOSTNAME: https://${DEMO_HOST}/auth/
+      KC_HOSTNAME_ADMIN: https://${DEMO_HOST}/auth/
+      # hururaa-api calls the admin REST API on http://keycloak:8080/auth
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: 'true'
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: 'true'
+    volumes:
+      - keycloak_data:/opt/keycloak/data/h2/
+      - ./keycloak/import/:/opt/keycloak/data/import/:ro
+      - ./keycloak/HealthCheck.java:/tmp/HealthCheck.java:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'java /tmp/HealthCheck.java http://localhost:9000/auth/health/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    mem_limit: 1200m
+
+  rest-api-db:
+    image: postgres:18
+    container_name: hururaa.rest-api-db
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_DB: rest_api
+      POSTGRES_USER: rest-api
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: 'Pacific/Tahiti'
+    volumes:
+      - rest_api_data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d rest_api -U rest-api -p 5432']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4
+    container_name: hururaa.rabbitmq
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      TZ: 'Pacific/Tahiti'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    mem_limit: 400m
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: hururaa.mailpit
+    restart: unless-stopped
+    logging: *default-logging
+    volumes:
+      - mailpit_data:/data
+    environment:
+      TZ: 'Pacific/Tahiti'
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      # the realm's smtpServer credentials, see keycloak/render-realms.sh
+      MP_SMTP_AUTH: mailpit:${MAILPIT_SMTP_PASSWORD}
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+      MP_WEBROOT: /mailpit/
+
+  grafana-lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: hururaa.grafana-lgtm
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      GF_SERVER_ROOT_URL: https://${DEMO_HOST}/grafana
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    mem_limit: 2g
+
+  gateway:
+    image: ghcr.io/${IMAGE_OWNER}/hururaa-gateway:${IMAGE_TAG}
+    container_name: hururaa.gateway
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SPRING_PROFILES_ACTIVE: demo
+      DEMO_HOST: ${DEMO_HOST}
+      HURURAA_BFF_CLIENT_SECRET: ${HURURAA_BFF_CLIENT_SECRET}
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+      TZ: 'Pacific/Tahiti'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:7081/actuator/health/readiness']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    mem_limit: 768m
+
+  hururaa-api:
+    image: ghcr.io/${IMAGE_OWNER}/hururaa-api:${IMAGE_TAG}
+    container_name: hururaa.api
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SPRING_PROFILES_ACTIVE: postgresql,demo
+      DEMO_HOST: ${DEMO_HOST}
+      HURURAA_API_CLIENT_SECRET: ${HURURAA_API_CLIENT_SECRET}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # the dev applications and delegations, matching the user ids of the imported realm (the
+      # demo runs the dev realm): see README.md
+      LIQUIBASE_CONTEXTS: dev
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+      TZ: 'Pacific/Tahiti'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8081/actuator/health/readiness']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      rest-api-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    mem_limit: 1g
