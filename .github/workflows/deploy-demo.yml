@@ -72,11 +72,11 @@ jobs:
           bash certs/self-signed.sh "$DEMO_HOST" "$SSL_PASSWORD" "$PWD/certs"
 
       - name: Generate OpenAPI specs
-        run: ./mvnw -B clean verify -Popenapi,h2 -DskipTests
+        run: bash ./mvnw -B clean verify -Popenapi,h2 -DskipTests
         working-directory: backend
 
       - name: Build and test backend
-        run: ./mvnw -B clean verify
+        run: bash ./mvnw -B clean verify
         working-directory: backend
 
       - name: Install frontend dependencies and generate API clients

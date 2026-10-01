@@ -54,7 +54,7 @@ jobs:
 
       # regenerated rather than committed: this is what catches a spec drifting from the code
       - name: Generate OpenAPI specs
-        run: ./mvnw -B clean verify -Popenapi,h2 -DskipTests
+        run: bash ./mvnw -B clean verify -Popenapi,h2 -DskipTests
         working-directory: backend
 
       # Fails once a version backend/pom.xml pins above the Spring Boot BOM is no longer needed:
@@ -63,7 +63,7 @@ jobs:
       - name: Check the Spring Boot version overrides
         run: bash backend/check-version-overrides.sh
       - name: Build and test (JaCoCo reports in */target/site/jacoco)
-        run: ./mvnw -B clean verify
+        run: bash ./mvnw -B clean verify
         working-directory: backend
 
       - uses: actions/upload-artifact@v7
