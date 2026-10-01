@@ -133,8 +133,9 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-gateway:latest
           build-args: |
             JAR=backend/gateway/target/gateway-*.jar
-          cache-from: type=gha,scope=gateway
-          cache-to: type=gha,scope=gateway,mode=max
+          # No layer cache, as for the frontend: a cached `apt-get upgrade` would keep serving the
+          # packages of its first run.
+          pull: true
 
       - name: Push hururaa-api
         uses: docker/build-push-action@v7
@@ -147,8 +148,9 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-api:latest
           build-args: |
             JAR=backend/hururaa-api/target/hururaa-api-*.jar
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,scope=api,mode=max
+          # No layer cache, as for the frontend: a cached `apt-get upgrade` would keep serving the
+          # packages of its first run.
+          pull: true
 
       - name: Push hururaa-frontend
         uses: docker/build-push-action@v7

@@ -12,8 +12,10 @@ RUN java -Djarmode=tools -jar app.jar extract --layers --destination extracted
 
 FROM eclipse-temurin:${JAVA_VERSION}-jre
 ENV TZ="Pacific/Tahiti"
+# Ubuntu publishes package fixes before Temurin rebuilds its image: take them without waiting.
 # curl is for the compose healthcheck (the JRE image ships neither curl nor wget)
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --create-home --shell /usr/sbin/nologin spring
