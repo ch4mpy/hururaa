@@ -73,7 +73,12 @@ Règles appliquées par l'API (bean `@uaa`, `pf.hururaa.uaa.UaaAuthorization`) :
   direction attribuent ses rôles (`APPLICATION_ROLES_STILL_GRANTED`) ; en changer retire ses
   gestionnaires ;
 - consulter une application (rôles, gestionnaires) ou une direction (administrateurs, groupes,
-  membres) est ouvert à quiconque a une délégation dessus, à n'importe quel niveau.
+  membres, historique des délégations) est ouvert à quiconque a une délégation dessus, à n'importe
+  quel niveau.
+
+L'historique des délégations d'une direction (qui a désigné ou retiré qui, et quand) est rejoué à
+partir de l'audit Envers des administrateurs de direction et des gestionnaires d'application. Ce
+qui vit dans Keycloak (membres des groupes, rôles qu'ils attribuent) n'y figure pas encore.
 
 Hurura'a est lui-même une application de la DSI : ses gestionnaires administrent le groupe `sipf`
 qui porte les rôles de la plateforme.
@@ -165,7 +170,9 @@ Tests : `./backend/mvnw -f backend/pom.xml clean install` (backend) et, dans `fr
 
 - saisir à l'enregistrement l'URL de l'application, pour que Hurura'a règle les URI de
   redirection de `<préfixe>-bff` au lieu de valeurs provisoires ;
-- exposer l'historique Envers des délégations (qui a désigné qui, quand) ;
+- historiser aussi les changements faits dans Keycloak via Hurura'a (membres des groupes, rôles
+  qu'ils attribuent), dans un journal propre à Hurura'a : Keycloak attribue ces changements au
+  compte de service de l'API, pas à la personne ;
 - décider si les administrateurs de direction doivent aussi pouvoir gérer les groupes ;
 - faire relayer à la plateforme les événements de toutes les directions (aujourd'hui, un
   utilisateur ne reçoit que ceux des directions dont il est membre).

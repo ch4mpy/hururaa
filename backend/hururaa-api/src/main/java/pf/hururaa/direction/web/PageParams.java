@@ -11,10 +11,11 @@ import jakarta.validation.constraints.Min;
  * {@link org.springframework.data.web.PagedModel PagedModel}.
  *
  * <p>
- * Deliberately carries no sort criteria: the data behind those endpoints comes from the Keycloak
- * Admin REST API, which exposes no ordering parameter (only {@code first} / {@code max}). Accepting
- * a {@link Pageable} would advertise a {@code sort} query parameter in the OpenAPI spec that could
- * only ever be silently discarded.
+ * Deliberately carries no sort criteria: the data behind those endpoints either comes from the
+ * Keycloak Admin REST API, which exposes no ordering parameter (only {@code first} / {@code max}),
+ * or has a fixed order (the delegation history, newest first). Accepting a {@link Pageable} would
+ * advertise a {@code sort} query parameter in the OpenAPI spec that could only ever be silently
+ * discarded.
  * </p>
  *
  * @param page zero-based page index, defaults to {@code 0} when absent

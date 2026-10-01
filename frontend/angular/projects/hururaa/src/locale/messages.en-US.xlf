@@ -730,6 +730,94 @@
           <context context-type="linenumber">149,151</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="direction.history" datatype="html">
+        <source>Historique des délégations</source>
+        <target>Delegation history</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">166,168</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.date" datatype="html">
+        <source>Date</source>
+        <target>Date</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">178,179</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.author" datatype="html">
+        <source>Par</source>
+        <target>By</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">180</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.change" datatype="html">
+        <source>Changement</source>
+        <target>Change</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">180,181</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.delegate" datatype="html">
+        <source>Personne concernée</source>
+        <target>Person concerned</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">181,183</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.empty" datatype="html">
+        <source>Aucun changement enregistré</source>
+        <target>No recorded change</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">194,196</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.unknownAuthor" datatype="html">
+        <source>Inconnu</source>
+        <target>Unknown</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">303</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.adminGranted" datatype="html">
+        <source>Désigné administrateur</source>
+        <target>Appointed administrator</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">314</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.adminRevoked" datatype="html">
+        <source>Retiré des administrateurs</source>
+        <target>Removed from administrators</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">315</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.managerGranted" datatype="html">
+        <source>Désigné gestionnaire de <x id="application" equiv-text="application"/></source>
+        <target>Appointed manager of <x id="application" equiv-text="application"/></target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">319</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="direction.history.managerRevoked" datatype="html">
+        <source>Retiré des gestionnaires de <x id="application" equiv-text="application"/></source>
+        <target>Removed from managers of <x id="application" equiv-text="application"/></target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
+          <context context-type="linenumber">320</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="direction.admin.added" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> désigné administrateur</source>
         <target><x id="user" equiv-text="userLabel(user)"/> appointed administrator</target>

@@ -12,7 +12,9 @@ import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.DSI;
+import static pf.hururaa.HururaaFixtures.SIPF_ADMIN;
 import static pf.hururaa.HururaaFixtures.user;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +33,10 @@ import com.c4_soft.springaddons.security.oauth2.test.webmvc.MockMvcSupport;
 import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.direction.DelegationHistoryService;
+import pf.hururaa.direction.domain.DelegationChange;
+import pf.hururaa.direction.domain.DelegationChange.Change;
+import pf.hururaa.direction.domain.DelegationChange.Delegation;
 import pf.hururaa.direction.domain.Direction;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
@@ -61,6 +67,9 @@ class DirectionControllerTest {
 
   @MockitoBean
   GroupService groupService;
+
+  @MockitoBean
+  DelegationHistoryService delegationHistoryService;
 
   @MockitoBean
   ResourceEventPublisher resourceEvents;
@@ -154,5 +163,47 @@ class DirectionControllerTest {
         .delete(DirectionController.ADMIN_PATH, DSI, "someone")
         .andExpect(status().isNoContent());
     verify(directionAdminRepository).delete(admin);
+  }
+
+  @Test
+  @WithAnonymousUser
+  void givenAnonymous_whenGetHistory_thenUnauthorized() throws Exception {
+    api.get(DirectionController.HISTORY_PATH, DPAM).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenMemberWithoutDelegation_whenGetHistory_thenForbidden() throws Exception {
+    api.get(DirectionController.HISTORY_PATH, DPAM).andExpect(status().isForbidden());
+    verify(delegationHistoryService, never()).findByDirection(any(), any());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenGetHistory_thenOk() throws Exception {
+    when(directionAdminRepository.existsByDirectionAndUserId(DPAM, DPAM_ADMIN)).thenReturn(true);
+    when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(1, 5)))
+        .thenReturn(new PageImpl<>(List.of(new DelegationChange(7L,
+            Instant.parse("2026-10-01T08:00:00Z"), user(SIPF_ADMIN, "sipf.admin"),
+            Delegation.DIRECTION_ADMIN, Change.GRANTED, user(DPAM_ADMIN, "dpam.admin"), null,
+            null)), PageRequest.of(1, 5), 6));
+
+    api
+        .get(DirectionController.HISTORY_PATH + "?page=1&size=5", DPAM)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].authorUsername").value("sipf.admin"))
+        .andExpect(jsonPath("$.content[0].delegateUsername").value("dpam.admin"))
+        .andExpect(jsonPath("$.content[0].change").value("GRANTED"))
+        .andExpect(jsonPath("$.page.totalElements").value(6));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenApplicationManager_whenGetHistory_thenOk() throws Exception {
+    when(applicationRepository.existsByDirectionAndManager(DPAM, DPAM_MANAGER)).thenReturn(true);
+    when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(0, 20)))
+        .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+    api.get(DirectionController.HISTORY_PATH, DPAM).andExpect(status().isOk());
   }
 }

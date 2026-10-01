@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.direction.DelegationHistoryService;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.events.DirectionEvents;
@@ -50,12 +51,15 @@ public class DirectionController {
   public static final String USERS_PATH = DIRECTION_PATH + "/users";
   public static final String USER_GROUPS_PATH =
       USERS_PATH + "/{" + USER_ID_PLACEHOLDER + "}/groups";
+  public static final String HISTORY_PATH = DIRECTION_PATH + "/history";
 
   private final DirectionService directionService;
 
   private final GroupService groupService;
 
   private final DirectionAdminRepository directionAdminRepository;
+
+  private final DelegationHistoryService delegationHistoryService;
 
   private final DirectoryMapper directoryMapper;
 
@@ -227,5 +231,33 @@ public class DirectionController {
         .stream()
         .map(directoryMapper::toGroupResponse)
         .toList();
+  }
+
+  /**
+   * Lists who designated or revoked whom, and when, in a direction: its administrators, and the
+   * managers of its applications (including applications since moved to another direction or
+   * deleted). Replayed from the audit trail, newest change first.
+   *
+   * <h4>Access control</h4>
+   * <p>
+   * Requires the user to have a say on the direction: platform administrator
+   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
+   * its applications.
+   * </p>
+   *
+   * @param direction the direction's alias
+   * @param pageParams the requested page index and size
+   * @return a page of the direction's delegation changes, with their author and delegate (one who
+   *         has left the direction and the platform is returned with their id as username)
+   */
+  @GetMapping(path = HISTORY_PATH)
+  @Transactional(readOnly = true)
+  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+  public PagedModel<DelegationChangeResponse> getDirectionHistory(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
+    return new PagedModel<>(delegationHistoryService
+        .findByDirection(direction, pageParams.toPageable())
+        .map(directoryMapper::toDelegationChangeResponse));
   }
 }

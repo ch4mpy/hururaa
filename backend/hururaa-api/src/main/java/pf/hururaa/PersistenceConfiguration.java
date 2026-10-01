@@ -65,7 +65,7 @@ public class PersistenceConfiguration {
   @Builder
   @EqualsAndHashCode(onlyExplicitlyIncluded = true)
   @ToString(onlyExplicitlyIncluded = true)
-  static class Revinfo implements Serializable {
+  public static class Revinfo implements Serializable {
     private static final long serialVersionUID = -5382427152828146876L;
 
     @Id

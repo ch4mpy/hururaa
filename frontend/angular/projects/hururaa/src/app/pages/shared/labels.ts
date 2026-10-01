@@ -4,8 +4,13 @@ import { MessageService } from 'primeng/api';
 
 /** Full name if known, otherwise the username. */
 export function userLabel(user: UserResponse): string {
-  const fullName = [user.firstName, user.lastName].filter((s) => !!s).join(' ');
-  return fullName || user.username;
+  return nameLabel(user.username, user.firstName, user.lastName);
+}
+
+/** Full name if known, otherwise the username. */
+export function nameLabel(username: string, firstName?: string, lastName?: string): string {
+  const fullName = [firstName, lastName].filter((s) => !!s).join(' ');
+  return fullName || username;
 }
 
 /**
