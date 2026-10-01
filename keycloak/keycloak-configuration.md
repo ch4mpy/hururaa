@@ -1,9 +1,8 @@
 # Keycloak configuration
 
 The dev realm is imported from `keycloak/import/public-facing-realm.json` when the Keycloak
-container starts without it (`docker compose down -v` to re-import). It was derived from Tickee's
-realm export (flows, client scopes and built-in clients), without its key pairs: Keycloak generates
-fresh ones on import. To persist changes made in the admin console, run `keycloak/export.sh`.
+container starts without it (`docker compose down -v` to re-import). It carries no key
+pairs: Keycloak generates fresh ones on import. To persist changes made in the admin console, run `keycloak/export.sh`.
 
 ## Realm `public-facing`
 

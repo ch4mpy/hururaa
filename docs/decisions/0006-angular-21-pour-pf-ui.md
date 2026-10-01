@@ -5,8 +5,7 @@ Statut : proposée.
 ## Contexte
 
 Le frontend doit utiliser les composants du design system de la Polynésie française, `pf-ui`
-(`21.0.14`, publié sur `bin.gov.pf`), basés sur PrimeNG 21. Tickee, dont Hurura'a est dérivé, est
-en Angular 22 avec Angular Material et Tailwind CSS.
+(`21.0.14`, publié sur `bin.gov.pf`), basés sur PrimeNG 21.
 
 PrimeNG 21 déclare `@angular/core ^21` en dépendance pair, PrimeNG 22 `^22`. `pf-ui` est publié
 comme un module unique (`fesm2022/pf-ui.mjs`) qui importe toutes ses dépendances, y compris celles

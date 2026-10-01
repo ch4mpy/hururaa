@@ -3,8 +3,8 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 Hurura'a is a proof of concept for the SIPF: a Keycloak-backed UAA delegating, direction by
-direction, the management of application permissions. It is a variant of Tickee (same stack and
-conventions); `README.md` (French) describes the model, the delegation chain and the dev users.
+direction, the management of application permissions. `README.md` (French) describes the model,
+the delegation chain and the dev users.
 
 ## Repository layout
 
@@ -29,7 +29,7 @@ and Docker-based dev infrastructure at the repo root.
 ## Commands
 
 ```bash
-./deploy-dev.sh           # (re-)builds and starts Keycloak, Postgres, Grafana LGTM, Mailpit, RabbitMQ, Nginx (same host ports as Tickee: stop Tickee's stack first)
+./deploy-dev.sh           # (re-)builds and starts Keycloak, Postgres, Grafana LGTM, Mailpit, RabbitMQ, Nginx (host ports 443, 3643, 2633, 5672...: stop any other stack using them first)
 ./build-openapi.sh        # regenerates backend/openapi/out/*.openapi.json (mvnw clean verify -Popenapi,h2 -DskipTests)
 ```
 
@@ -41,7 +41,7 @@ Frontend (`frontend/angular/`): `npm run start` (fr on 4200, en on 4205), `npm r
 
 ### Gateway (OAuth2 BFF)
 
-Same design as Tickee (read the spring-addons-starter-oidc README before touching its security config): session cookie + CSRF cookie/header for the SPA, `TokenRelay=` to `hururaa-api` on `/bff/api/v1/**`, tokens stored in the HTTP session, login/logout answering the target in a `Location` header (the SPA follows it with a real navigation), post-login/logout URIs via `X-POST-LOGIN-SUCCESS-URI` / `X-POST-LOGOUT-SUCCESS-URI`. Registration `hururaa-bff`, scopes `openid` and `organization:*`.
+Read the spring-addons-starter-oidc README before touching its security config. Session cookie + CSRF cookie/header for the SPA, `TokenRelay=` to `hururaa-api` on `/bff/api/v1/**`, tokens stored in the HTTP session, login/logout answering the target in a `Location` header (the SPA follows it with a real navigation), post-login/logout URIs via `X-POST-LOGIN-SUCCESS-URI` / `X-POST-LOGOUT-SUCCESS-URI`. Registration `hururaa-bff`, scopes `openid` and `organization:*`.
 
 - `/me` (`getMe`) always answers `200`: identity and `directions`, the organizations the user is a member of (with or without roles). What the user may do comes from the API's `/me/delegations`, not from the gateway.
 - `GET /bff/events/{tenant}` (`SseController`, `@tpe.isMember`) relays `hururaa-api`'s events of that direction; `SessionEndListener` pushes the `session` event when the HTTP session ends. Single gateway instance by decision (`docs/decisions/0002`).
@@ -52,7 +52,7 @@ Three levels (`README.md` §2): platform (token roles `hururaa.*` in the platfor
 
 ### Error responses (RFC 9457 problems)
 
-As in Tickee, in `pf.hururaa.problem`: closed `ProblemType` enum (URN `urn:hururaa:problem:<slug>`, parameters in its Javadoc), checked `HururaaProblemException` declared on endpoints and services (`rollbackFor` on writing transactions, `.unchecked()` in converters), `HururaaExceptionHandler` (5xx details logged, never sent). Adding a problem: a constant there, then a message in the frontend's `core/problem-messages.ts` (exhaustive record: compile error after `npm run api` until it exists), then the `angular-fix-i18n` skill.
+In `pf.hururaa.problem`: closed `ProblemType` enum (URN `urn:hururaa:problem:<slug>`, parameters in its Javadoc), checked `HururaaProblemException` declared on endpoints and services (`rollbackFor` on writing transactions, `.unchecked()` in converters), `HururaaExceptionHandler` (5xx details logged, never sent). Adding a problem: a constant there, then a message in the frontend's `core/problem-messages.ts` (exhaustive record: compile error after `npm run api` until it exists), then the `angular-fix-i18n` skill.
 
 ### Persistence
 

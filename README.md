@@ -14,10 +14,6 @@ Hurura'a :
 Une démonstration est en ligne sur https://hururaa.c4-soft.com, redéployée à chaque push sur
 `master` (voir [deploy/README.md](deploy/README.md)).
 
-Le projet est une variante de Tickee (même socle : Keycloak, BFF Spring Cloud Gateway, API REST
-Spring Boot qui pilote l'Admin API de Keycloak, SPA Angular, événements RabbitMQ relayés en SSE).
-Les différences sont listées en [fin de document](#7-différences-avec-tickee).
-
 ## 1. Modèle
 
 | Notion Hurura'a       | Où elle vit                                                                                 |
@@ -146,8 +142,8 @@ Prérequis : Git, JDK 26 et Maven (SDKMan : `sdk env install`), Node.js 24, Dock
 Docker Engine avec `127.0.0.1 host.docker.internal` dans `/etc/hosts`), `JAVA_HOME` positionné,
 et un accès à `https://bin.gov.pf/artifactory` pour installer `pf-ui`.
 
-L'infrastructure réutilise les ports de Tickee (443, 3643, 2633, 5672...) : arrêter celle de
-Tickee avant de lancer celle-ci (`docker compose -p tickee stop`).
+L'infrastructure occupe les ports 443, 3643, 2633, 5672... de l'hôte : arrêter toute autre pile
+qui les utilise avant de la lancer.
 
 `bash ./reset-dev-env.sh` initialise l'environnement (`.env`, `secrets/`, certificat auto-signé
 pour `host.docker.internal`), construit les images (reverse proxy, Keycloak avec import du royaume
@@ -176,18 +172,3 @@ Tests : `./backend/mvnw -f backend/pom.xml clean install` (backend) et, dans `fr
 - décider si les administrateurs de direction doivent aussi pouvoir gérer les groupes ;
 - faire relayer à la plateforme les événements de toutes les directions (aujourd'hui, un
   utilisateur ne reçoit que ceux des directions dont il est membre).
-
-## 7. Différences avec Tickee
-
-- Un seul royaume, `public-facing`, avec des utilisateurs locaux : pas de fournisseur d'identité
-  par tenant, pas de LDAP, pas de page de choix du tenant (une personne peut avoir des délégations
-  dans plusieurs directions).
-- Les permissions ne sont pas des rôles d'un client unique namespacés par tenant, mais les rôles
-  des clients `<préfixe>-api` de chaque application.
-- Plus de formulaires : le domaine de `hururaa-api` est celui des applications, directions,
-  groupes et délégations.
-- La gateway expose un seul `/me` (identité et directions d'appartenance) ; ce que l'utilisateur
-  peut faire vient de `GET /me/delegations` de l'API. Le flux SSE est ouvert à tout membre d'une
-  direction (`@tpe.isMember`).
-- Frontend en Angular 21 avec pf-ui / PrimeNG 21, PrimeFlex et Remix Icon au lieu d'Angular
-  Material et Tailwind CSS (décision 0006).

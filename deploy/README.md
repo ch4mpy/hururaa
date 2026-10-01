@@ -43,7 +43,7 @@ continuously to `https://hururaa.c4-soft.com` by
 
 1. Order the VPS (Ubuntu LTS, 8 GB RAM is comfortable with Grafana LGTM, 4 GB is too tight) and
    note its IP. Caddy publishes ports 80 and 443: the host cannot share them with another
-   deployment of the same kind (Tickee's demo, for instance).
+   deployment of the same kind.
 2. DNS: an `A` record for `hururaa.c4-soft.com` pointing at that IP (Caddy needs it to get its
    certificate).
 3. Generate an SSH key pair dedicated to the deployment (`ssh-keygen -t ed25519 -f hururaa-demo`)

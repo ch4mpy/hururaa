@@ -4,8 +4,7 @@ Une décision par fichier, numérotée, jamais modifiée après acceptation : un
 en remplace une autre (`Remplacée par`). Chaque fiche tient en une page : contexte, options
 envisagées, décision, conséquences.
 
-Les décisions 0001 à 0004 sont héritées de Tickee, dont Hurura'a est dérivé : elles portent sur
-le socle commun (pile technique, gateway, événements, actuator) et restent valables ici.
+Les décisions 0001 à 0004 portent sur le socle technique (pile, gateway, événements, actuator).
 
 Statuts : `proposée` (en attente d'arbitrage), `acceptée`, `remplacée par NNNN`.
 
