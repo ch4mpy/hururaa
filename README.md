@@ -11,6 +11,9 @@ Hurura'a :
 - gère, pour chaque application, qui a le droit d'en gérer les permissions : définition des rôles,
   agrégation des rôles en groupes, affectation des utilisateurs aux groupes.
 
+Une démonstration est en ligne sur https://hururaa.c4-soft.com, redéployée à chaque push sur
+`master` (voir [deploy/README.md](deploy/README.md)).
+
 Le projet est une variante de Tickee (même socle : Keycloak, BFF Spring Cloud Gateway, API REST
 Spring Boot qui pilote l'Admin API de Keycloak, SPA Angular, événements RabbitMQ relayés en SSE).
 Les différences sont listées en [fin de document](#7-différences-avec-tickee).
@@ -165,8 +168,7 @@ Tests : `./backend/mvnw -f backend/pom.xml clean install` (backend) et, dans `fr
 - exposer l'historique Envers des délégations (qui a désigné qui, quand) ;
 - décider si les administrateurs de direction doivent aussi pouvoir gérer les groupes ;
 - faire relayer à la plateforme les événements de toutes les directions (aujourd'hui, un
-  utilisateur ne reçoit que ceux des directions dont il est membre) ;
-- CI et déploiement de démonstration (le dépôt Tickee en contient, non repris ici faute de cible).
+  utilisateur ne reçoit que ceux des directions dont il est membre).
 
 ## 7. Différences avec Tickee
 
