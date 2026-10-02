@@ -27,8 +27,11 @@ import pf.hururaa.application.domain.Application;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.keycloak.ClientRoleService;
+import pf.hururaa.direction.domain.DelegatedDirection;
+import pf.hururaa.direction.web.DirectionController;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.uaa.HururaaPermission;
 
 @Tag(name = "Application Roles")
 @RestController
@@ -38,10 +41,12 @@ import pf.hururaa.problem.HururaaProblemException;
 @Observed
 @Slf4j
 public class ApplicationRoleController {
+  public static final String DIRECTION_PLACEHOLDER = DirectionController.DIRECTION_PLACEHOLDER;
   public static final String APPLICATION_ID_PLACEHOLDER =
       ApplicationController.APPLICATION_ID_PLACEHOLDER;
   public static final String ROLE_PLACEHOLDER = "role";
-  public static final String BASE_PATH = ApplicationController.APPLICATION_PATH + "/roles";
+  public static final String BASE_PATH =
+      ApplicationController.DIRECTION_APPLICATION_PATH + "/roles";
   public static final String ROLE_PATH = BASE_PATH + "/{" + ROLE_PLACEHOLDER + "}";
 
   private final ClientRoleService clientRoleService;
@@ -59,16 +64,21 @@ public class ApplicationRoleController {
    * <p>
    * Requires the user to have a say on the application: platform administrator
    * ({@code hururaa.applications.manage}), administrator of its direction, or manager of the
-   * application.
+   * application. The application must be managed by {@code direction}.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @return the application's roles, by name
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadApplication(authentication, #application)")
+@PreAuthorize("(hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
+      + " and #application.direction == #direction.alias")
   public List<ApplicationRoleResponse> getApplicationRoles(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application)
       throws HururaaProblemException {
@@ -85,17 +95,21 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a manager of the application.
+   * Requires the user to be a manager of the application, which must be managed by
+   * {@code direction}.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @param request the role to define
    * @return the location of the role
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("@uaa.isApplicationManager(authentication, #application)")
+  @PreAuthorize("#application.isManagedBy(authentication.name)"
+      + " and #application.direction == #direction.alias")
   public ResponseEntity<Void> createApplicationRole(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @RequestBody @Valid ApplicationRoleRequest request,
@@ -109,7 +123,7 @@ public class ApplicationRoleController {
     final var location = ServletUriComponentsBuilder
         .fromCurrentContextPath()
         .path(ROLE_PATH)
-        .buildAndExpand(application.getId(), request.name())
+        .buildAndExpand(direction.alias(), application.getId(), request.name())
         .toUri();
     return ResponseEntity.created(location).build();
   }
@@ -120,17 +134,21 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a manager of the application.
+   * Requires the user to be a manager of the application, which must be managed by
+   * {@code direction}.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @param role the role's name
    */
   @DeleteMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isApplicationManager(authentication, #application)")
+  @PreAuthorize("#application.isManagedBy(authentication.name)"
+      + " and #application.direction == #direction.alias")
   public void deleteApplicationRole(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,

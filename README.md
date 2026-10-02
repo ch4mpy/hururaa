@@ -56,10 +56,14 @@ Plateforme (rôles hururaa.* dans l'organisation dsi, groupe « sipf »)
            └─ affecte les membres de la direction aux groupes
 ```
 
-Règles appliquées par l'API (bean `@uaa`, `pf.hururaa.uaa.UaaAuthorization`) :
+Règles appliquées par l'API, écrites dans les `@PreAuthorize` des endpoints. Les variables de
+chemin `{direction}`, `{group}` et `{applicationId}` y sont résolues en objets portant leurs
+délégations (404 si la direction, le groupe ou l'application n'existe pas, avant toute règle
+d'accès), par exemple `#direction.isAdministeredBy(authentication.name)` :
 
 - les rôles `hururaa.*` ne valent que dans l'organisation plateforme (`uaa.platform-organization`,
-  `dsi` en dev) : portés par un groupe d'une autre direction, ils ne donnent rien ;
+  `dsi` en dev), où ils deviennent les authorities de l'utilisateur : portés par un groupe d'une
+  autre direction, ils ne donnent rien ;
 - un groupe n'attribue que des rôles d'applications gérées par sa propre direction
   (`APPLICATION_NOT_IN_DIRECTION` sinon) : c'est Hurura'a qui l'impose, Keycloak ne sait pas
   rattacher un client à une organisation ;
@@ -70,7 +74,9 @@ Règles appliquées par l'API (bean `@uaa`, `pf.hururaa.uaa.UaaAuthorization`) :
   gestionnaires ;
 - consulter une application (rôles, gestionnaires) ou une direction (administrateurs, groupes,
   membres, historique des délégations) est ouvert à quiconque a une délégation dessus, à n'importe
-  quel niveau.
+  quel niveau ;
+- les rôles et les gestionnaires d'une application sont adressés sous sa direction
+  (`/directions/{direction}/applications/{applicationId}/...`), et seulement sous elle.
 
 L'historique des délégations d'une direction (qui a désigné ou retiré qui, et quand) est rejoué à
 partir de l'audit Envers des administrateurs de direction et des gestionnaires d'application. Ce

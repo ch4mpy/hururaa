@@ -13,6 +13,7 @@ import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +37,7 @@ import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 
 /**
@@ -75,14 +77,17 @@ class GroupControllerTest {
   GroupService groupService;
 
   @MockitoBean
+  DirectionService directionService;
+
+  @MockitoBean
   ResourceEventPublisher resourceEvents;
 
   @BeforeEach
   void setUp() throws Exception {
+    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
     when(applicationRepository.findById(TE_FENUA_ID)).thenReturn(Optional.of(teFenua()));
     when(applicationRepository.findById(7L)).thenReturn(Optional.of(pgc()));
-    when(applicationRepository.existsByDirectionAndManager(DPAM, DPAM_MANAGER)).thenReturn(true);
     when(applicationRepository.findByDirectionOrderByNameAsc(DPAM))
         .thenReturn(List.of(escales(), pgc()));
     when(groupService.findByName(DPAM, GROUP))
@@ -194,8 +199,30 @@ class GroupControllerTest {
   @Test
   @WithJwt("jwt/sipf-admin.json")
   void givenPlatformAdmin_whenAddMember_thenForbidden() throws Exception {
+    when(groupService.findByName(DSI, "sipf"))
+        .thenReturn(Optional.of(new Group("g0", DSI, "sipf")));
+
     // platform administrators read everything, but only application managers grant roles
     api.put(Map.of(), GroupController.MEMBER_PATH, DSI, "sipf", DPAM_AGENT)
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenUnknownGroup_whenDeleteGroup_thenNotFound() throws Exception {
+    api
+        .delete(GroupController.GROUP_PATH, DPAM, "no-such-group")
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(ProblemType.GROUP_NOT_FOUND.uri().toString()));
+    verify(groupService, never()).delete(anyString(), anyString());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenUnknownDirection_whenGetGroups_thenNotFound() throws Exception {
+    api
+        .get(GroupController.BASE_PATH, "no-such-direction")
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(ProblemType.DIRECTION_NOT_FOUND.uri().toString()));
   }
 }

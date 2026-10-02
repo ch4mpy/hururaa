@@ -26,7 +26,15 @@ const PAGE_SIZE = 10;
  */
 @Component({
   selector: 'app-group-detail',
-  imports: [PfPageComponent, RouterLink, FormsModule, ButtonModule, SelectModule, TableModule, UserPicker],
+  imports: [
+    PfPageComponent,
+    RouterLink,
+    FormsModule,
+    ButtonModule,
+    SelectModule,
+    TableModule,
+    UserPicker,
+  ],
   template: `
     <pf-page [withPadding]="true">
       <ng-template #title>{{ group() }}</ng-template>
@@ -188,9 +196,7 @@ export class GroupDetail {
 
   /** The applications of this direction whose roles the user may grant. */
   protected readonly managedApplications = computed(() =>
-    this.delegations
-      .current()
-      .managedApplications.filter((a) => a.direction === this.direction()),
+    this.delegations.current().managedApplications.filter((a) => a.direction === this.direction()),
   );
 
   protected readonly roles = rxResource({
@@ -211,7 +217,8 @@ export class GroupDetail {
 
   protected readonly grantableRoles = rxResource({
     params: () => this.grantApplicationId(),
-    stream: ({ params }) => (params ? this.rolesApi.getApplicationRoles(params) : of([])),
+    stream: ({ params }) =>
+      params ? this.rolesApi.getApplicationRoles(this.direction(), params) : of([]),
   });
 
   constructor() {
@@ -236,11 +243,13 @@ export class GroupDetail {
     if (!applicationId || !role) {
       return;
     }
-    this.groupsApi.addGroupRole(this.direction(), this.group(), applicationId, role).subscribe(() => {
-      this.grantRole = undefined;
-      this.notify($localize`:@@group.role.added:Le groupe attribue désormais ${role}:role:`);
-      this.roles.reload();
-    });
+    this.groupsApi
+      .addGroupRole(this.direction(), this.group(), applicationId, role)
+      .subscribe(() => {
+        this.grantRole = undefined;
+        this.notify($localize`:@@group.role.added:Le groupe attribue désormais ${role}:role:`);
+        this.roles.reload();
+      });
   }
 
   protected removeRole(role: GroupRoleResponse): void {

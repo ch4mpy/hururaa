@@ -33,12 +33,14 @@ import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.direction.domain.DelegatedDirection;
+import pf.hururaa.direction.domain.DelegatedGroup;
 import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
-import pf.hururaa.uaa.UaaAuthorization;
+import pf.hururaa.uaa.HururaaPermission;
 
 @Tag(name = "Groups")
 @RestController
@@ -67,8 +69,6 @@ public class GroupController {
 
   private final KeycloakAdminApiProperties keycloakProperties;
 
-  private final UaaAuthorization uaa;
-
   private final DirectoryMapper directoryMapper;
 
   private final ResourceEventPublisher resourceEvents;
@@ -88,11 +88,16 @@ public class GroupController {
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+@PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #direction.hasDelegate(authentication.name)")
   public List<GroupResponse> getGroups(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction)
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
       throws HururaaProblemException {
-    return groupService.findAll(direction).stream().map(directoryMapper::toGroupResponse).toList();
+    return groupService
+        .findAll(direction.alias())
+        .stream()
+        .map(directoryMapper::toGroupResponse)
+        .toList();
   }
 
   /**
@@ -110,25 +115,25 @@ public class GroupController {
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("@uaa.isManagerInDirection(authentication, #direction)")
+  @PreAuthorize("#direction.isManagedBy(authentication.name)")
   public ResponseEntity<Void> createGroup(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestBody @Valid GroupRequest request,
       Authentication authentication) throws HururaaProblemException {
-    final var group = groupService.save(direction, request.name());
-    log.info("{} created group {} in {}", authentication.getName(), group.name(), direction);
-    publish(direction, group.name(), EventType.CREATE);
+    final var group = groupService.save(direction.alias(), request.name());
+    log.info("{} created group {} in {}", authentication.getName(), group.name(),
+        direction.alias());
+    publish(direction.alias(), group.name(), EventType.CREATE);
     final var location = ServletUriComponentsBuilder
         .fromCurrentContextPath()
         .path(GROUP_PATH)
-        .buildAndExpand(direction, group.name())
+        .buildAndExpand(direction.alias(), group.name())
         .toUri();
     return ResponseEntity.created(location).build();
   }
 
   /**
-   * Deletes a group, which revokes the roles it granted from its members. Idempotent: does nothing
-   * when no group has that name.
+   * Deletes a group, which revokes the roles it granted from its members.
    *
    * <h4>Access control</h4>
    * <p>
@@ -137,23 +142,20 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    */
   @DeleteMapping(path = GROUP_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isManagerInDirection(authentication, #direction)")
+@PreAuthorize("#group.isManageableBy(authentication.name)")
   public void deleteGroup(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       Authentication authentication) throws HururaaProblemException {
-    if (groupService.findByName(direction, group).isEmpty()) {
-      return;
-    }
-    uaa.checkCanManageGroup(authentication, direction, group);
-    groupService.delete(direction, group);
-    log.info("{} deleted group {} of {}", authentication.getName(), group, direction);
-    publish(direction, group, EventType.DELETE);
+    groupService.delete(direction, group.name());
+    log.info("{} deleted group {} of {}", authentication.getName(), group.name(), direction);
+    publish(direction, group.name(), EventType.DELETE);
   }
 
   /**
@@ -168,19 +170,22 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    * @return the roles granted by the group, by application name then role name
    */
   @GetMapping(path = ROLES_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+@PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #group.direction.hasDelegate(authentication.name)")
   public List<GroupRoleResponse> getGroupRoles(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group) throws HururaaProblemException {
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group)
+      throws HururaaProblemException {
     final var roles = new ArrayList<GroupRoleResponse>();
     for (final var application : applicationRepository.findByDirectionOrderByNameAsc(direction)) {
       final var clientId = keycloakProperties.apiClientId(application.getClientPrefix());
-      for (final var role : groupService.findClientRoles(direction, group, clientId)) {
+      for (final var role : groupService.findClientRoles(direction, group.name(), clientId)) {
         roles.add(new GroupRoleResponse(Objects.requireNonNull(application.getId()),
             application.getName(), clientId, role));
       }
@@ -197,7 +202,7 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    * @param application the application resolved from the {@code applicationId} path variable,
    *        which must be managed by {@code direction}
    * @param role the name of one of the application's roles
@@ -205,20 +210,21 @@ public class GroupController {
   @PutMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isApplicationManager(authentication, #application)")
+  @PreAuthorize("#application.isManagedBy(authentication.name)")
   public void addGroupRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
     requireInDirection(application, direction);
-    groupService.addClientRole(direction, group,
+    groupService.addClientRole(direction, group.name(),
         keycloakProperties.apiClientId(application.getClientPrefix()), role);
-    log.info("{} made group {} of {} grant role {} of {}", authentication.getName(), group,
-        direction, role, application.getClientPrefix());
-    publish(direction, group, EventType.UPDATE);
+    log.info("{} made group {} of {} grant role {} of {}", authentication.getName(),
+        group.name(), direction, role, application.getClientPrefix());
+    publish(direction, group.name(), EventType.UPDATE);
   }
 
   /**
@@ -230,7 +236,7 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    * @param application the application resolved from the {@code applicationId} path variable,
    *        which must be managed by {@code direction}
    * @param role the name of one of the application's roles
@@ -238,20 +244,21 @@ public class GroupController {
   @DeleteMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isApplicationManager(authentication, #application)")
+  @PreAuthorize("#application.isManagedBy(authentication.name)")
   public void removeGroupRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
     requireInDirection(application, direction);
-    groupService.removeClientRole(direction, group,
+    groupService.removeClientRole(direction, group.name(),
         keycloakProperties.apiClientId(application.getClientPrefix()), role);
     log.info("{} made group {} of {} stop granting role {} of {}", authentication.getName(),
-        group, direction, role, application.getClientPrefix());
-    publish(direction, group, EventType.UPDATE);
+        group.name(), direction, role, application.getClientPrefix());
+    publish(direction, group.name(), EventType.UPDATE);
   }
 
   /**
@@ -270,19 +277,21 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    * @param pageParams the requested page index and size
    * @return a page of the group's members
    */
   @GetMapping(path = MEMBERS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+@PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #group.direction.hasDelegate(authentication.name)")
   public PagedModel<UserResponse> getGroupMembers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
     return new PagedModel<>(groupService
-        .findMembers(direction, group, pageParams.toPageable())
+        .findMembers(direction, group.name(), pageParams.toPageable())
         .map(directoryMapper::toUserResponse));
   }
 
@@ -296,22 +305,23 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    * @param userId the added user's id; must be a member of the direction
    */
   @PutMapping(path = MEMBER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isManagerInDirection(authentication, #direction)")
+@PreAuthorize("#group.isManageableBy(authentication.name)")
   public void addGroupMember(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    uaa.checkCanManageGroup(authentication, direction, group);
-    groupService.addMember(direction, group, userId);
-    log.info("{} added {} to group {} of {}", authentication.getName(), userId, group, direction);
-    publish(direction, group, EventType.UPDATE);
+    groupService.addMember(direction, group.name(), userId);
+    log.info("{} added {} to group {} of {}", authentication.getName(), userId, group.name(),
+        direction);
+    publish(direction, group.name(), EventType.UPDATE);
   }
 
   /**
@@ -324,23 +334,23 @@ public class GroupController {
    * </p>
    *
    * @param direction the direction's alias
-   * @param group the group's name
+   * @param group the group resolved from its name
    * @param userId the removed user's id
    */
   @DeleteMapping(path = MEMBER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isManagerInDirection(authentication, #direction)")
+@PreAuthorize("#group.isManageableBy(authentication.name)")
   public void removeGroupMember(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
-      @PathVariable(name = GROUP_PLACEHOLDER) String group,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    uaa.checkCanManageGroup(authentication, direction, group);
-    groupService.removeMember(direction, group, userId);
-    log.info("{} removed {} from group {} of {}", authentication.getName(), userId, group,
-        direction);
-    publish(direction, group, EventType.UPDATE);
+    groupService.removeMember(direction, group.name(), userId);
+    log.info("{} removed {} from group {} of {}", authentication.getName(), userId,
+        group.name(), direction);
+    publish(direction, group.name(), EventType.UPDATE);
   }
 
   /**

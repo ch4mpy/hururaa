@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.direction.DelegationHistoryService;
+import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.events.DirectionEvents;
@@ -99,13 +100,15 @@ public class DirectionController {
    */
   @GetMapping(path = ADMINS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #direction.hasDelegate(authentication.name)")
   public List<UserResponse> getDirectionAdmins(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction)
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
       throws HururaaProblemException {
     final var admins = new ArrayList<UserResponse>();
-    for (final var admin : directionAdminRepository.findByDirectionOrderByUserId(direction)) {
-      final var member = directionService.findMember(direction, admin.getUserId());
+    for (final var admin : directionAdminRepository
+        .findByDirectionOrderByUserId(direction.alias())) {
+      final var member = directionService.findMember(direction.alias(), admin.getUserId());
       admins.add(member.isPresent() ? directoryMapper.toUserResponse(member.get())
           : new UserResponse(admin.getUserId(), admin.getUserId(), null, null, null));
     }
@@ -127,20 +130,19 @@ public class DirectionController {
   @PutMapping(path = ADMIN_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.hasPlatformPermission(authentication, '"
-      + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')")
   public void addDirectionAdmin(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    directionService.requireMember(direction, userId);
-    if (!directionAdminRepository.existsByDirectionAndUserId(direction, userId)) {
+    directionService.requireMember(direction.alias(), userId);
+    if (!directionAdminRepository.existsByDirectionAndUserId(direction.alias(), userId)) {
       directionAdminRepository
-          .save(DirectionAdmin.builder().direction(direction).userId(userId).build());
+          .save(DirectionAdmin.builder().direction(direction.alias()).userId(userId).build());
       log.info("{} designated {} as administrator of {}", authentication.getName(), userId,
-          direction);
-      resourceEvents.publish(
-          DirectionEvents.of(direction, DirectionEvents.DIRECTION, direction, EventType.UPDATE));
+          direction.alias());
+      resourceEvents.publish(DirectionEvents.of(direction.alias(), DirectionEvents.DIRECTION,
+          direction.alias(), EventType.UPDATE));
     }
   }
 
@@ -158,18 +160,18 @@ public class DirectionController {
   @DeleteMapping(path = ADMIN_PATH)
   @Transactional
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.hasPlatformPermission(authentication, '"
-      + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')")
   public void removeDirectionAdmin(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) {
-    final var admin = directionAdminRepository.findByDirectionAndUserId(direction, userId);
+    final var admin = directionAdminRepository.findByDirectionAndUserId(direction.alias(), userId);
     if (admin.isPresent()) {
       directionAdminRepository.delete(admin.get());
-      log.info("{} revoked {} as administrator of {}", authentication.getName(), userId, direction);
-      resourceEvents.publish(
-          DirectionEvents.of(direction, DirectionEvents.DIRECTION, direction, EventType.UPDATE));
+      log.info("{} revoked {} as administrator of {}", authentication.getName(), userId,
+          direction.alias());
+      resourceEvents.publish(DirectionEvents.of(direction.alias(), DirectionEvents.DIRECTION,
+          direction.alias(), EventType.UPDATE));
     }
   }
 
@@ -196,13 +198,14 @@ public class DirectionController {
    */
   @GetMapping(path = USERS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #direction.hasDelegate(authentication.name)")
   public PagedModel<UserResponse> getDirectionUsers(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestParam(required = false, defaultValue = "") String search,
       @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
     return new PagedModel<>(directionService
-        .searchMembers(direction, search, pageParams.toPageable())
+        .searchMembers(direction.alias(), search, pageParams.toPageable())
         .map(directoryMapper::toUserResponse));
   }
 
@@ -222,12 +225,13 @@ public class DirectionController {
    */
   @GetMapping(path = USER_GROUPS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #direction.hasDelegate(authentication.name)")
   public List<GroupResponse> getDirectionUserGroups(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId) throws HururaaProblemException {
     return groupService
-        .findByMember(direction, userId)
+        .findByMember(direction.alias(), userId)
         .stream()
         .map(directoryMapper::toGroupResponse)
         .toList();
@@ -252,12 +256,13 @@ public class DirectionController {
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadDirection(authentication, #direction)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+      + " or #direction.hasDelegate(authentication.name)")
   public PagedModel<DelegationChangeResponse> getDirectionHistory(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
     return new PagedModel<>(delegationHistoryService
-        .findByDirection(direction, pageParams.toPageable())
+        .findByDirection(direction.alias(), pageParams.toPageable())
         .map(directoryMapper::toDelegationChangeResponse));
   }
 }

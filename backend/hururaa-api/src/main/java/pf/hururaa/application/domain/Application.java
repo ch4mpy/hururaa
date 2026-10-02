@@ -107,4 +107,9 @@ public class Application implements Serializable {
   @Column(name = "USER_ID", nullable = false)
   @Builder.Default
   private Set<String> managers = new HashSet<>();
+
+  /** Whether the user was designated manager of the application. */
+  public boolean isManagedBy(String userId) {
+    return managers.contains(userId);
+  }
 }

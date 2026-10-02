@@ -40,7 +40,8 @@ utilisateurs au groupe `sipf` qui porte ses rôles.
 ## Conséquences
 
 - Les délégations de niveaux 2 et 3 prennent effet immédiatement (lues en base à chaque requête,
-  bean `@uaa`), sans reconnexion.
+  à la résolution des variables de chemin sur lesquelles portent les règles d'accès), sans
+  reconnexion.
 - La gateway ne connaît pas ces délégations : les événements de Hurura'a sont adressés à tous les
   membres de la direction (`ResourceEvent.ALL_MEMBERS`), le frontend relit ensuite par l'API avec
   ses propres droits. Les événements ne portant aucune donnée, seule l'existence d'un changement

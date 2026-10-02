@@ -25,10 +25,13 @@ import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.direction.domain.DelegatedDirection;
+import pf.hururaa.direction.web.DirectionController;
 import pf.hururaa.direction.web.DirectoryMapper;
 import pf.hururaa.direction.web.UserResponse;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.uaa.HururaaPermission;
 
 @Tag(name = "Application Managers")
 @RestController
@@ -38,10 +41,12 @@ import pf.hururaa.problem.HururaaProblemException;
 @Observed
 @Slf4j
 public class ApplicationManagerController {
+  public static final String DIRECTION_PLACEHOLDER = DirectionController.DIRECTION_PLACEHOLDER;
   public static final String APPLICATION_ID_PLACEHOLDER =
       ApplicationController.APPLICATION_ID_PLACEHOLDER;
   public static final String USER_ID_PLACEHOLDER = "userId";
-  public static final String BASE_PATH = ApplicationController.APPLICATION_PATH + "/managers";
+  public static final String BASE_PATH =
+      ApplicationController.DIRECTION_APPLICATION_PATH + "/managers";
   public static final String MANAGER_PATH = BASE_PATH + "/{" + USER_ID_PLACEHOLDER + "}";
 
   private final ApplicationRepository applicationRepository;
@@ -60,17 +65,22 @@ public class ApplicationManagerController {
    * <p>
    * Requires the user to have a say on the application: platform administrator
    * ({@code hururaa.applications.manage}), administrator of its direction, or manager of the
-   * application.
+   * application. The application must be managed by {@code direction}.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @return the application's managers, by username (a manager who has left the direction is
    *         listed with their id as username)
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("@uaa.canReadApplication(authentication, #application)")
+@PreAuthorize("(hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
+      + " and #application.direction == #direction.alias")
   public List<UserResponse> getApplicationManagers(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application)
       throws HururaaProblemException {
@@ -89,17 +99,21 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be an administrator of the application's direction.
+   * Requires the user to be an administrator of {@code direction}, which must manage the
+   * application.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @param userId the designated user's id; must be a member of the application's direction
    */
   @PutMapping(path = MANAGER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isDirectionAdmin(authentication, #application.direction)")
+  @PreAuthorize("#direction.isAdministeredBy(authentication.name)"
+      + " and #application.direction == #direction.alias")
   public void addApplicationManager(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
@@ -119,17 +133,21 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be an administrator of the application's direction.
+   * Requires the user to be an administrator of {@code direction}, which must manage the
+   * application.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @param userId the revoked manager's id
    */
   @DeleteMapping(path = MANAGER_PATH)
   @Transactional
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.isDirectionAdmin(authentication, #application.direction)")
+  @PreAuthorize("#direction.isAdministeredBy(authentication.name)"
+      + " and #application.direction == #direction.alias")
   public void removeApplicationManager(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,

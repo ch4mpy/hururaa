@@ -11,11 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pf.hururaa.HururaaFixtures.DPAM;
-import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
+import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.user;
 import java.util.List;
 import java.util.Map;
@@ -77,9 +78,9 @@ class ApplicationRoleAndManagerControllersTest {
   ResourceEventPublisher resourceEvents;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws Exception {
+    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
-    when(directionAdminRepository.existsByDirectionAndUserId(DPAM, DPAM_ADMIN)).thenReturn(true);
   }
 
   // ---------- roles ----------
@@ -87,7 +88,9 @@ class ApplicationRoleAndManagerControllersTest {
   @Test
   @WithJwt("jwt/dpam-agent.json")
   void givenMemberWithoutDelegation_whenGetRoles_thenForbidden() throws Exception {
-    api.get(ApplicationRoleController.BASE_PATH, ESCALES_ID).andExpect(status().isForbidden());
+    api
+        .get(ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isForbidden());
   }
 
   @Test
@@ -97,7 +100,7 @@ class ApplicationRoleAndManagerControllersTest {
         .thenReturn(List.of(new ApplicationRole("escales.stopovers.read", "Consulter")));
 
     api
-        .get(ApplicationRoleController.BASE_PATH, ESCALES_ID)
+        .get(ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].name").value("escales.stopovers.read"))
         .andExpect(jsonPath("$[0].description").value("Consulter"));
@@ -106,7 +109,7 @@ class ApplicationRoleAndManagerControllersTest {
   @Test
   @WithJwt("jwt/sipf-admin.json")
   void givenPlatformAdmin_whenGetRoles_thenOk() throws Exception {
-    api.get(ApplicationRoleController.BASE_PATH, ESCALES_ID).andExpect(status().isOk());
+    api.get(ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID).andExpect(status().isOk());
   }
 
   @Test
@@ -114,7 +117,7 @@ class ApplicationRoleAndManagerControllersTest {
   void givenDirectionAdmin_whenCreateRole_thenForbidden() throws Exception {
     api
         .post(new ApplicationRoleRequest("escales.stopovers.delete", null),
-            ApplicationRoleController.BASE_PATH, ESCALES_ID)
+            ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isForbidden());
     verify(clientRoleService, never()).save(anyString(), anyString(), any());
   }
@@ -124,7 +127,7 @@ class ApplicationRoleAndManagerControllersTest {
   void givenManagerOfAnotherApplication_whenCreateRole_thenForbidden() throws Exception {
     api
         .post(new ApplicationRoleRequest("escales.stopovers.delete", null),
-            ApplicationRoleController.BASE_PATH, ESCALES_ID)
+            ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isForbidden());
   }
 
@@ -133,10 +136,10 @@ class ApplicationRoleAndManagerControllersTest {
   void givenApplicationManager_whenCreateRole_thenCreatedOnTheApiClient() throws Exception {
     api
         .post(new ApplicationRoleRequest("escales.stopovers.delete", "Supprimer une escale"),
-            ApplicationRoleController.BASE_PATH, ESCALES_ID)
+            ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isCreated())
         .andExpect(header().string("Location",
-            endsWith("/applications/3/roles/escales.stopovers.delete")));
+            endsWith("/directions/dpam/applications/3/roles/escales.stopovers.delete")));
     verify(clientRoleService)
         .save("escales-api", "escales.stopovers.delete", "Supprimer une escale");
   }
@@ -146,7 +149,7 @@ class ApplicationRoleAndManagerControllersTest {
   void givenInvalidRoleName_whenCreateRole_thenUnprocessable() throws Exception {
     api
         .post(new ApplicationRoleRequest("Not a role", null), ApplicationRoleController.BASE_PATH,
-            ESCALES_ID)
+            DPAM, ESCALES_ID)
         .andExpect(status().isUnprocessableContent());
   }
 
@@ -154,7 +157,7 @@ class ApplicationRoleAndManagerControllersTest {
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenDeleteRole_thenNoContent() throws Exception {
     api
-        .delete(ApplicationRoleController.ROLE_PATH, ESCALES_ID, "escales.stopovers.read")
+        .delete(ApplicationRoleController.ROLE_PATH, DPAM, ESCALES_ID, "escales.stopovers.read")
         .andExpect(status().isNoContent());
     verify(clientRoleService).delete("escales-api", "escales.stopovers.read");
   }
@@ -168,12 +171,14 @@ class ApplicationRoleAndManagerControllersTest {
     final var application = escales();
     application.getManagers().add("former-member");
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(application));
+    when(applicationRepository.findByDirectionOrderByNameAsc(DPAM))
+        .thenReturn(List.of(application));
     when(directionService.findMember(DPAM, DPAM_MANAGER))
         .thenReturn(Optional.of(user(DPAM_MANAGER, "dpam.manager")));
     when(directionService.findMember(DPAM, "former-member")).thenReturn(Optional.empty());
 
     api
-        .get(ApplicationManagerController.BASE_PATH, ESCALES_ID)
+        .get(ApplicationManagerController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].username").value("dpam.manager"))
         .andExpect(jsonPath("$[1].username").value("former-member"));
@@ -183,7 +188,7 @@ class ApplicationRoleAndManagerControllersTest {
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenAddManager_thenForbidden() throws Exception {
     api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, ESCALES_ID, DPAM_AGENT)
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isForbidden());
   }
 
@@ -191,7 +196,7 @@ class ApplicationRoleAndManagerControllersTest {
   @WithJwt("jwt/sipf-admin.json")
   void givenPlatformAdmin_whenAddManager_thenForbidden() throws Exception {
     api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, ESCALES_ID, DPAM_AGENT)
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isForbidden());
   }
 
@@ -202,7 +207,7 @@ class ApplicationRoleAndManagerControllersTest {
         .thenReturn(user(DPAM_AGENT, "dpam.agent"));
 
     api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, ESCALES_ID, DPAM_AGENT)
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isNoContent());
 
     final var saved = ArgumentCaptor.forClass(Application.class);
@@ -218,7 +223,7 @@ class ApplicationRoleAndManagerControllersTest {
             Map.of("userId", "outsider")));
 
     api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, ESCALES_ID, "outsider")
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, "outsider")
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(ProblemType.NOT_A_MEMBER.uri().toString()));
     verify(applicationRepository, never()).save(any());
@@ -228,11 +233,31 @@ class ApplicationRoleAndManagerControllersTest {
   @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenRemoveManager_thenSaved() throws Exception {
     api
-        .delete(ApplicationManagerController.MANAGER_PATH, ESCALES_ID, DPAM_MANAGER)
+        .delete(ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_MANAGER)
         .andExpect(status().isNoContent());
 
     final var saved = ArgumentCaptor.forClass(Application.class);
     verify(applicationRepository).save(saved.capture());
     assertThat(saved.getValue().getManagers()).isEmpty();
+  }
+
+  @Test
+  @WithJwt("jwt/dsi-admin.json")
+  void givenAdminOfAnotherDirection_whenAddManagerUnderTheirDirection_thenForbidden()
+      throws Exception {
+    // Escales is managed by dpam: addressing it under dsi grants dsi's administrator nothing
+    api
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DSI, ESCALES_ID, DPAM_AGENT)
+        .andExpect(status().isForbidden());
+    verify(applicationRepository, never()).save(any());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenUnknownDirection_whenGetRoles_thenNotFound() throws Exception {
+    api
+        .get(ApplicationRoleController.BASE_PATH, "no-such-direction", ESCALES_ID)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(ProblemType.DIRECTION_NOT_FOUND.uri().toString()));
   }
 }

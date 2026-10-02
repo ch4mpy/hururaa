@@ -232,24 +232,34 @@ export class ApplicationDetail {
     this.delegations.isApplicationManager(this.applicationId()),
   );
 
+  /** The direction managing the application: its roles and managers are addressed under it. */
+  private readonly direction = computed(() => this.application.value()?.direction);
+
   protected readonly isDirectionAdmin = computed(() => {
-    const direction = this.application.value()?.direction;
+    const direction = this.direction();
     return !!direction && this.delegations.isDirectionAdmin(direction);
   });
 
-  /** Mirrors the API's `@uaa.canReadApplication`. */
+  /** Mirrors the access rule of the API's application roles and managers endpoints. */
   protected readonly canRead = computed(
     () => this.delegations.canManageApplications() || this.isDirectionAdmin() || this.isManager(),
   );
 
+  private readonly directionApplication = computed(() => {
+    const direction = this.direction();
+    return direction && this.canRead() ? { direction, id: this.applicationId() } : undefined;
+  });
+
   protected readonly roles = rxResource({
-    params: () => (this.canRead() ? this.applicationId() : undefined),
-    stream: ({ params }) => (params ? this.rolesApi.getApplicationRoles(params) : of([])),
+    params: () => this.directionApplication(),
+    stream: ({ params }) =>
+      params ? this.rolesApi.getApplicationRoles(params.direction, params.id) : of([]),
   });
 
   protected readonly managers = rxResource({
-    params: () => (this.canRead() ? this.applicationId() : undefined),
-    stream: ({ params }) => (params ? this.managersApi.getApplicationManagers(params) : of([])),
+    params: () => this.directionApplication(),
+    stream: ({ params }) =>
+      params ? this.managersApi.getApplicationManagers(params.direction, params.id) : of([]),
   });
 
   private readonly formBuilder = inject(FormBuilder).nonNullable;
@@ -301,7 +311,9 @@ export class ApplicationDetail {
       message: $localize`:@@application.unregister.confirm:Désenregistrer l'application ${name}:name: ? Ses clients Keycloak ne sont pas supprimés.`,
     }).subscribe(() =>
       this.applicationsApi.deleteApplication(this.applicationId()).subscribe(() => {
-        this.notify($localize`:@@application.unregistered:Application ${name}:name: désenregistrée`);
+        this.notify(
+          $localize`:@@application.unregistered:Application ${name}:name: désenregistrée`,
+        );
         this.delegations.refresh();
         void this.router.navigate(['/applications']);
       }),
@@ -311,7 +323,10 @@ export class ApplicationDetail {
   protected createRole(): void {
     const { name, description } = this.roleForm.getRawValue();
     this.rolesApi
-      .createApplicationRole(this.applicationId(), { name, description: description || undefined })
+      .createApplicationRole(this.loadedDirection(), this.applicationId(), {
+        name,
+        description: description || undefined,
+      })
       .subscribe(() => {
         this.roleForm.reset();
         this.notify($localize`:@@application.role.created:Rôle ${name}:name: défini`);
@@ -324,30 +339,45 @@ export class ApplicationDetail {
       header: $localize`:@@application.role.delete:Supprimer le rôle`,
       message: $localize`:@@application.role.delete.confirm:Supprimer le rôle ${role}:role: ? Il sera retiré de tous les groupes qui l'attribuent.`,
     }).subscribe(() =>
-      this.rolesApi.deleteApplicationRole(this.applicationId(), role).subscribe(() => {
-        this.notify($localize`:@@application.role.deleted:Rôle ${role}:role: supprimé`);
-        this.roles.reload();
-      }),
+      this.rolesApi
+        .deleteApplicationRole(this.loadedDirection(), this.applicationId(), role)
+        .subscribe(() => {
+          this.notify($localize`:@@application.role.deleted:Rôle ${role}:role: supprimé`);
+          this.roles.reload();
+        }),
     );
   }
 
   protected addManager(user: UserResponse): void {
-    this.managersApi.addApplicationManager(this.applicationId(), user.id).subscribe(() => {
-      this.notify(
-        $localize`:@@application.manager.added:${userLabel(user)}:user: désigné gestionnaire`,
-      );
-      this.managers.reload();
-      this.delegations.refresh();
-    });
+    this.managersApi
+      .addApplicationManager(this.loadedDirection(), this.applicationId(), user.id)
+      .subscribe(() => {
+        this.notify(
+          $localize`:@@application.manager.added:${userLabel(user)}:user: désigné gestionnaire`,
+        );
+        this.managers.reload();
+        this.delegations.refresh();
+      });
   }
 
   protected removeManager(user: UserResponse): void {
-    this.managersApi.removeApplicationManager(this.applicationId(), user.id).subscribe(() => {
-      this.notify(
-        $localize`:@@application.manager.removed:${userLabel(user)}:user: n'est plus gestionnaire`,
-      );
-      this.managers.reload();
-      this.delegations.refresh();
-    });
+    this.managersApi
+      .removeApplicationManager(this.loadedDirection(), this.applicationId(), user.id)
+      .subscribe(() => {
+        this.notify(
+          $localize`:@@application.manager.removed:${userLabel(user)}:user: n'est plus gestionnaire`,
+        );
+        this.managers.reload();
+        this.delegations.refresh();
+      });
+  }
+
+  /** The roles and managers actions are only offered once the application is loaded. */
+  private loadedDirection(): string {
+    const direction = this.direction();
+    if (!direction) {
+      throw new Error('The application is not loaded yet');
+    }
+    return direction;
   }
 }

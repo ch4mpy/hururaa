@@ -2,6 +2,7 @@ package pf.hururaa.application.web;
 
 import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,8 +36,10 @@ import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.direction.domain.DirectionAdmin;
+import pf.hururaa.direction.jpa.DirectionAdminRepository;
+import pf.hururaa.direction.web.DirectionController;
 import pf.hururaa.uaa.HururaaPermission;
-import pf.hururaa.uaa.UaaAuthorization;
 
 @Tag(name = "Applications")
 @RestController
@@ -52,6 +55,12 @@ public class ApplicationController {
   public static final String BASE_PATH = "/applications";
   public static final String APPLICATION_PATH =
       BASE_PATH + "/{" + APPLICATION_ID_PLACEHOLDER + "}";
+  /**
+   * Where an application's roles and managers are addressed: under its direction, so that their
+   * access rules can read the direction's administrators.
+   */
+  public static final String DIRECTION_APPLICATION_PATH = DirectionController.DIRECTION_PATH
+      + "/applications/{" + APPLICATION_ID_PLACEHOLDER + "}";
 
   private final ApplicationRepository applicationRepository;
 
@@ -61,7 +70,7 @@ public class ApplicationController {
 
   private final ResourceEventPublisher resourceEvents;
 
-  private final UaaAuthorization uaa;
+  private final DirectionAdminRepository directionAdminRepository;
 
   /**
    * Lists the registered applications, by name: which direction manages each of them is no secret.
@@ -89,9 +98,18 @@ public class ApplicationController {
     final var applications = direction == null || direction.isBlank()
         ? applicationRepository.findAllByOrderByNameAsc()
         : applicationRepository.findByDirectionOrderByNameAsc(direction);
+    if (!manageable || hasAuthority(authentication, HururaaPermission.Names.APPLICATIONS_MANAGE)) {
+      return applications.stream().map(applicationMapper::toApplicationResponse).toList();
+    }
+    final var administeredDirections = directionAdminRepository
+        .findByUserIdOrderByDirection(authentication.getName())
+        .stream()
+        .map(DirectionAdmin::getDirection)
+        .collect(Collectors.toSet());
     return applications
         .stream()
-        .filter(application -> !manageable || uaa.canReadApplication(authentication, application))
+        .filter(application -> administeredDirections.contains(application.getDirection())
+            || application.isManagedBy(authentication.getName()))
         .map(applicationMapper::toApplicationResponse)
         .toList();
   }
@@ -110,8 +128,7 @@ public class ApplicationController {
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("@uaa.hasPlatformPermission(authentication, '"
-      + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
   public ResponseEntity<Void> createApplication(
       @RequestBody @Valid ApplicationCreationRequest request,
       Authentication authentication) throws HururaaProblemException {
@@ -157,8 +174,7 @@ public class ApplicationController {
   @PutMapping(path = APPLICATION_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.hasPlatformPermission(authentication, '"
-      + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
   public void updateApplication(
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
@@ -188,8 +204,7 @@ public class ApplicationController {
   @DeleteMapping(path = APPLICATION_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("@uaa.hasPlatformPermission(authentication, '"
-      + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
   public void deleteApplication(
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
@@ -214,5 +229,12 @@ public class ApplicationController {
       EventType eventType) {
     return DirectionEvents
         .of(direction, DirectionEvents.APPLICATION, String.valueOf(application.getId()), eventType);
+  }
+
+  private static boolean hasAuthority(Authentication authentication, String authority) {
+    return authentication
+        .getAuthorities()
+        .stream()
+        .anyMatch(granted -> authority.equals(granted.getAuthority()));
   }
 }

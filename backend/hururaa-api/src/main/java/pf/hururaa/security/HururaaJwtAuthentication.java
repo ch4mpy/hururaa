@@ -1,8 +1,9 @@
 package pf.hururaa.security;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import com.c4_soft.springaddons.security.oidc.OAuthentication;
 import com.c4_soft.springaddons.security.oidc.OpenidClaimSet;
@@ -12,8 +13,8 @@ import pf.hururaa.commons.security.HururaaAuthentication;
 
 /**
  * The resource server's {@link HururaaAuthentication}: an {@link OAuthentication} built from the
- * JWT access token, exposing the OpenID claims and the per-tenant permissions (see
- * {@link HururaaAuthenticationConverter}).
+ * JWT access token, exposing the OpenID claims, the per-tenant permissions, and the platform
+ * permissions as authorities (see {@link HururaaAuthenticationConverter}).
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
@@ -24,8 +25,12 @@ public class HururaaJwtAuthentication extends OAuthentication<OpenidToken>
   @Getter
   private final Map<String, Set<String>> permissionsByTenant;
 
-  public HururaaJwtAuthentication(Jwt jwt, Map<String, Set<String>> permissionsByTenant) {
-    super(new OpenidToken(new OpenidClaimSet(jwt.getClaims()), jwt.getTokenValue()), List.of());
+  /**
+   * @param authorities the platform permissions (see {@link HururaaAuthenticationConverter})
+   */
+  public HururaaJwtAuthentication(Jwt jwt, Map<String, Set<String>> permissionsByTenant,
+      Collection<? extends GrantedAuthority> authorities) {
+    super(new OpenidToken(new OpenidClaimSet(jwt.getClaims()), jwt.getTokenValue()), authorities);
     this.permissionsByTenant = permissionsByTenant;
   }
 }

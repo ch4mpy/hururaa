@@ -3,6 +3,7 @@ package pf.hururaa.uaa.web;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +15,7 @@ import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.application.web.ApplicationMapper;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
-import pf.hururaa.uaa.UaaAuthorization;
+import pf.hururaa.uaa.HururaaPermission;
 import pf.hururaa.uaa.UaaProperties;
 
 @Tag(name = "Delegations")
@@ -25,8 +26,6 @@ import pf.hururaa.uaa.UaaProperties;
 @Observed
 public class DelegationController {
   public static final String BASE_PATH = "/me/delegations";
-
-  private final UaaAuthorization uaa;
 
   private final UaaProperties uaaProperties;
 
@@ -53,7 +52,13 @@ public class DelegationController {
   @PreAuthorize("isAuthenticated()")
   public DelegationsResponse getMyDelegations(Authentication authentication) {
     return new DelegationsResponse(
-        uaa.platformPermissions(authentication),
+        authentication
+            .getAuthorities()
+            .stream()
+            .map(GrantedAuthority::getAuthority)
+            .filter(HururaaPermission.ALL::contains)
+            .sorted()
+            .toList(),
         uaaProperties.getPlatformOrganization(),
         directionAdminRepository
             .findByUserIdOrderByDirection(authentication.getName())

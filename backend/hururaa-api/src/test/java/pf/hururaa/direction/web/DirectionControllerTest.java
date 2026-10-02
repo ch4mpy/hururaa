@@ -13,11 +13,13 @@ import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.SIPF_ADMIN;
+import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.user;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -71,6 +73,11 @@ class DirectionControllerTest {
   @MockitoBean
   DelegationHistoryService delegationHistoryService;
 
+  @BeforeEach
+  void setUp() throws Exception {
+    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
+  }
+
   @MockitoBean
   ResourceEventPublisher resourceEvents;
 
@@ -103,7 +110,6 @@ class DirectionControllerTest {
   @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenSearchUsers_thenOk() throws Exception {
-    when(applicationRepository.existsByDirectionAndManager(DPAM, DPAM_MANAGER)).thenReturn(true);
     when(directionService.searchMembers(DPAM, "agent", PageRequest.of(0, 20)))
         .thenReturn(new PageImpl<>(List.of(user(DPAM_AGENT, "dpam.agent")),
             PageRequest.of(0, 20), 1));
@@ -132,7 +138,6 @@ class DirectionControllerTest {
   @Test
   @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenDesignateAnotherAdmin_thenForbidden() throws Exception {
-    when(directionAdminRepository.existsByDirectionAndUserId(DPAM, DPAM_ADMIN)).thenReturn(true);
 
     api
         .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_AGENT)
@@ -181,7 +186,6 @@ class DirectionControllerTest {
   @Test
   @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenGetHistory_thenOk() throws Exception {
-    when(directionAdminRepository.existsByDirectionAndUserId(DPAM, DPAM_ADMIN)).thenReturn(true);
     when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(1, 5)))
         .thenReturn(new PageImpl<>(List.of(new DelegationChange(7L,
             Instant.parse("2026-10-01T08:00:00Z"), user(SIPF_ADMIN, "sipf.admin"),
@@ -200,7 +204,6 @@ class DirectionControllerTest {
   @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenGetHistory_thenOk() throws Exception {
-    when(applicationRepository.existsByDirectionAndManager(DPAM, DPAM_MANAGER)).thenReturn(true);
     when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(0, 20)))
         .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 

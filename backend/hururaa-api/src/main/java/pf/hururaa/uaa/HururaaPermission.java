@@ -13,7 +13,7 @@ import java.util.stream.Stream;
  * They only take effect in the <b>platform organization</b> (see {@link UaaProperties}): holding
  * them in another direction grants nothing. Everything below the platform level (who administers a
  * direction, who manages an application) is not a token role but a delegation stored by Hurura'a,
- * see {@link UaaAuthorization}.
+ * see {@link pf.hururaa.direction.domain.DelegatedDirection}.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com

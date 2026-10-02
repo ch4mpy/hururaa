@@ -211,7 +211,7 @@ export class DirectionDetail {
   /** Bound from the `:direction` route parameter. */
   readonly direction = input.required<string>();
 
-  /** Mirrors the API's `@uaa.canReadDirection`. */
+  /** Mirrors the API's rule for reading a direction: platform administrator or delegate. */
   protected readonly canRead = computed(() => this.delegations.canReadDirection(this.direction()));
 
   protected readonly applications = rxResource({

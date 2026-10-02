@@ -6,13 +6,17 @@ import static pf.hururaa.security.HururaaJwtFixture.fixtureClaims;
 import static pf.hururaa.security.HururaaJwtFixture.jwt;
 import static pf.hururaa.uaa.HururaaPermission.APPLICATIONS_MANAGE;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.GrantedAuthority;
 import pf.hururaa.commons.security.TenantPermissionsExtractor;
 import pf.hururaa.commons.security.HururaaAuthentication;
+import pf.hururaa.uaa.HururaaPermission;
+import pf.hururaa.uaa.UaaProperties;
 
 class HururaaAuthenticationConverterTest {
 
   private static HururaaAuthenticationConverter converter(String rolesNamespace) {
-    return new HururaaAuthenticationConverter(new TenantPermissionsExtractor(rolesNamespace));
+    return new HururaaAuthenticationConverter(new TenantPermissionsExtractor(rolesNamespace),
+        new UaaProperties("dsi"));
   }
 
   @Test
@@ -44,10 +48,20 @@ class HururaaAuthenticationConverterTest {
   }
 
   @Test
-  void carriesNoGrantedAuthority() {
+  void grantsThePlatformOrganizationsHururaaPermissionsAsAuthorities() {
     final var authentication = converter(ROLES_NAMESPACE).convert(jwt(fixtureClaims()));
 
-    assertThat(authentication.getAuthorities()).isEmpty();
+    assertThat(authentication.getAuthorities())
+        .extracting(GrantedAuthority::getAuthority)
+        .containsExactlyInAnyOrderElementsOf(HururaaPermission.ALL);
+  }
+
+  @Test
+  void grantsNoAuthorityForHururaaPermissionsHeldInAnotherOrganization() {
+    final var converter = new HururaaAuthenticationConverter(
+        new TenantPermissionsExtractor(ROLES_NAMESPACE), new UaaProperties("dpam"));
+
+    assertThat(converter.convert(jwt(fixtureClaims())).getAuthorities()).isEmpty();
   }
 
   @Test

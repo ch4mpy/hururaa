@@ -1,6 +1,5 @@
 package pf.hururaa.application.web;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import org.springdoc.core.customizers.OperationCustomizer;
@@ -9,20 +8,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.FormatterRegistry;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
-import pf.hururaa.problem.HururaaProblemDetail;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.problem.ResolvedPathVariables;
 
 /**
  * Resolves {@code @PathVariable} ids into {@link Application} entities, so that
@@ -30,12 +22,10 @@ import pf.hururaa.problem.ProblemType;
  * managers).
  *
  * <p>
- * The converter owns not-found handling: an unknown (or non-numeric) id fails with a
- * {@code 404 Not Found} {@link HururaaProblemException} (unchecked-wrapped, as a {@code Converter}
- * can't declare it) before the endpoint method is invoked (Spring MVC wraps it in a type-mismatch
- * exception, which {@link pf.hururaa.problem.HururaaExceptionHandler} unwraps). This is why Spring
- * Data's auto-registered {@code DomainClassConverter} isn't relied upon: it resolves an unknown id
- * to {@code null}, which the SpEL access rules can't evaluate.
+ * An unknown (or non-numeric) id fails with {@code APPLICATION_NOT_FOUND} (see
+ * {@link ResolvedPathVariables}). This is why Spring Data's auto-registered
+ * {@code DomainClassConverter} isn't relied upon: it resolves an unknown id to {@code null}, which
+ * the SpEL access rules can't evaluate.
  * </p>
  *
  * <p>
@@ -51,24 +41,9 @@ public class ApplicationWebMvcConfiguration implements WebMvcConfigurer {
 
   private final ObjectProvider<ApplicationRepository> applicationRepository;
 
-  /**
-   * Documents the {@code 404} the converter can produce on every operation taking a resolved
-   * {@link Application}: it never shows in the endpoint's {@code throws} clause, which is otherwise
-   * what springdoc derives error responses from.
-   */
   @Bean
   OperationCustomizer resolvedApplicationNotFoundResponse() {
-    return (Operation operation, HandlerMethod handlerMethod) -> {
-      if (Arrays.stream(handlerMethod.getMethodParameters())
-          .anyMatch(p -> Application.class.equals(p.getParameterType()))) {
-        operation.getResponses().computeIfAbsent(String.valueOf(HttpStatus.NOT_FOUND.value()),
-            code -> new ApiResponse().description(HttpStatus.NOT_FOUND.getReasonPhrase())
-                .content(new Content().addMediaType(MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                    new io.swagger.v3.oas.models.media.MediaType().schema(new Schema<>()
-                        .$ref(HururaaProblemDetail.class.getSimpleName())))));
-      }
-      return operation;
-    };
+    return ResolvedPathVariables.notFoundResponse(Application.class);
   }
 
   @Override

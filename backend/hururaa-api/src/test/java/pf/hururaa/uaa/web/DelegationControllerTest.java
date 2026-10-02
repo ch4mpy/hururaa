@@ -23,6 +23,7 @@ import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.application.web.ApplicationMapperImpl;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
+import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.uaa.HururaaPermission;
 
@@ -43,6 +44,9 @@ class DelegationControllerTest {
 
   @MockitoBean
   GroupService groupService;
+
+  @MockitoBean
+  DirectionService directionService;
 
   @Test
   @WithAnonymousUser

@@ -39,6 +39,7 @@ import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.keycloak.ClientProvisioningService;
@@ -128,7 +129,8 @@ class ApplicationControllerTest {
   void givenDirectionAdmin_whenGetManageableApplications_thenThoseOfTheDirection()
       throws Exception {
     when(applicationRepository.findAllByOrderByNameAsc()).thenReturn(List.of(escales(), teFenua()));
-    when(directionAdminRepository.existsByDirectionAndUserId(DPAM, DPAM_ADMIN)).thenReturn(true);
+    when(directionAdminRepository.findByUserIdOrderByDirection(DPAM_ADMIN))
+        .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
 
     api
         .get(MANAGEABLE)

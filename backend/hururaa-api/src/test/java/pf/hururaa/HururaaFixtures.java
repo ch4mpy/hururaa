@@ -1,16 +1,25 @@
 package pf.hururaa;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import pf.hururaa.application.domain.Application;
+import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.security.HururaaSecurityConfiguration;
+import pf.hururaa.direction.DelegationResolver;
+import pf.hururaa.direction.domain.Direction;
+import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.domain.User;
+import pf.hururaa.direction.jpa.DirectionAdminRepository;
+import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.security.HururaaAuthenticationConverter;
-import pf.hururaa.uaa.UaaAuthorization;
 import pf.hururaa.uaa.UaaProperties;
 
 /**
@@ -59,20 +68,43 @@ public final class HururaaFixtures {
         .build();
   }
 
+  /**
+   * Stubs what the path variable converters read, as in the dev data: {@value #DSI},
+   * {@value #DPAM} and {@value #DAF} exist in Keycloak (no other direction does), administered by
+   * {@link #DSI_ADMIN} and {@link #DPAM_ADMIN}, with {@link #teFenua()} in dsi and
+   * {@link #escales()} in dpam. A test stubbing one of these calls again overrides it.
+   */
+  public static void stubDevDelegations(DirectionService directionService,
+      DirectionAdminRepository directionAdminRepository,
+      ApplicationRepository applicationRepository) throws Exception {
+    when(directionService.findByAlias(anyString())).thenAnswer(invocation -> {
+      final String alias = invocation.getArgument(0);
+      return Set.of(DSI, DPAM, DAF).contains(alias) ? Optional.of(new Direction(alias, alias, null))
+          : Optional.empty();
+    });
+    when(directionAdminRepository.findByDirectionOrderByUserId(DSI))
+        .thenReturn(List.of(DirectionAdmin.builder().direction(DSI).userId(DSI_ADMIN).build()));
+    when(directionAdminRepository.findByDirectionOrderByUserId(DPAM))
+        .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
+    when(applicationRepository.findByDirectionOrderByNameAsc(DSI)).thenReturn(List.of(teFenua()));
+    when(applicationRepository.findByDirectionOrderByNameAsc(DPAM)).thenReturn(List.of(escales()));
+  }
+
   public static User user(String id, String username) {
     return new User(id, username, null, null, username + "@gov.pf");
   }
 
   /**
    * What a {@code @WebMvcTest} slice of this API needs besides its controller: the method-security
-   * setup and JWT converter of {@code common-security-starter}, and the real {@code @uaa} access
-   * rules with their properties bound from {@code application.yml} (their repositories and Keycloak
-   * services being mocked by each test).
+   * setup of {@code common-security-starter}, this API's JWT converter (platform permissions as
+   * authorities), and the real {@link DelegationResolver} the path variable converters resolve
+   * directions and groups with, with their properties bound from {@code application.yml} (its
+   * repositories and Keycloak services being mocked by each test).
    */
   @TestConfiguration
   @EnableConfigurationProperties({UaaProperties.class, KeycloakAdminApiProperties.class})
   @Import({HururaaSecurityConfiguration.class, HururaaAuthenticationConverter.class,
-      UaaAuthorization.class})
+      DelegationResolver.class})
   public static class WebMvcTestConfiguration {
   }
 }
