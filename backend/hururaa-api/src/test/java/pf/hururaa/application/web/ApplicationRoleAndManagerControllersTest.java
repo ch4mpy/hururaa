@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +38,7 @@ import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.domain.ApplicationRole;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.direction.web.DirectoryMapperImpl;
 import pf.hururaa.keycloak.ClientRoleService;
@@ -76,6 +78,9 @@ class ApplicationRoleAndManagerControllersTest {
 
   @MockitoBean
   ResourceEventPublisher resourceEvents;
+
+  @MockitoBean
+  PermissionJournal permissionJournal;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -275,5 +280,29 @@ class ApplicationRoleAndManagerControllersTest {
         .get(ApplicationRoleController.BASE_PATH, "no-such-direction", ESCALES_ID)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(ProblemType.DIRECTION_NOT_FOUND.uri().toString()));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenNewRole_whenCreateRole_thenJournaled() throws Exception {
+    when(clientRoleService.save("escales-api", "escales.stopovers.delete", null)).thenReturn(true);
+
+    api
+        .post(new ApplicationRoleRequest("escales.stopovers.delete", null),
+            ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isCreated());
+    verify(permissionJournal).applicationRoleCreated(any(Application.class),
+        eq("escales.stopovers.delete"));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenNoSuchRole_whenDeleteRole_thenNotJournaled() throws Exception {
+    when(clientRoleService.delete("escales-api", "escales.nothing")).thenReturn(false);
+
+    api
+        .delete(ApplicationRoleController.ROLE_PATH, DPAM, ESCALES_ID, "escales.nothing")
+        .andExpect(status().isNoContent());
+    verify(permissionJournal, never()).applicationRoleDeleted(any(), any());
   }
 }

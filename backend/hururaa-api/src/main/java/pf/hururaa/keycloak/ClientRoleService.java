@@ -43,10 +43,13 @@ public class ClientRoleService {
    * @param clientId a Keycloak client ID (not its UUID)
    * @param name the role name
    * @param description what the role allows
+   * @return whether the role was created (false if it existed already)
    */
-  public void save(String clientId, String name, @Nullable String description)
+  public boolean save(String clientId, String name, @Nullable String description)
       throws HururaaProblemException {
+    final var existed = exists(clientId, name);
     roleRepo.saveClientRole(clientId, name, description);
+    return !existed;
   }
 
   /**
@@ -55,8 +58,20 @@ public class ClientRoleService {
    *
    * @param clientId a Keycloak client ID (not its UUID)
    * @param name the role name
+   * @return whether the role was deleted (false if there was none)
    */
-  public void delete(String clientId, String name) throws HururaaProblemException {
+  public boolean delete(String clientId, String name) throws HururaaProblemException {
+    if (!exists(clientId, name)) {
+      return false;
+    }
     roleRepo.deleteClientRole(clientId, name);
+    return true;
+  }
+
+  private boolean exists(String clientId, String name) throws HururaaProblemException {
+    return roleRepo
+        .findAllClientRoles(clientId)
+        .stream()
+        .anyMatch(role -> name.equals(role.getName()));
   }
 }

@@ -29,6 +29,7 @@ import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.direction.web.DirectionController;
+import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.uaa.HururaaPermission;
@@ -56,6 +57,8 @@ public class ApplicationRoleController {
   private final ApplicationMapper applicationMapper;
 
   private final ResourceEventPublisher resourceEvents;
+
+  private final PermissionJournal permissionJournal;
 
   /**
    * Lists an application's roles (the client roles of its {@code <prefix>-api} Keycloak client).
@@ -117,8 +120,10 @@ public class ApplicationRoleController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @RequestBody @Valid ApplicationRoleRequest request,
       Authentication authentication) throws HururaaProblemException {
-    clientRoleService.save(keycloakProperties.apiClientId(application.getClientPrefix()),
-        request.name(), request.description());
+    if (clientRoleService.save(keycloakProperties.apiClientId(application.getClientPrefix()),
+        request.name(), request.description())) {
+      permissionJournal.applicationRoleCreated(application, request.name());
+    }
     log.info("{} created role {} of application {}", authentication.getName(), request.name(),
         application.getClientPrefix());
     resourceEvents.publish(ApplicationController.eventFor(application, application.getDirection(),
@@ -159,7 +164,10 @@ public class ApplicationRoleController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
-    clientRoleService.delete(keycloakProperties.apiClientId(application.getClientPrefix()), role);
+    if (clientRoleService.delete(keycloakProperties.apiClientId(application.getClientPrefix()),
+        role)) {
+      permissionJournal.applicationRoleDeleted(application, role);
+    }
     log.info("{} deleted role {} of application {}", authentication.getName(), role,
         application.getClientPrefix());
     resourceEvents.publish(ApplicationController.eventFor(application, application.getDirection(),

@@ -1,9 +1,12 @@
 package pf.hururaa.direction.web;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pf.hururaa.HururaaFixtures.DPAM;
@@ -34,6 +37,7 @@ import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.problem.ProblemType;
@@ -81,6 +85,9 @@ class GroupControllerTest {
 
   @MockitoBean
   ResourceEventPublisher resourceEvents;
+
+  @MockitoBean
+  PermissionJournal permissionJournal;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -262,5 +269,57 @@ class GroupControllerTest {
     api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
         .andExpect(status().isForbidden());
     verify(groupService, never()).addMember(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenNewMember_whenAddMember_thenJournaled() throws Exception {
+    when(groupService.addMember(DPAM, GROUP, DPAM_AGENT)).thenReturn(true);
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verify(permissionJournal).groupMemberAdded(DPAM, GROUP, DPAM_AGENT);
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenAlreadyMember_whenAddMember_thenNotJournaled() throws Exception {
+    when(groupService.addMember(DPAM, GROUP, DPAM_AGENT)).thenReturn(false);
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenRoleNotGrantedYet_whenGrantRole_thenJournaledWithTheApplication() throws Exception {
+    when(groupService.addClientRole(DPAM, GROUP, "escales-api", "escales.stopovers.read"))
+        .thenReturn(true);
+
+    api.put(Map.of(), GroupController.ROLE_PATH, DPAM, GROUP, ESCALES_ID, "escales.stopovers.read")
+        .andExpect(status().isNoContent());
+    verify(permissionJournal).groupRoleGranted(eq(DPAM), eq(GROUP),
+        argThat(application -> ESCALES_ID == application.getId()), eq("escales.stopovers.read"));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenNewGroup_whenCreateGroup_thenJournaled() throws Exception {
+    when(groupService.save(DPAM, "new-group")).thenReturn(new Group("g2", DPAM, "new-group"));
+
+    api.post(new GroupRequest("new-group"), GroupController.BASE_PATH, DPAM)
+        .andExpect(status().isCreated());
+    verify(permissionJournal).groupCreated(DPAM, "new-group");
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenExistingGroup_whenCreateGroup_thenNotJournaled() throws Exception {
+    when(groupService.save(DPAM, GROUP)).thenReturn(new Group("g1", DPAM, GROUP));
+
+    api.post(new GroupRequest(GROUP), GroupController.BASE_PATH, DPAM)
+        .andExpect(status().isCreated());
+    verifyNoInteractions(permissionJournal);
   }
 }

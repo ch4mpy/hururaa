@@ -16,6 +16,8 @@ const PROBLEM_MESSAGES: Record<ProblemType, (p: Parameters) => string> = {
   [ProblemType.VALIDATION]: () => $localize`:@@problem.validation:Certaines valeurs sont invalides`,
   [ProblemType.DIRECTION_NOT_FOUND]: (p) =>
     $localize`:@@problem.directionNotFound:Direction ${str(p['direction'])}:direction: inconnue`,
+  [ProblemType.DIRECTION_ALREADY_EXISTS]: (p) =>
+    $localize`:@@problem.directionAlreadyExists:Une direction existe déjà sous l'alias ${str(p['direction'])}:direction: ou sous ce nom`,
   [ProblemType.GROUP_NOT_FOUND]: (p) =>
     $localize`:@@problem.groupNotFound:Groupe ${str(p['group'])}:group: inconnu dans la direction ${str(p['direction'])}:direction:`,
   [ProblemType.NOT_A_MEMBER]: (p) =>

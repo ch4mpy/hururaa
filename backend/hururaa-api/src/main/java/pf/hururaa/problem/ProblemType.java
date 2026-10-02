@@ -23,6 +23,9 @@ public enum ProblemType {
   /** Parameters: {@code direction}. No Keycloak organization has that alias. */
   DIRECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "direction-not-found"),
 
+  /** Parameters: {@code direction}. An organization already has that alias, or that name. */
+  DIRECTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "direction-already-exists"),
+
   /** Parameters: {@code direction}, {@code group}. */
   GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "group-not-found"),
 

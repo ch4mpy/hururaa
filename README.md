@@ -87,8 +87,17 @@ d'accès), par exemple `#direction.isAdministeredBy(authentication.name)` :
   administrateur Hurura'a la change de direction.
 
 L'historique des délégations d'une direction (qui a désigné ou retiré qui, et quand) est rejoué à
-partir de l'audit Envers des administrateurs de direction et des gestionnaires d'application. Ce
-qui vit dans Keycloak (membres des groupes, rôles qu'ils attribuent) n'y figure pas encore.
+partir de l'audit Envers des administrateurs de direction et des gestionnaires d'application.
+
+Les changements que Hurura'a fait dans Keycloak (création des directions, rôles des applications,
+groupes, rôles qu'ils attribuent, membres) sont consignés dans un journal propre à Hurura'a, la
+table `PERMISSION_EVENTS` : Keycloak les attribue au compte de service de l'API, pas à la personne.
+Seuls les changements effectifs y figurent (les opérations sont idempotentes), avec leur auteur et
+leur horodatage ; l'état courant se lit toujours dans Keycloak. Le journal n'est pas encore affiché.
+Les journaux applicatifs (Loki) en gardent aussi la trace.
+
+Les administrateurs Hurura'a créent les directions depuis Hurura'a (`POST /directions`, une
+organisation Keycloak sans domaine).
 
 Hurura'a est lui-même une application de la DSI : les administrateurs de la DSI et les
 gestionnaires de Hurura'a affectent les utilisateurs au groupe `hururaa-admins`, qui porte son rôle
@@ -180,8 +189,9 @@ Tests : `./backend/mvnw -f backend/pom.xml clean install` (backend) et, dans `fr
 
 - saisir à l'enregistrement l'URL de l'application, pour que Hurura'a règle les URI de
   redirection de `<préfixe>-bff` au lieu de valeurs provisoires ;
-- historiser aussi les changements faits dans Keycloak via Hurura'a (membres des groupes, rôles
-  qu'ils attribuent), dans un journal propre à Hurura'a : Keycloak attribue ces changements au
-  compte de service de l'API, pas à la personne ;
+- afficher le journal des permissions avec l'historique des délégations et celui des applications
+  (enregistrement, renommage, changement de direction) ;
+- notifier Hurura'a des changements faits directement dans la console Keycloak (event listener SPI),
+  pour les journaliser aussi ;
 - faire relayer aux administrateurs Hurura'a les événements de toutes les directions (aujourd'hui, un
   utilisateur ne reçoit que ceux des directions dont il est membre).

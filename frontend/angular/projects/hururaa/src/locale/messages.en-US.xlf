@@ -194,6 +194,14 @@
           <context context-type="linenumber">18</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="problem.directionAlreadyExists" datatype="html">
+        <source>Une direction existe déjà sous l&apos;alias <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/> ou sous ce nom</source>
+        <target>A department already exists with the alias <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/> or with this name</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
+          <context context-type="linenumber">20</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="problem.groupNotFound" datatype="html">
         <source>Groupe <x id="group" equiv-text="str(p[&apos;group&apos;])"/> inconnu dans la direction <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/></source>
         <target>Unknown group <x id="group" equiv-text="str(p[&apos;group&apos;])"/> in department <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/></target>
@@ -880,6 +888,66 @@
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
           <context context-type="linenumber">48,50</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.create" datatype="html">
+        <source>Créer une direction</source>
+        <target>Create a department</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">43,44</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">92,94</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.alias" datatype="html">
+        <source>Alias</source>
+        <target>Alias</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">96,97</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.alias.hint" datatype="html">
+        <source>Minuscules, chiffres et tirets : il figure dans les adresses et dans les jetons.</source>
+        <target>Lowercase letters, digits and hyphens: it appears in addresses and in tokens.</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">99,102</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.name" datatype="html">
+        <source>Nom</source>
+        <target>Name</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">103,104</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.description" datatype="html">
+        <source>Nom complet</source>
+        <target>Full name</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">107,108</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.create.submit" datatype="html">
+        <source>Créer</source>
+        <target>Create</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">124,126</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.created" datatype="html">
+        <source>Direction <x id="alias" equiv-text="alias"/> créée</source>
+        <target>Department <x id="alias" equiv-text="alias"/> created</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">162</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete" datatype="html">

@@ -36,6 +36,7 @@ import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.direction.domain.DelegatedGroup;
 import pf.hururaa.events.DirectionEvents;
+import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
@@ -72,6 +73,8 @@ public class GroupController {
   private final DirectoryMapper directoryMapper;
 
   private final ResourceEventPublisher resourceEvents;
+
+  private final PermissionJournal permissionJournal;
 
   /**
    * Lists a direction's groups.
@@ -122,7 +125,11 @@ public class GroupController {
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestBody @Valid GroupRequest request,
       Authentication authentication) throws HururaaProblemException {
+    final var isNew = groupService.findByName(direction.alias(), request.name()).isEmpty();
     final var group = groupService.save(direction.alias(), request.name());
+    if (isNew) {
+      permissionJournal.groupCreated(direction.alias(), group.name());
+    }
     log.info("{} created group {} in {}", authentication.getName(), group.name(),
         direction.alias());
     publish(direction.alias(), group.name(), EventType.CREATE);
@@ -158,6 +165,7 @@ public class GroupController {
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       Authentication authentication) throws HururaaProblemException {
     groupService.delete(direction, group.name());
+    permissionJournal.groupDeleted(direction, group.name());
     log.info("{} deleted group {} of {}", authentication.getName(), group.name(), direction);
     publish(direction, group.name(), EventType.DELETE);
   }
@@ -227,8 +235,10 @@ public class GroupController {
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
     requireInDirection(application, direction);
-    groupService.addClientRole(direction, group.name(),
-        keycloakProperties.apiClientId(application.getClientPrefix()), role);
+    if (groupService.addClientRole(direction, group.name(),
+        keycloakProperties.apiClientId(application.getClientPrefix()), role)) {
+      permissionJournal.groupRoleGranted(direction, group.name(), application, role);
+    }
     log.info("{} made group {} of {} grant role {} of {}", authentication.getName(),
         group.name(), direction, role, application.getClientPrefix());
     publish(direction, group.name(), EventType.UPDATE);
@@ -264,8 +274,10 @@ public class GroupController {
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
     requireInDirection(application, direction);
-    groupService.removeClientRole(direction, group.name(),
-        keycloakProperties.apiClientId(application.getClientPrefix()), role);
+    if (groupService.removeClientRole(direction, group.name(),
+        keycloakProperties.apiClientId(application.getClientPrefix()), role)) {
+      permissionJournal.groupRoleRevoked(direction, group.name(), application, role);
+    }
     log.info("{} made group {} of {} stop granting role {} of {}", authentication.getName(),
         group.name(), direction, role, application.getClientPrefix());
     publish(direction, group.name(), EventType.UPDATE);
@@ -330,7 +342,9 @@ public class GroupController {
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    groupService.addMember(direction, group.name(), userId);
+    if (groupService.addMember(direction, group.name(), userId)) {
+      permissionJournal.groupMemberAdded(direction, group.name(), userId);
+    }
     log.info("{} added {} to group {} of {}", authentication.getName(), userId, group.name(),
         direction);
     publish(direction, group.name(), EventType.UPDATE);
@@ -361,7 +375,9 @@ public class GroupController {
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    groupService.removeMember(direction, group.name(), userId);
+    if (groupService.removeMember(direction, group.name(), userId)) {
+      permissionJournal.groupMemberRemoved(direction, group.name(), userId);
+    }
     log.info("{} removed {} from group {} of {}", authentication.getName(), userId,
         group.name(), direction);
     publish(direction, group.name(), EventType.UPDATE);

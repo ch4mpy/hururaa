@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.keycloak.admin.model.OrganizationRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +52,30 @@ public class DirectionService {
   public Optional<Direction> findByAlias(String direction) throws HururaaProblemException {
     final var org = findOrganization(direction);
     return org.isPresent() ? Optional.of(mapper.toDirection(org.get())) : Optional.empty();
+  }
+
+  /**
+   * Creates a direction: a Keycloak organization, enabled, without domain.
+   *
+   * @param alias how the direction is addressed (and the key of the tokens' {@code organization}
+   *        claim)
+   * @param name the organization's name
+   * @param description the direction's full name
+   * @return the created direction
+   * @throws HururaaProblemException {@code DIRECTION_ALREADY_EXISTS} if an organization already has
+   *         that alias or that name
+   */
+  public Direction create(String alias, String name, @Nullable String description)
+      throws HururaaProblemException {
+    if (exists(alias)) {
+      throw new HururaaProblemException(
+          ProblemType.DIRECTION_ALREADY_EXISTS,
+          "A direction with alias %s already exists".formatted(alias),
+          Map.of("direction", alias));
+    }
+    organizationRepo
+        .create(new OrganizationRepresentation().alias(alias).name(name).description(description));
+    return new Direction(alias, name, description);
   }
 
   /**

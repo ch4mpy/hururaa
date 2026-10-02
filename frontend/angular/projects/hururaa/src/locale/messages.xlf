@@ -111,6 +111,10 @@
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
           <context context-type="linenumber">119</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">116</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="http.error.network" datatype="html">
         <source>Serveur injoignable, vérifiez votre connexion</source>
@@ -168,74 +172,81 @@
           <context context-type="linenumber">18</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="problem.directionAlreadyExists" datatype="html">
+        <source>Une direction existe déjà sous l&apos;alias <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/> ou sous ce nom</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
+          <context context-type="linenumber">20</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="problem.groupNotFound" datatype="html">
         <source>Groupe <x id="group" equiv-text="str(p[&apos;group&apos;])"/> inconnu dans la direction <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">20</context>
+          <context context-type="linenumber">22</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.notAMember" datatype="html">
         <source>L&apos;utilisateur <x id="userId" equiv-text="str(p[&apos;userId&apos;])"/> n&apos;est pas membre de la direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">22</context>
+          <context context-type="linenumber">24</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.applicationNotFound" datatype="html">
         <source>Application n° <x id="applicationId" equiv-text="str(p[&apos;applicationId&apos;])"/> introuvable</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">24</context>
+          <context context-type="linenumber">26</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.applicationAlreadyExists" datatype="html">
         <source>Une application utilise déjà le préfixe <x id="clientPrefix" equiv-text="str(p[&apos;clientPrefix&apos;])"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">26</context>
+          <context context-type="linenumber">28</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.applicationRoleNotFound" datatype="html">
         <source>Le client <x id="clientId" equiv-text="str(p[&apos;clientId&apos;])"/> n&apos;a pas de rôle <x id="role" equiv-text="str(p[&apos;role&apos;])"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">28</context>
+          <context context-type="linenumber">30</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.applicationNotInDirection" datatype="html">
         <source>L&apos;application n° <x id="applicationId" equiv-text="str(p[&apos;applicationId&apos;])"/> n&apos;est pas gérée par la direction <x id="direction" equiv-text="str(p[&apos;direction&apos;])"/> : ses rôles ne peuvent pas être attribués par les groupes de cette direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">30</context>
+          <context context-type="linenumber">32</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.applicationRolesStillGranted" datatype="html">
         <source>Des groupes attribuent encore des rôles de l&apos;application (<x id="groups" equiv-text="str(p[&apos;groups&apos;])"/>) : retirez-les d&apos;abord</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">32</context>
+          <context context-type="linenumber">34</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.concurrentModification" datatype="html">
         <source>Modifié entre-temps par quelqu&apos;un d&apos;autre : rechargez la page avant de réessayer</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">34</context>
+          <context context-type="linenumber">36</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.dataIntegrityViolation" datatype="html">
         <source>La demande est en conflit avec des données existantes</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">36</context>
+          <context context-type="linenumber">38</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.identityProviderError" datatype="html">
         <source>La communication avec le serveur d&apos;identité a échoué : réessayez plus tard</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">38</context>
+          <context context-type="linenumber">40</context>
         </context-group>
       </trans-unit>
       <trans-unit id="session.ended" datatype="html">
@@ -744,35 +755,88 @@
         <source>Directions</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">18,20</context>
+          <context context-type="linenumber">36,38</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.create" datatype="html">
+        <source>Créer une direction</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">43,44</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">92,94</context>
         </context-group>
       </trans-unit>
       <trans-unit id="directions.member" datatype="html">
         <source>Membre</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">32,34</context>
+          <context context-type="linenumber">60,62</context>
         </context-group>
       </trans-unit>
       <trans-unit id="directions.admin" datatype="html">
         <source>Administrateur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">35,37</context>
+          <context context-type="linenumber">63,65</context>
         </context-group>
       </trans-unit>
       <trans-unit id="directions.manager" datatype="html">
         <source>Gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">41,43</context>
+          <context context-type="linenumber">69,71</context>
         </context-group>
       </trans-unit>
       <trans-unit id="directions.runsHururaa" datatype="html">
         <source>Exploite Hurura&apos;a</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">48,50</context>
+          <context context-type="linenumber">76,78</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.alias" datatype="html">
+        <source>Alias</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">96,97</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.alias.hint" datatype="html">
+        <source>Minuscules, chiffres et tirets : il figure dans les adresses et dans les jetons.</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">99,102</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.name" datatype="html">
+        <source>Nom</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">103,104</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.description" datatype="html">
+        <source>Nom complet</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">107,108</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.create.submit" datatype="html">
+        <source>Créer</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">124,126</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="directions.created" datatype="html">
+        <source>Direction <x id="alias" equiv-text="alias"/> créée</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
+          <context context-type="linenumber">162</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete" datatype="html">

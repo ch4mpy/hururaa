@@ -7,6 +7,7 @@ import org.keycloak.admin.api.OrganizationsApi;
 import org.keycloak.admin.model.MemberRepresentation;
 import org.keycloak.admin.model.OrganizationRepresentation;
 import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -97,6 +98,35 @@ class CachingKeycloakOrganizationRepository {
           ProblemType.IDENTITY_PROVIDER_ERROR,
           "Error while fetching member %s of organization %s: %s"
               .formatted(userId, orgId, e.getMessage()),
+          Map.of());
+    }
+  }
+
+  /**
+   * Creates an organization (enabled, without domain). The cached organizations are all evicted:
+   * the list of every organization is cached too.
+   *
+   * @throws HururaaProblemException {@code DIRECTION_ALREADY_EXISTS} when Keycloak refuses it as a
+   *         duplicate (an organization already has that alias or that name)
+   */
+  @CacheEvict(cacheNames = ORGANIZATIONS_CACHE, allEntries = true)
+  public void create(OrganizationRepresentation organization) throws HururaaProblemException {
+    try {
+      organizationsApi
+          .adminRealmsRealmOrganizationsPost(apiProperties.getRealmName(),
+              Optional.of(organization.enabled(true)));
+    } catch (HttpClientErrorException.Conflict e) {
+      throw new HururaaProblemException(
+          ProblemType.DIRECTION_ALREADY_EXISTS,
+          "An organization named %s or aliased %s already exists"
+              .formatted(organization.getName(), organization.getAlias()),
+          Map.of("direction", String.valueOf(organization.getAlias())));
+    } catch (HttpClientErrorException e) {
+      log.error("Failed to create organization {}: {}", organization.getAlias(), e.getMessage());
+      throw new HururaaProblemException(
+          ProblemType.IDENTITY_PROVIDER_ERROR,
+          "Error while creating organization %s: %s"
+              .formatted(organization.getAlias(), e.getMessage()),
           Map.of());
     }
   }

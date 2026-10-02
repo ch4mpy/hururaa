@@ -1,5 +1,8 @@
 package pf.hururaa.direction.web;
 
+import static org.hamcrest.Matchers.endsWith;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +38,7 @@ import com.c4_soft.springaddons.security.oauth2.test.webmvc.MockMvcSupport;
 import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.direction.DelegationHistoryService;
 import pf.hururaa.direction.domain.DelegationChange;
 import pf.hururaa.direction.domain.DelegationChange.Change;
@@ -44,6 +48,8 @@ import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
+import pf.hururaa.problem.ProblemType;
+import pf.hururaa.problem.HururaaProblemException;
 
 /**
  * Level 1 of the delegation chain: Hurura'a administrators designate each direction's
@@ -80,6 +86,9 @@ class DirectionControllerTest {
 
   @MockitoBean
   ResourceEventPublisher resourceEvents;
+
+  @MockitoBean
+  PermissionJournal permissionJournal;
 
   @Test
   @WithAnonymousUser
@@ -208,5 +217,61 @@ class DirectionControllerTest {
         .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
     api.get(DirectionController.HISTORY_PATH, DPAM).andExpect(status().isOk());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenCreateDirection_thenForbidden() throws Exception {
+    api.post(new DirectionCreationRequest("dsp", "DSP", null), DirectionController.BASE_PATH)
+        .andExpect(status().isForbidden());
+    verify(directionService, never()).create(any(), any(), any());
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenCreateDirection_thenCreatedAndJournaled() throws Exception {
+    when(directionService.create("dsp", "DSP", "Direction de la santé publique"))
+        .thenReturn(new Direction("dsp", "DSP", "Direction de la santé publique"));
+
+    api
+        .post(new DirectionCreationRequest("dsp", "DSP", "Direction de la santé publique"),
+            DirectionController.BASE_PATH)
+        .andExpect(status().isCreated())
+        .andExpect(header().string("Location", endsWith("/directions/dsp")));
+    verify(permissionJournal).directionCreated("dsp");
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenTakenAlias_whenCreateDirection_thenConflictAndNotJournaled() throws Exception {
+    when(directionService.create("dpam", "DPAM", null))
+        .thenThrow(new HururaaProblemException(ProblemType.DIRECTION_ALREADY_EXISTS, "taken",
+            Map.of("direction", "dpam")));
+
+    api
+        .post(new DirectionCreationRequest("dpam", "DPAM", null), DirectionController.BASE_PATH)
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.type").value(ProblemType.DIRECTION_ALREADY_EXISTS.uri().toString()));
+    verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenInvalidAlias_whenCreateDirection_thenUnprocessable() throws Exception {
+    api
+        .post(new DirectionCreationRequest("Not An Alias", "X", null),
+            DirectionController.BASE_PATH)
+        .andExpect(status().isUnprocessableContent())
+        .andExpect(jsonPath("$.invalidFields.alias").exists());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenAuthenticatedUser_whenGetDirection_thenOk() throws Exception {
+    api
+        .get(DirectionController.DIRECTION_PATH, DPAM)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.alias").value(DPAM));
   }
 }

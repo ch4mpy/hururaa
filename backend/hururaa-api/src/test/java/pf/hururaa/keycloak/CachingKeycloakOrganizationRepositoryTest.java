@@ -407,4 +407,30 @@ class CachingKeycloakOrganizationRepositoryTest {
         .isEqualTo(ProblemType.IDENTITY_PROVIDER_ERROR);
   }
 
+
+  @Test
+  void givenDuplicate_whenCreate_thenDirectionAlreadyExists() {
+    when(organizationsApi.adminRealmsRealmOrganizationsPost(any(), any()))
+        .thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT, "Conflict", null, null,
+            null));
+
+    assertThatThrownBy(() -> organizationService
+        .create(new OrganizationRepresentation().alias("dpam").name("DPAM")))
+        .isInstanceOf(HururaaProblemException.class)
+        .extracting(e -> ((HururaaProblemException) e).getType())
+        .isEqualTo(ProblemType.DIRECTION_ALREADY_EXISTS);
+  }
+
+  @Test
+  void whenCreate_thenEnabledAndTheCachedOrganizationsEvicted() throws Exception {
+    final var cache =
+        cacheManager.getCache(CachingKeycloakOrganizationRepository.ORGANIZATIONS_CACHE);
+    cache.put("*", List.of());
+
+    organizationService.create(new OrganizationRepresentation().alias("dsp").name("DSP"));
+
+    verify(organizationsApi).adminRealmsRealmOrganizationsPost(REALM,
+        Optional.of(new OrganizationRepresentation().alias("dsp").name("DSP").enabled(true)));
+    assertThat(cache.get("*")).isNull();
+  }
 }

@@ -3,21 +3,26 @@ package pf.hururaa.direction.web;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -33,7 +38,10 @@ import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.journal.PermissionJournal;
+import pf.hururaa.problem.ProblemType;
 import pf.hururaa.uaa.HururaaPermission;
+import pf.hururaa.uaa.UaaProperties;
 
 @Tag(name = "Directions")
 @RestController
@@ -66,6 +74,10 @@ public class DirectionController {
 
   private final ResourceEventPublisher resourceEvents;
 
+  private final PermissionJournal permissionJournal;
+
+  private final UaaProperties uaaProperties;
+
   /**
    * Lists the directions (Keycloak organizations), by alias.
    *
@@ -81,6 +93,61 @@ public class DirectionController {
   @PreAuthorize("isAuthenticated()")
   public List<DirectionResponse> getDirections() throws HururaaProblemException {
     return directionService.findAll().stream().map(directoryMapper::toDirectionResponse).toList();
+  }
+
+  /**
+   * Creates a direction: a Keycloak organization, enabled, without domain.
+   *
+   * <h4>Access control</h4>
+   * <p>
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}).
+   * </p>
+   *
+   * @param request the direction to create
+   * @return the location of the created direction
+   */
+  @PostMapping(path = BASE_PATH)
+  @Transactional(rollbackFor = HururaaProblemException.class)
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')")
+  public ResponseEntity<Void> createDirection(
+      @RequestBody @Valid DirectionCreationRequest request,
+      Authentication authentication) throws HururaaProblemException {
+    final var direction =
+        directionService.create(request.alias(), request.name(), request.description());
+    permissionJournal.directionCreated(direction.alias());
+    log.info("{} created direction {}", authentication.getName(), direction.alias());
+    // the Hurura'a administrators, members of the DSI, are the ones listing every direction
+    resourceEvents.publish(DirectionEvents.of(uaaProperties.getPlatformOrganization(),
+        DirectionEvents.DIRECTION, direction.alias(), EventType.CREATE));
+    final var location = ServletUriComponentsBuilder
+        .fromCurrentContextPath()
+        .path(DIRECTION_PATH)
+        .buildAndExpand(direction.alias())
+        .toUri();
+    return ResponseEntity.created(location).build();
+  }
+
+  /**
+   * Retrieves a single direction.
+   *
+   * <h4>Access control</h4>
+   * <p>
+   * Requires the user to be authenticated.
+   * </p>
+   *
+   * @param direction the direction's alias
+   * @return the requested direction
+   */
+  @GetMapping(path = DIRECTION_PATH)
+  @Transactional(readOnly = true)
+  @PreAuthorize("isAuthenticated()")
+  public DirectionResponse getDirection(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction)
+      throws HururaaProblemException {
+    return directoryMapper.toDirectionResponse(directionService
+        .findByAlias(direction)
+        .orElseThrow(() -> new HururaaProblemException(ProblemType.DIRECTION_NOT_FOUND,
+            "No direction with alias %s".formatted(direction), Map.of("direction", direction))));
   }
 
   /**

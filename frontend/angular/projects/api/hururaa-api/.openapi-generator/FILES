@@ -24,6 +24,7 @@ model/applicationRoleResponse.ts
 model/applicationUpdateRequest.ts
 model/delegationChangeResponse.ts
 model/delegationsResponse.ts
+model/directionCreationRequest.ts
 model/directionResponse.ts
 model/groupRequest.ts
 model/groupResponse.ts

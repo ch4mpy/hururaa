@@ -111,25 +111,46 @@ public class GroupService {
   /**
    * Idempotent: does nothing when the user is already a member.
    *
+   * @return whether the user was added (false if already a member)
    * @throws HururaaProblemException {@code NOT_A_MEMBER} when the user is not a member of the
    *         direction (only its members can join its groups)
    */
-  public void addMember(String direction, String groupName, String userId)
+  public boolean addMember(String direction, String groupName, String userId)
       throws HururaaProblemException {
     directionService.requireMember(direction, userId);
     final var orgId = directionService.requireOrgId(direction);
     final var groupId = requireGroupId(direction, orgId, groupName);
+    if (isGroupMember(orgId, groupId, userId)) {
+      return false;
+    }
     groupRepo.addGroupMember(orgId, groupId, userId);
+    return true;
   }
 
   /**
    * Idempotent: does nothing when the user is not a member.
+   *
+   * @return whether the user was removed (false if not a member)
    */
-  public void removeMember(String direction, String groupName, String userId)
+  public boolean removeMember(String direction, String groupName, String userId)
       throws HururaaProblemException {
     final var orgId = directionService.requireOrgId(direction);
     final var groupId = requireGroupId(direction, orgId, groupName);
+    if (directionService.findMember(direction, userId).isEmpty()
+        || !isGroupMember(orgId, groupId, userId)) {
+      return false;
+    }
     groupRepo.removeGroupMember(orgId, groupId, userId);
+    return true;
+  }
+
+  /** The user's groups are read uncached: membership is what's about to change. */
+  private boolean isGroupMember(String orgId, String groupId, String userId)
+      throws HururaaProblemException {
+    return groupRepo
+        .findMemberGroups(orgId, userId)
+        .stream()
+        .anyMatch(group -> groupId.equals(group.getId()));
   }
 
   /**
@@ -152,24 +173,43 @@ public class GroupService {
   /**
    * Idempotent: does nothing when the group already grants the role.
    *
+   * @return whether the group now grants the role (false if it already did)
    * @throws HururaaProblemException {@code APPLICATION_ROLE_NOT_FOUND} when the client has no such
    *         role
    */
-  public void addClientRole(String direction, String groupName, String clientId, String role)
+  public boolean addClientRole(String direction, String groupName, String clientId, String role)
       throws HururaaProblemException {
     final var orgId = directionService.requireOrgId(direction);
     final var groupId = requireGroupId(direction, orgId, groupName);
+    if (grants(clientId, orgId, groupId, role)) {
+      return false;
+    }
     groupRepo.addClientRoleToGroup(clientId, orgId, groupId, role);
+    return true;
   }
 
   /**
    * Idempotent: does nothing when the group does not grant the role.
+   *
+   * @return whether the group stopped granting the role (false if it did not)
    */
-  public void removeClientRole(String direction, String groupName, String clientId, String role)
-      throws HururaaProblemException {
+  public boolean removeClientRole(String direction, String groupName, String clientId,
+      String role) throws HururaaProblemException {
     final var orgId = directionService.requireOrgId(direction);
     final var groupId = requireGroupId(direction, orgId, groupName);
+    if (!grants(clientId, orgId, groupId, role)) {
+      return false;
+    }
     groupRepo.removeClientRoleFromGroup(clientId, orgId, groupId, role);
+    return true;
+  }
+
+  private boolean grants(String clientId, String orgId, String groupId, String role)
+      throws HururaaProblemException {
+    return groupRepo
+        .findClientRolesByGroupId(clientId, orgId, groupId)
+        .stream()
+        .anyMatch(granted -> role.equals(granted.getName()));
   }
 
   private String requireGroupId(String direction, String orgId, String groupName)
