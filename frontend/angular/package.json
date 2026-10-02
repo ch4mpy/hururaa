@@ -32,7 +32,7 @@
     "@messageformat/core": "^3.4.0",
     "@ngrx/signals": "^21.1.1",
     "@ngx-translate/core": "^17.0.0",
-    "@ngx-translate/http-loader": "^17.0.0",
+    "@ngx-translate/http-loader": "^18.0.0",
     "@primeng/themes": "^21.0.4",
     "filesize": "^11.0.25",
     "google-libphonenumber": "^3.2.47",
