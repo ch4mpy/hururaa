@@ -78,8 +78,7 @@ export const DEV_DIRECTIONS: DevDirection[] = [
 ];
 
 export const DEV_USERS: DevUser[] = [
-  { username: 'hururaa.admin', direction: 'dsi', groups: ['hururaa-admins'] },
-  { username: 'dsi.admin', direction: 'dsi', groups: [] },
+  { username: 'dsi.admin', direction: 'dsi', groups: ['hururaa-admins'] },
   { username: 'dsi.manager', direction: 'dsi', groups: [] },
   { username: 'dsi.agent', direction: 'dsi', groups: ['te-fenua-agents'] },
   { username: 'dpam.admin', direction: 'dpam', groups: [] },
@@ -94,7 +93,7 @@ export const DEV_USERS: DevUser[] = [
 export function devDelegationOf(
   username: string,
 ): 'hururaa-admin' | 'admin' | 'manager' | undefined {
-  if (username === 'hururaa.admin') {
+  if (DEV_USERS.some((u) => u.username === username && u.groups.includes('hururaa-admins'))) {
     return 'hururaa-admin';
   }
   for (const direction of DEV_DIRECTIONS) {

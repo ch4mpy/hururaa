@@ -119,18 +119,17 @@ Royaume `public-facing` (`keycloak/import/public-facing-realm.json`), directions
 
 Utilisateurs (mot de passe `secret` pour tous) :
 
-| Utilisateur     | Direction | Délégation                                        |
-| --------------- | --------- | ------------------------------------------------- |
-| `hururaa.admin` | DSI       | administrateur Hurura'a (groupe `hururaa-admins`) |
-| `dsi.admin`     | DSI       | administrateur de la DSI                          |
-| `dsi.manager`   | DSI       | gestionnaire de Hurura'a et de Te Fenua           |
-| `dsi.agent`     | DSI       | aucune (membre de `te-fenua-agents`)              |
-| `dpam.admin`    | DPAM      | administrateur de la DPAM                         |
-| `dpam.manager`  | DPAM      | gestionnaire d'Escales                            |
-| `dpam.agent`    | DPAM      | aucune (membre de `escales-agents`)               |
-| `daf.admin`     | DAF       | administrateur de la DAF                          |
-| `daf.manager`   | DAF       | gestionnaire d'Anahei                             |
-| `daf.agent`     | DAF       | aucune (membre de `anahei-agents`)                |
+| Utilisateur    | Direction | Délégation                                                                    |
+| -------------- | --------- | ----------------------------------------------------------------------------- |
+| `dsi.admin`    | DSI       | administrateur de la DSI et administrateur Hurura'a (groupe `hururaa-admins`) |
+| `dsi.manager`  | DSI       | gestionnaire de Hurura'a et de Te Fenua                                       |
+| `dsi.agent`    | DSI       | aucune (membre de `te-fenua-agents`)                                          |
+| `dpam.admin`   | DPAM      | administrateur de la DPAM                                                     |
+| `dpam.manager` | DPAM      | gestionnaire d'Escales                                                        |
+| `dpam.agent`   | DPAM      | aucune (membre de `escales-agents`)                                           |
+| `daf.admin`    | DAF       | administrateur de la DAF                                                      |
+| `daf.manager`  | DAF       | gestionnaire d'Anahei                                                         |
+| `daf.agent`    | DAF       | aucune (membre de `anahei-agents`)                                            |
 
 Les délégations des niveaux direction et application sont chargées par Liquibase (contexte `dev`,
 `1790700000001-1-dev-data.xml`) avec les identifiants fixés dans l'export du royaume. Hors dev,

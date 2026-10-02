@@ -576,28 +576,6 @@
   "webAuthnPolicyPasswordlessExtraOrigins": [],
   "users": [
     {
-      "id": "d053cfc8-5a34-4fcb-9431-bb47617c18c6",
-      "username": "hururaa.admin",
-      "firstName": "Hina",
-      "lastName": "Teriitahi",
-      "email": "hururaa.admin@gov.pf",
-      "emailVerified": true,
-      "enabled": true,
-      "createdTimestamp": 1790700000000,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "secret",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "default-roles-public-facing"
-      ],
-      "notBefore": 0,
-      "groups": []
-    },
-    {
       "id": "e6ff96c5-0d55-4a1e-8716-8e0210551d1a",
       "username": "dsi.admin",
       "firstName": "Teva",
@@ -3722,15 +3700,10 @@
       "attributes": {},
       "members": [
         {
-          "username": "hururaa.admin",
+          "username": "dsi.admin",
           "groups": [
             "bf1d34ae-b12a-4cf4-8d8b-da276595ce6f"
           ],
-          "membershipType": "UNMANAGED"
-        },
-        {
-          "username": "dsi.admin",
-          "groups": [],
           "membershipType": "UNMANAGED"
         },
         {

@@ -32,6 +32,10 @@ public final class HururaaFixtures {
   public static final String DPAM = "dpam";
   public static final String DAF = "daf";
 
+  /**
+   * A Hurura'a administrator who administers no direction. Not a user of the dev realm, where
+   * {@code dsi.admin} is both: kept apart here so that tests tell the two delegations apart.
+   */
   public static final String HURURAA_ADMIN = "d053cfc8-5a34-4fcb-9431-bb47617c18c6";
   public static final String DSI_ADMIN = "e6ff96c5-0d55-4a1e-8716-8e0210551d1a";
   public static final String DSI_MANAGER = "c6bca76e-e2cb-45ee-bbfe-2538652279b1";

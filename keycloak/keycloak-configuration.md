@@ -59,5 +59,5 @@ is what `@tpe.isMember` relies on.
 
 ### Users
 
-See the table in the root README: ten dev users (password `secret`) with fixed ids, which the
+See the table in the root README: nine dev users (password `secret`) with fixed ids, which the
 Liquibase dev data of `hururaa-api` references.
