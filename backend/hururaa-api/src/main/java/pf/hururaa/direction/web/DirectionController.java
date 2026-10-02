@@ -30,6 +30,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import pf.hururaa.application.domain.Application;
+import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.direction.domain.DelegatedDirection;
@@ -75,6 +77,8 @@ public class DirectionController {
   private final GroupService groupService;
 
   private final DirectionAdminRepository directionAdminRepository;
+
+  private final ApplicationRepository applicationRepository;
 
   private final PermissionHistoryService permissionHistoryService;
 
@@ -307,10 +311,12 @@ public class DirectionController {
   public List<GroupResponse> getDirectionUserGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId) throws HururaaProblemException {
+    final var applications = applicationRepository.findByDirectionOrderByNameAsc(direction.alias());
     return groupService
         .findByMember(direction.alias(), userId)
         .stream()
-        .map(directoryMapper::toGroupResponse)
+        .map(group -> directoryMapper.toGroupResponse(group,
+            Application.owningGroup(applications, group.name()).orElse(null)))
         .toList();
   }
 

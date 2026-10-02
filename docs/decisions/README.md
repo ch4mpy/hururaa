@@ -16,3 +16,4 @@ Statuts : `proposée` (en attente d'arbitrage), `acceptée`, `remplacée par NNN
 | [0004](0004-actuator-sur-port-de-management.md) | Actuator sur un port de management dédié       | acceptée |
 | [0005](0005-delegations-stockees-par-hururaa.md) | Délégations stockées par Hurura'a plutôt que dans les jetons | proposée |
 | [0006](0006-angular-21-pour-pf-ui.md) | Angular 21 pour s'aligner sur pf-ui 21 / PrimeNG 21 | proposée |
+| [0007](0007-groupes-propres-a-une-application.md) | Groupes propres à une application | proposée |

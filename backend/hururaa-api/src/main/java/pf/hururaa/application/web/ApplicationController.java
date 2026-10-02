@@ -183,7 +183,7 @@ public class ApplicationController {
 
   /**
    * Renames an application and sets the direction managing it. Moving it to another direction drops
-   * its managers, and is refused while groups of its current direction grant its roles.
+   * its managers, and is refused while it has groups in its current direction.
    *
    * <h4>Access control</h4>
    * <p>
@@ -220,8 +220,8 @@ public class ApplicationController {
   }
 
   /**
-   * Unregisters an application (its Keycloak clients are left untouched). Refused while groups of
-   * its direction grant its roles.
+   * Unregisters an application (its Keycloak clients are left untouched). Refused while it has
+   * groups in its direction.
    *
    * <h4>Access control</h4>
    * <p>
@@ -251,7 +251,8 @@ public class ApplicationController {
 
   /**
    * Lists who changed what about an application, and when, newest first: its registration,
-   * renaming, moves and unregistration, its managers, its roles and the groups granting them.
+   * renaming, moves and unregistration, its managers, its roles and its groups (their roles and
+   * members).
    *
    * <h4>Access control</h4>
    * <p>

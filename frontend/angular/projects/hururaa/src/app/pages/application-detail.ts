@@ -7,6 +7,7 @@ import {
   ApplicationRolesApi,
   ApplicationsApi,
   DirectionsApi,
+  GroupsApi,
   UserResponse,
 } from '@api/hururaa-api';
 import { PfPageComponent } from 'pf-ui';
@@ -25,8 +26,8 @@ import { UserPicker } from './shared/user-picker';
 
 /**
  * An application: its identity (edited by its direction's administrators, its direction by
- * Hurura'a administrators only), its roles and its managers (defined by its direction's
- * administrators and by its managers).
+ * Hurura'a administrators only), its roles, its groups (named after its client prefix) and its
+ * managers (defined by its direction's administrators and by its managers).
  */
 @Component({
   selector: 'app-application-detail',
@@ -86,9 +87,9 @@ import { UserPicker } from './shared/user-picker';
             />
           </form>
           @if (delegations.isAdmin()) {
-            <small class="block mt-2" i18n="@@application.move.hint"
-              >Changer de direction retire les gestionnaires de l'application. C'est refusé tant que
-              des groupes de la direction actuelle attribuent ses rôles.</small
+            <small class="block mt-2" i18n="@@application.move.groupsHint"
+              >Changer de direction retire les gestionnaires de l'application. C'est refusé tant
+              qu'elle a des groupes dans sa direction actuelle.</small
             >
           }
         }
@@ -155,6 +156,45 @@ import { UserPicker } from './shared/user-picker';
             />
           </form>
 
+          <h2 i18n="@@application.groups">Groupes</h2>
+          <ul>
+            @for (group of groups.value() ?? []; track group.id) {
+              <li>
+                <a [routerLink]="['/directions', app.direction, 'groups', group.name]">{{
+                  group.name
+                }}</a>
+              </li>
+            } @empty {
+              <li i18n="@@application.groups.empty">Aucun groupe</li>
+            }
+          </ul>
+          <form
+            [formGroup]="groupForm"
+            (ngSubmit)="createGroup()"
+            class="flex flex-wrap align-items-end gap-3"
+          >
+            <div class="flex flex-column gap-1">
+              <label for="groupName" i18n="@@application.group.name">Nom du groupe</label>
+              <div class="flex align-items-center gap-1">
+                <code>{{ app.clientPrefix }}.</code>
+                <input
+                  pInputText
+                  id="groupName"
+                  formControlName="name"
+                  i18n-placeholder="@@application.group.name.placeholder"
+                  placeholder="agent"
+                />
+              </div>
+            </div>
+            <p-button
+              type="submit"
+              icon="ri-add-line"
+              [disabled]="groupForm.invalid"
+              i18n-label="@@application.group.create"
+              label="Créer le groupe"
+            />
+          </form>
+
           <h2 i18n="@@application.managers">Gestionnaires</h2>
           <p-table [value]="managers.value() ?? []" [loading]="managers.isLoading()">
             <ng-template #body let-manager>
@@ -206,6 +246,7 @@ export class ApplicationDetail {
   private readonly rolesApi = inject(ApplicationRolesApi);
   private readonly managersApi = inject(ApplicationManagersApi);
   private readonly directionsApi = inject(DirectionsApi);
+  private readonly groupsApi = inject(GroupsApi);
   private readonly confirmation = inject(ConfirmationService);
   private readonly router = inject(Router);
   private readonly notify = injectNotifier();
@@ -258,6 +299,12 @@ export class ApplicationDetail {
       params ? this.managersApi.getApplicationManagers(params.direction, params.id) : of([]),
   });
 
+  protected readonly groups = rxResource({
+    params: () => this.directionApplication(),
+    stream: ({ params }) =>
+      params ? this.groupsApi.getApplicationGroups(params.direction, params.id) : of([]),
+  });
+
   private readonly formBuilder = inject(FormBuilder).nonNullable;
 
   protected readonly form = this.formBuilder.group({
@@ -268,6 +315,11 @@ export class ApplicationDetail {
   protected readonly roleForm = this.formBuilder.group({
     name: ['', [Validators.required, Validators.pattern(/^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$/)]],
     description: [''],
+  });
+
+  /** The group's name within the application, which the API prefixes with its client prefix. */
+  protected readonly groupForm = this.formBuilder.group({
+    name: ['', [Validators.required, Validators.pattern(/^[a-z0-9][a-z0-9._-]*$/)]],
   });
 
   constructor() {
@@ -286,7 +338,8 @@ export class ApplicationDetail {
         direction.disable();
       }
     });
-    inject(ResourceEventsService)
+    const events = inject(ResourceEventsService);
+    events
       .of(ResourceTypes.APPLICATION)
       .pipe(takeUntilDestroyed())
       .subscribe((event) => {
@@ -295,6 +348,21 @@ export class ApplicationDetail {
           this.roles.reload();
           this.managers.reload();
         }
+      });
+    events
+      .of(ResourceTypes.GROUP)
+      .pipe(takeUntilDestroyed())
+      .subscribe((event) => event.tenant === this.direction() && this.groups.reload());
+  }
+
+  protected createGroup(): void {
+    const name = `${this.application.value()?.clientPrefix}.${this.groupForm.getRawValue().name}`;
+    this.groupsApi
+      .createGroup(this.loadedDirection(), this.applicationId(), this.groupForm.getRawValue())
+      .subscribe(() => {
+        this.groupForm.reset();
+        this.notify($localize`:@@application.group.created:Groupe ${name}:name: créé`);
+        this.groups.reload();
       });
   }
 

@@ -1,7 +1,9 @@
 package pf.hururaa.application.domain;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
@@ -37,6 +39,12 @@ import lombok.ToString;
  * </p>
  *
  * <p>
+ * Its groups are organization groups of its direction named {@code <prefix>.<name>}
+ * ({@code escales.agent}): a group grants roles of the application its name starts with, and of no
+ * other. Client prefixes contain no dot, which makes that application unambiguous.
+ * </p>
+ *
+ * <p>
  * Every application has two Keycloak clients named after its {@link #clientPrefix}: its users log
  * in with {@code <prefix>-bff} (authorization code with PKCE, refresh token), and its REST API
  * calls Keycloak's admin API with the service account of {@code <prefix>-api}, which also carries
@@ -59,6 +67,9 @@ import lombok.ToString;
 @ToString(onlyExplicitlyIncluded = true)
 public class Application implements Serializable {
   private static final long serialVersionUID = -2203717815932264771L;
+
+  /** Separates, in a group's name, the client prefix of its application from the rest. */
+  public static final String GROUP_NAME_SEPARATOR = ".";
 
   @Id
   @Column(name = "ID")
@@ -111,5 +122,24 @@ public class Application implements Serializable {
   /** Whether the user was designated manager of the application. */
   public boolean isManagedBy(String userId) {
     return managers.contains(userId);
+  }
+
+  /** The full name of the application's group named {@code name}: {@code escales.agent}. */
+  public String groupName(String name) {
+    return clientPrefix + GROUP_NAME_SEPARATOR + name;
+  }
+
+  /** Whether the group with that name is one of the application's. */
+  public boolean ownsGroup(String groupName) {
+    return groupName.startsWith(clientPrefix + GROUP_NAME_SEPARATOR);
+  }
+
+  /**
+   * @param applications the applications of the group's direction
+   * @return the one the group belongs to, empty for a group created outside of Hurura'a
+   */
+  public static Optional<Application> owningGroup(Collection<Application> applications,
+      String groupName) {
+    return applications.stream().filter(application -> application.ownsGroup(groupName)).findAny();
   }
 }

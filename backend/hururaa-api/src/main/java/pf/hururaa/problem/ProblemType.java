@@ -42,17 +42,17 @@ public enum ProblemType {
   APPLICATION_ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "application-role-not-found"),
 
   /**
-   * Parameters: {@code applicationId}, {@code direction}. A group only grants the roles of the
-   * applications managed by its own direction.
+   * Parameters: {@code direction}, {@code group}. The group's name does not start with the client
+   * prefix of an application of its direction (it was created outside of Hurura'a): it grants no
+   * role through Hurura'a.
    */
-  APPLICATION_NOT_IN_DIRECTION(HttpStatus.CONFLICT, "application-not-in-direction"),
+  GROUP_WITHOUT_APPLICATION(HttpStatus.CONFLICT, "group-without-application"),
 
   /**
    * Parameters: {@code applicationId}, {@code groups} (comma-separated names). The application
-   * can't leave its direction (moved to another one, or unregistered) while groups of that
-   * direction still grant its roles.
+   * can't leave its direction (moved to another one, or unregistered) while it has groups there.
    */
-  APPLICATION_ROLES_STILL_GRANTED(HttpStatus.CONFLICT, "application-roles-still-granted"),
+  APPLICATION_HAS_GROUPS(HttpStatus.CONFLICT, "application-has-groups"),
 
   /**
    * Parameters: {@code entity} (simple class name) and {@code id} when known. Another request

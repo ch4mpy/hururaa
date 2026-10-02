@@ -23,14 +23,14 @@ describe('problemMessage', () => {
       problemMessage(
         new HttpErrorResponse({
           status: 409,
-          error: problem(ProblemType.APPLICATION_ROLES_STILL_GRANTED, {
+          error: problem(ProblemType.APPLICATION_HAS_GROUPS, {
             applicationId: 3,
-            groups: 'escales-agents',
+            groups: 'escales.agent',
           }),
         }),
       ),
     ).toBe(
-      "Des groupes attribuent encore des rôles de l'application (escales-agents) : retirez-les d'abord",
+      "L'application a encore des groupes (escales.agent) : supprimez-les d'abord",
     );
   });
 

@@ -1,16 +1,15 @@
 package pf.hururaa.application;
 
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
+import pf.hururaa.direction.domain.Group;
 import pf.hururaa.keycloak.ClientProvisioningService;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
-import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 
@@ -30,8 +29,6 @@ public class ApplicationService {
   private final GroupService groupService;
 
   private final ClientProvisioningService clientProvisioningService;
-
-  private final KeycloakAdminApiProperties keycloakProperties;
 
   /**
    * Registers an application, creating its Keycloak clients ({@code <prefix>-bff} and
@@ -63,15 +60,15 @@ public class ApplicationService {
    * Renames an application and (re)assigns it to a direction. Moving it to another direction drops
    * its managers, who are members of the former one.
    *
-   * @throws HururaaProblemException {@code APPLICATION_ROLES_STILL_GRANTED} when moving an
-   *         application whose roles groups of its current direction still grant,
-   *         {@code DIRECTION_NOT_FOUND} if the new direction does not exist
+   * @throws HururaaProblemException {@code APPLICATION_HAS_GROUPS} when moving an application
+   *         which still has groups in its current direction, {@code DIRECTION_NOT_FOUND} if the new
+   *         direction does not exist
    */
   public Application update(Application application, String name, String direction)
       throws HururaaProblemException {
     if (!application.getDirection().equals(direction)) {
       requireDirection(direction);
-      requireNotGranted(application);
+      requireNoGroups(application);
       application.setDirection(direction);
       application.getManagers().clear();
     }
@@ -82,35 +79,32 @@ public class ApplicationService {
   /**
    * Unregisters an application. Its Keycloak clients are left untouched.
    *
-   * @throws HururaaProblemException {@code APPLICATION_ROLES_STILL_GRANTED} when groups of the
-   *         application's direction still grant its roles
+   * @throws HururaaProblemException {@code APPLICATION_HAS_GROUPS} when the application still has
+   *         groups in its direction
    */
   public void delete(Application application) throws HururaaProblemException {
-    requireNotGranted(application);
+    requireNoGroups(application);
     applicationRepository.delete(application);
   }
 
   /**
-   * An application leaving its direction must not leave behind groups granting its roles: nobody
-   * could manage these mappings anymore (they are out of reach of the new direction's groups, and
-   * of the former direction's application managers).
+   * An application leaving its direction must not leave its groups behind: they would be out of
+   * reach of its managers, and still grant its roles to their members.
    */
-  private void requireNotGranted(Application application) throws HururaaProblemException {
-    final var clientId = keycloakProperties.apiClientId(application.getClientPrefix());
-    final var granting = new ArrayList<String>();
-    for (final var group : groupService.findAll(application.getDirection())) {
-      if (!groupService.findClientRoles(application.getDirection(), group.name(), clientId)
-          .isEmpty()) {
-        granting.add(group.name());
-      }
-    }
-    if (!granting.isEmpty()) {
+  private void requireNoGroups(Application application) throws HururaaProblemException {
+    final var groups = groupService
+        .findAll(application.getDirection())
+        .stream()
+        .map(Group::name)
+        .filter(application::ownsGroup)
+        .toList();
+    if (!groups.isEmpty()) {
       throw new HururaaProblemException(
-          ProblemType.APPLICATION_ROLES_STILL_GRANTED,
-          "Groups %s of %s still grant roles of %s"
-              .formatted(granting, application.getDirection(), application.getClientPrefix()),
+          ProblemType.APPLICATION_HAS_GROUPS,
+          "%s still has groups %s in %s"
+              .formatted(application.getClientPrefix(), groups, application.getDirection()),
           Map.of("applicationId", Objects.requireNonNull(application.getId()), "groups",
-              String.join(",", granting)));
+              String.join(",", groups)));
     }
   }
 

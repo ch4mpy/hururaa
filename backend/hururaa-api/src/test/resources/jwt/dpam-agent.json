@@ -8,7 +8,7 @@
           "roles": ["escales.stopovers.read", "escales.stopovers.edit"]
         }
       },
-      "groups": ["/escales-agents"]
+      "groups": ["/escales.agent"]
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApplicationsApi, DirectionsApi, GroupsApi, UserResponse } from '@api/hururaa-api';
 import { PfPageComponent } from 'pf-ui';
@@ -18,7 +18,7 @@ const PAGE_SIZE = 10;
 
 /**
  * A direction: its administrators (designated by Hurura'a administrators), its applications, its
- * groups (created by its application managers) and its members.
+ * groups (each belonging to one of its applications) and its members.
  */
 @Component({
   selector: 'app-direction-detail',
@@ -26,7 +26,6 @@ const PAGE_SIZE = 10;
     PfPageComponent,
     RouterLink,
     FormsModule,
-    ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
     TableModule,
@@ -99,30 +98,21 @@ const PAGE_SIZE = 10;
               <a [routerLink]="['/directions', direction(), 'groups', group.name]">{{
                 group.name
               }}</a>
+              @if (group.applicationId) {
+                ·
+                <a [routerLink]="['/applications', group.applicationId]">{{
+                  group.applicationName
+                }}</a>
+              }
             </li>
           } @empty {
             <li i18n="@@direction.groups.empty">Aucun groupe</li>
           }
         </ul>
-        @if (delegations.canCreateGroupsIn(direction())) {
-          <form
-            [formGroup]="groupForm"
-            (ngSubmit)="createGroup()"
-            class="flex align-items-end gap-3"
-          >
-            <div class="flex flex-column gap-1">
-              <label for="groupName" i18n="@@direction.group.name">Nom du groupe</label>
-              <input pInputText id="groupName" formControlName="name" />
-            </div>
-            <p-button
-              type="submit"
-              icon="ri-add-line"
-              [disabled]="groupForm.invalid"
-              i18n-label="@@direction.group.create"
-              label="Créer le groupe"
-            />
-          </form>
-        }
+        <small class="block" i18n="@@direction.groups.hint"
+          >Chaque groupe appartient à une application, dont il porte le préfixe : il se crée depuis
+          la page de cette application.</small
+        >
 
         <h2 i18n="@@direction.members">Membres</h2>
         <div class="flex align-items-center gap-2 mb-2">
@@ -214,10 +204,6 @@ export class DirectionDetail {
         : of({ content: [] }),
   });
 
-  protected readonly groupForm = inject(FormBuilder).nonNullable.group({
-    name: ['', [Validators.required, Validators.pattern(/^[a-z0-9][a-z0-9._-]*$/)]],
-  });
-
   constructor() {
     const events = inject(ResourceEventsService);
     events
@@ -258,15 +244,6 @@ export class DirectionDetail {
         $localize`:@@direction.admin.removed:${userLabel(user)}:user: n'est plus administrateur`,
       );
       this.admins.reload();
-    });
-  }
-
-  protected createGroup(): void {
-    const { name } = this.groupForm.getRawValue();
-    this.groupsApi.createGroup(this.direction(), { name }).subscribe(() => {
-      this.groupForm.reset();
-      this.notify($localize`:@@direction.group.created:Groupe ${name}:name: créé`);
-      this.groups.reload();
     });
   }
 }

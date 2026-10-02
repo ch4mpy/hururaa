@@ -49,7 +49,7 @@ roles granted by the organization's groups under each organization:
 "organization": {
   "dsi": {
     "resource_access": { "hururaa-api": { "roles": ["hururaa.admin"] } },
-    "groups": ["/hururaa-admins"]
+    "groups": ["/hururaa.admin"]
   }
 }
 ```

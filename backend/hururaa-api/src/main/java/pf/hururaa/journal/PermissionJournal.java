@@ -2,6 +2,7 @@ package pf.hururaa.journal;
 
 import java.time.Instant;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -42,32 +43,52 @@ public class PermissionJournal {
         application, role));
   }
 
-  public void groupCreated(String direction, String group) {
-    save(event(direction, PermissionEventType.GROUP_CREATED).groupName(group));
+  /**
+   * @param application the application the group belongs to (in whose direction it is created)
+   */
+  public void groupCreated(Application application, String group) {
+    save(groupEvent(application.getDirection(), PermissionEventType.GROUP_CREATED, application,
+        group));
   }
 
-  public void groupDeleted(String direction, String group) {
-    save(event(direction, PermissionEventType.GROUP_DELETED).groupName(group));
+  /**
+   * @param application the application the group belonged to, if any
+   */
+  public void groupDeleted(String direction, @Nullable Application application, String group) {
+    save(groupEvent(direction, PermissionEventType.GROUP_DELETED, application, group));
   }
 
-  public void groupRoleGranted(String direction, String group, Application application,
-      String role) {
-    save(roleEvent(direction, PermissionEventType.GROUP_ROLE_GRANTED, application, role)
-        .groupName(group));
+  /**
+   * @param application the application the group belongs to, whose role it grants
+   */
+  public void groupRoleGranted(Application application, String group, String role) {
+    save(roleEvent(application.getDirection(), PermissionEventType.GROUP_ROLE_GRANTED,
+        application, role).groupName(group));
   }
 
-  public void groupRoleRevoked(String direction, String group, Application application,
-      String role) {
-    save(roleEvent(direction, PermissionEventType.GROUP_ROLE_REVOKED, application, role)
-        .groupName(group));
+  /**
+   * @param application the application the group belongs to, whose role it no longer grants
+   */
+  public void groupRoleRevoked(Application application, String group, String role) {
+    save(roleEvent(application.getDirection(), PermissionEventType.GROUP_ROLE_REVOKED,
+        application, role).groupName(group));
   }
 
-  public void groupMemberAdded(String direction, String group, String userId) {
-    save(event(direction, PermissionEventType.GROUP_MEMBER_ADDED).groupName(group).userId(userId));
+  /**
+   * @param application the application the group belongs to, if any
+   */
+  public void groupMemberAdded(String direction, @Nullable Application application, String group,
+      String userId) {
+    save(groupEvent(direction, PermissionEventType.GROUP_MEMBER_ADDED, application, group)
+        .userId(userId));
   }
 
-  public void groupMemberRemoved(String direction, String group, String userId) {
-    save(event(direction, PermissionEventType.GROUP_MEMBER_REMOVED).groupName(group)
+  /**
+   * @param application the application the group belongs to, if any
+   */
+  public void groupMemberRemoved(String direction, @Nullable Application application,
+      String group, String userId) {
+    save(groupEvent(direction, PermissionEventType.GROUP_MEMBER_REMOVED, application, group)
         .userId(userId));
   }
 
@@ -77,6 +98,13 @@ public class PermissionJournal {
         .applicationId(application.getId())
         .applicationName(application.getName())
         .role(role);
+  }
+
+  private static PermissionEvent.PermissionEventBuilder groupEvent(String direction,
+      PermissionEventType type, @Nullable Application application, String group) {
+    final var event = event(direction, type).groupName(group);
+    return application == null ? event
+        : event.applicationId(application.getId()).applicationName(application.getName());
   }
 
   /** The author is the authenticated user: the {@code Authentication}'s name is their id. */

@@ -2,13 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import {
-  ApplicationRolesApi,
-  ApplicationsApi,
-  GroupRoleResponse,
-  GroupsApi,
-  UserResponse,
-} from '@api/hururaa-api';
+import { ApplicationRolesApi, GroupsApi, UserResponse } from '@api/hururaa-api';
 import { PfPageComponent } from 'pf-ui';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -25,11 +19,9 @@ import { UserPicker } from './shared/user-picker';
 const PAGE_SIZE = 10;
 
 /**
- * A group of a direction: the roles it grants (of the direction's applications only, each managed
- * by that application's managers) and its members.
- *
- * Changing the members or deleting the group requires managing every application whose roles the
- * group grants: the API enforces it, a refusal shows in the error banner.
+ * A group of a direction: the roles of its application it grants, and its members. A group belongs
+ * to the application whose client prefix starts its name, and is managed by that application's
+ * managers and by its direction's administrators.
  */
 @Component({
   selector: 'app-group-detail',
@@ -46,7 +38,7 @@ const PAGE_SIZE = 10;
   template: `
     <pf-page [withPadding]="true">
       <ng-template #title>{{ group() }}</ng-template>
-      @if (canManageMembers()) {
+      @if (canManage()) {
         <ng-template #toolbar>
           <p-button
             severity="danger"
@@ -59,81 +51,73 @@ const PAGE_SIZE = 10;
         </ng-template>
       }
       <p class="mt-0">
-        <span i18n="@@group.of">Groupe de la direction</span>&nbsp;
+        @if (details.value()?.applicationId; as applicationId) {
+          <span i18n="@@group.ofApplication">Groupe de l'application</span>&nbsp;
+          <a [routerLink]="['/applications', applicationId]">{{
+            details.value()?.applicationName
+          }}</a>
+          ·
+        } @else if (details.value()) {
+          <span i18n="@@group.withoutApplication"
+            >Ce groupe n'appartient à aucune application : il n'attribue aucun rôle par
+            Hurura'a.</span
+          >
+          ·
+        }
+        <span i18n="@@group.direction">Direction</span>&nbsp;
         <a [routerLink]="['/directions', direction()]">{{ direction().toUpperCase() }}</a>
       </p>
 
-      <h2 i18n="@@group.roles">Rôles attribués</h2>
-      <p-table [value]="roles.value() ?? []" [loading]="roles.isLoading()">
-        <ng-template #header>
-          <tr>
-            <th i18n="@@group.role.application">Application</th>
-            <th i18n="@@group.role.name">Rôle</th>
-            <th><span class="sr-only" i18n="@@actions">Actions</span></th>
-          </tr>
-        </ng-template>
-        <ng-template #body let-role>
-          <tr>
-            <td>
-              <a [routerLink]="['/applications', role.applicationId]">{{ role.applicationName }}</a>
-            </td>
-            <td>
-              <code>{{ role.role }}</code>
-            </td>
-            <td class="text-right">
-              @if (
-                delegations.canGrantRolesOf({ id: role.applicationId, direction: direction() })
-              ) {
-                <p-button
-                  icon="ri-close-line"
-                  severity="danger"
-                  [text]="true"
-                  i18n-ariaLabel="@@group.role.remove"
-                  ariaLabel="Ne plus attribuer ce rôle"
-                  (onClick)="removeRole(role)"
-                />
-              }
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="3" i18n="@@group.roles.empty">Ce groupe n'attribue aucun rôle</td>
-          </tr>
-        </ng-template>
-      </p-table>
+      @if (applicationId()) {
+        <h2 i18n="@@group.roles">Rôles attribués</h2>
+        <p-table [value]="roles.value() ?? []" [loading]="roles.isLoading()">
+          <ng-template #body let-role>
+            <tr>
+              <td>
+                <code>{{ role.role }}</code>
+              </td>
+              <td class="text-right">
+                @if (canManage()) {
+                  <p-button
+                    icon="ri-close-line"
+                    severity="danger"
+                    [text]="true"
+                    i18n-ariaLabel="@@group.role.remove"
+                    ariaLabel="Ne plus attribuer ce rôle"
+                    (onClick)="removeRole(role.role)"
+                  />
+                }
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="2" i18n="@@group.roles.empty">Ce groupe n'attribue aucun rôle</td>
+            </tr>
+          </ng-template>
+        </p-table>
 
-      @if (grantableApplications().length) {
-        <div class="flex flex-wrap align-items-end gap-3 mt-3">
-          <div class="flex flex-column gap-1">
-            <label for="grantApplication" i18n="@@group.role.application">Application</label>
-            <p-select
-              inputId="grantApplication"
-              [options]="grantableApplications()"
-              optionLabel="name"
-              optionValue="id"
-              [ngModel]="grantApplicationId()"
-              (ngModelChange)="grantApplicationId.set($event)"
+        @if (canManage()) {
+          <div class="flex flex-wrap align-items-end gap-3 mt-3">
+            <div class="flex flex-column gap-1">
+              <label for="grantRole" i18n="@@group.role.name">Rôle</label>
+              <p-select
+                inputId="grantRole"
+                [options]="grantableRoles()"
+                optionLabel="name"
+                optionValue="name"
+                [(ngModel)]="grantRole"
+              />
+            </div>
+            <p-button
+              icon="ri-add-line"
+              [disabled]="!grantRole"
+              i18n-label="@@group.role.add"
+              label="Attribuer le rôle"
+              (onClick)="addRole()"
             />
           </div>
-          <div class="flex flex-column gap-1">
-            <label for="grantRole" i18n="@@group.role.name">Rôle</label>
-            <p-select
-              inputId="grantRole"
-              [options]="grantableRoles.value() ?? []"
-              optionLabel="name"
-              optionValue="name"
-              [(ngModel)]="grantRole"
-            />
-          </div>
-          <p-button
-            icon="ri-add-line"
-            [disabled]="!grantApplicationId() || !grantRole"
-            i18n-label="@@group.role.add"
-            label="Attribuer le rôle"
-            (onClick)="addRole()"
-          />
-        </div>
+        }
       }
 
       <h2 i18n="@@group.members">Membres</h2>
@@ -150,7 +134,7 @@ const PAGE_SIZE = 10;
           <tr>
             <td>{{ labelOf(member) }}</td>
             <td>{{ member.email }}</td>
-            @if (canManageMembers()) {
+            @if (canManage()) {
               <td class="text-right">
                 <p-button
                   icon="ri-user-unfollow-line"
@@ -170,7 +154,7 @@ const PAGE_SIZE = 10;
           </tr>
         </ng-template>
       </p-table>
-      @if (canManageMembers()) {
+      @if (canManage()) {
         <div class="mt-3">
           <app-user-picker
             [direction]="direction()"
@@ -193,7 +177,7 @@ export class GroupDetail {
   private readonly confirmation = inject(ConfirmationService);
   private readonly router = inject(Router);
   private readonly notify = injectNotifier();
-  protected readonly delegations = inject(DelegationsService);
+  private readonly delegations = inject(DelegationsService);
   protected readonly labelOf = userLabel;
   protected readonly pageSize = PAGE_SIZE;
 
@@ -203,29 +187,39 @@ export class GroupDetail {
   /** Bound from the `:group` route parameter. */
   readonly group = input.required<string>();
 
-  /**
-   * Whether to offer changing the group's members, or deleting it: for a manager who is not an
-   * administrator, the API also requires managing every application whose roles the group grants.
-   */
-  protected readonly canManageMembers = computed(() =>
-    this.delegations.canCreateGroupsIn(this.direction()),
-  );
-
-  private readonly applicationsApi = inject(ApplicationsApi);
-
-  private readonly directionApplications = rxResource({
-    params: () => this.direction(),
-    stream: ({ params }) => this.applicationsApi.getApplications(params),
+  protected readonly details = rxResource({
+    params: () => ({ direction: this.direction(), group: this.group() }),
+    stream: ({ params }) => this.groupsApi.getGroup(params.direction, params.group),
   });
 
-  /** The applications of this direction whose roles the user may grant. */
-  protected readonly grantableApplications = computed(() =>
-    (this.directionApplications.value() ?? []).filter((a) => this.delegations.canGrantRolesOf(a)),
+  /** The application the group belongs to, if any: only its roles can be granted. */
+  protected readonly applicationId = computed(() => this.details.value()?.applicationId);
+
+  /** Mirrors the access rule of the API's group roles, members and deletion endpoints. */
+  protected readonly canManage = computed(
+    () =>
+      !!this.details.value() &&
+      this.delegations.canManageGroup({
+        direction: this.direction(),
+        applicationId: this.applicationId(),
+      }),
   );
 
   protected readonly roles = rxResource({
     params: () => ({ direction: this.direction(), group: this.group() }),
     stream: ({ params }) => this.groupsApi.getGroupRoles(params.direction, params.group),
+  });
+
+  private readonly applicationRoles = rxResource({
+    params: () => (this.canManage() ? this.applicationId() : undefined),
+    stream: ({ params }) =>
+      params ? this.rolesApi.getApplicationRoles(this.direction(), params) : of([]),
+  });
+
+  /** The application's roles the group does not grant yet. */
+  protected readonly grantableRoles = computed(() => {
+    const granted = new Set((this.roles.value() ?? []).map((r) => r.role));
+    return (this.applicationRoles.value() ?? []).filter((r) => !granted.has(r.name));
   });
 
   protected readonly page = signal(0);
@@ -236,14 +230,7 @@ export class GroupDetail {
       this.groupsApi.getGroupMembers(params.direction, params.group, params.page, PAGE_SIZE),
   });
 
-  protected readonly grantApplicationId = signal<number | undefined>(undefined);
   protected grantRole: string | undefined;
-
-  protected readonly grantableRoles = rxResource({
-    params: () => this.grantApplicationId(),
-    stream: ({ params }) =>
-      params ? this.rolesApi.getApplicationRoles(this.direction(), params) : of([]),
-  });
 
   constructor() {
     inject(ResourceEventsService)
@@ -262,27 +249,22 @@ export class GroupDetail {
   }
 
   protected addRole(): void {
-    const applicationId = this.grantApplicationId();
     const role = this.grantRole;
-    if (!applicationId || !role) {
+    if (!role) {
       return;
     }
-    this.groupsApi
-      .addGroupRole(this.direction(), this.group(), applicationId, role)
-      .subscribe(() => {
-        this.grantRole = undefined;
-        this.notify($localize`:@@group.role.added:Le groupe attribue désormais ${role}:role:`);
-        this.roles.reload();
-      });
+    this.groupsApi.addGroupRole(this.direction(), this.group(), role).subscribe(() => {
+      this.grantRole = undefined;
+      this.notify($localize`:@@group.role.added:Le groupe attribue désormais ${role}:role:`);
+      this.roles.reload();
+    });
   }
 
-  protected removeRole(role: GroupRoleResponse): void {
-    this.groupsApi
-      .removeGroupRole(this.direction(), this.group(), role.applicationId, role.role)
-      .subscribe(() => {
-        this.notify($localize`:@@group.role.removed:Le groupe n'attribue plus ${role.role}:role:`);
-        this.roles.reload();
-      });
+  protected removeRole(role: string): void {
+    this.groupsApi.removeGroupRole(this.direction(), this.group(), role).subscribe(() => {
+      this.notify($localize`:@@group.role.removed:Le groupe n'attribue plus ${role}:role:`);
+      this.roles.reload();
+    });
   }
 
   protected addMember(user: UserResponse): void {
@@ -301,13 +283,16 @@ export class GroupDetail {
 
   protected deleteGroup(): void {
     const group = this.group();
+    const applicationId = this.applicationId();
     confirm(this.confirmation, {
       header: $localize`:@@group.delete:Supprimer le groupe`,
       message: $localize`:@@group.delete.confirm:Supprimer le groupe ${group}:group: ? Ses membres perdront les rôles qu'il leur attribue.`,
     }).subscribe(() =>
       this.groupsApi.deleteGroup(this.direction(), group).subscribe(() => {
         this.notify($localize`:@@group.deleted:Groupe ${group}:group: supprimé`);
-        void this.router.navigate(['/directions', this.direction()]);
+        void this.router.navigate(
+          applicationId ? ['/applications', applicationId] : ['/directions', this.direction()],
+        );
       }),
     );
   }

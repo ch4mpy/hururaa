@@ -10,8 +10,8 @@
  * <li><b>direction administrators</b> (a {@code DirectionAdmin} row) register, rename and
  * unregister the applications of their direction, and define their roles and managers;</li>
  * <li><b>application managers</b> (a user id in {@code Application.managers}) define the roles and
- * the other managers of the applications they manage, aggregate roles into groups of the
- * direction, and assign users to those groups.</li>
+ * the other managers of the applications they manage, create their groups (named after their
+ * client prefix: {@code escales.agent}), make them grant their roles and assign users to them.</li>
  * </ol>
  *
  * <p>

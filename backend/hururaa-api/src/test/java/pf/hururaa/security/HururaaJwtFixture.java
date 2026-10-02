@@ -23,8 +23,8 @@ final class HururaaJwtFixture {
 
   /**
    * A synthetic access token: a user member of two directions, with no Hurura'a role in dpam (via
-   * {@code /escales-agents}, granting roles of escales-api only) and {@link HururaaPermission#ALL}
-   * of them in dsi (via {@code /hururaa-admins}).
+   * {@code /escales.agent}, granting roles of escales-api only) and {@link HururaaPermission#ALL}
+   * of them in dsi (via {@code /hururaa.admin}).
    */
   static Map<String, Object> fixtureClaims() {
     final var claims = new LinkedHashMap<String, Object>();
@@ -46,13 +46,13 @@ final class HururaaJwtFixture {
             "resource_access",
             Map.of("escales-api", Map.of("roles", List.of("escales.bookings.read"))),
             "groups",
-            List.of("/escales-agents"));
+            List.of("/escales.agent"));
     final var dsi = Map
         .of(
             "resource_access",
             Map.of(ROLES_NAMESPACE, Map.of("roles", List.copyOf(HururaaPermission.ALL))),
             "groups",
-            List.of("/hururaa-admins"));
+            List.of("/hururaa.admin"));
     return Map.of("dpam", dpam, "dsi", dsi);
   }
 }

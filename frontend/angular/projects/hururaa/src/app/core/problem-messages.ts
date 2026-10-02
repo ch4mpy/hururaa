@@ -28,10 +28,10 @@ const PROBLEM_MESSAGES: Record<ProblemType, (p: Parameters) => string> = {
     $localize`:@@problem.applicationAlreadyExists:Une application utilise déjà le préfixe ${str(p['clientPrefix'])}:clientPrefix:`,
   [ProblemType.APPLICATION_ROLE_NOT_FOUND]: (p) =>
     $localize`:@@problem.applicationRoleNotFound:Le client ${str(p['clientId'])}:clientId: n'a pas de rôle ${str(p['role'])}:role:`,
-  [ProblemType.APPLICATION_NOT_IN_DIRECTION]: (p) =>
-    $localize`:@@problem.applicationNotInDirection:L'application n° ${str(p['applicationId'])}:applicationId: n'est pas gérée par la direction ${str(p['direction'])}:direction: : ses rôles ne peuvent pas être attribués par les groupes de cette direction`,
-  [ProblemType.APPLICATION_ROLES_STILL_GRANTED]: (p) =>
-    $localize`:@@problem.applicationRolesStillGranted:Des groupes attribuent encore des rôles de l'application (${str(p['groups'])}:groups:) : retirez-les d'abord`,
+  [ProblemType.GROUP_WITHOUT_APPLICATION]: (p) =>
+    $localize`:@@problem.groupWithoutApplication:Le groupe ${str(p['group'])}:group: n'appartient à aucune application de la direction ${str(p['direction'])}:direction: : il ne peut pas attribuer de rôle`,
+  [ProblemType.APPLICATION_HAS_GROUPS]: (p) =>
+    $localize`:@@problem.applicationHasGroups:L'application a encore des groupes (${str(p['groups'])}:groups:) : supprimez-les d'abord`,
   [ProblemType.CONCURRENT_MODIFICATION]: () =>
     $localize`:@@problem.concurrentModification:Modifié entre-temps par quelqu'un d'autre : rechargez la page avant de réessayer`,
   [ProblemType.DATA_INTEGRITY_VIOLATION]: () =>

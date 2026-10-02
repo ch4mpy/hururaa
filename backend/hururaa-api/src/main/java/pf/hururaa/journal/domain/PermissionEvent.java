@@ -71,11 +71,11 @@ public class PermissionEvent implements Serializable {
   @ToString.Include
   private PermissionEventType type;
 
-  /** For a role related event: the application whose role it is. */
+  /** For a role or group related event: the application whose role or group it is. */
   @Column(name = "APPLICATION_ID", updatable = false)
   private @Nullable Long applicationId;
 
-  /** For a role related event: the application's name at the time of the change. */
+  /** For a role or group related event: the application's name at the time of the change. */
   @Column(name = "APPLICATION_NAME", updatable = false)
   private @Nullable String applicationName;
 

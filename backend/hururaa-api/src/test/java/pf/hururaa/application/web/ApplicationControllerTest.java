@@ -309,9 +309,8 @@ class ApplicationControllerTest {
   @WithJwt("jwt/hururaa-admin.json")
   void givenHururaaAdmin_whenMovingApplication_thenManagersDroppedAndBothDirectionsNotified()
       throws Exception {
-    when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "escales-agents")));
-    when(groupService.findClientRoles(DPAM, "escales-agents", "escales-api"))
-        .thenReturn(List.of());
+    // a group of another application of the direction does not hold Escales back
+    when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "pgc.agent")));
 
     api
         .put(new ApplicationUpdateRequest("Escales", DSI),
@@ -330,10 +329,9 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenRolesStillGranted_whenMovingApplication_thenConflict() throws Exception {
-    when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "escales-agents")));
-    when(groupService.findClientRoles(DPAM, "escales-agents", "escales-api"))
-        .thenReturn(List.of("escales.stopovers.read"));
+  void givenApplicationWithGroups_whenMovingApplication_thenConflict() throws Exception {
+    when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "escales.agent"),
+        new Group("g2", DPAM, "pgc.agent")));
 
     api
         .put(new ApplicationUpdateRequest("Escales", DSI),
@@ -341,15 +339,15 @@ class ApplicationControllerTest {
             DPAM, ESCALES_ID)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type")
-            .value(ProblemType.APPLICATION_ROLES_STILL_GRANTED.uri().toString()))
-        .andExpect(jsonPath("$.parameters.groups").value("escales-agents"));
+            .value(ProblemType.APPLICATION_HAS_GROUPS.uri().toString()))
+        .andExpect(jsonPath("$.parameters.groups").value("escales.agent"));
     verify(applicationRepository, never()).save(any());
     verifyNoInteractions(resourceEvents);
   }
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenSameDirection_whenRenamingApplication_thenGrantsAreNotChecked() throws Exception {
+  void givenSameDirection_whenRenamingApplication_thenGroupsAreNotChecked() throws Exception {
     api
         .put(new ApplicationUpdateRequest("Escales 2", DPAM),
             ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
@@ -377,7 +375,7 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenDeleteUngrantedApplication_thenNoContent() throws Exception {
+  void givenHururaaAdmin_whenDeleteApplicationWithoutGroups_thenNoContent() throws Exception {
     when(groupService.findAll(DPAM)).thenReturn(List.of());
 
     api.delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)

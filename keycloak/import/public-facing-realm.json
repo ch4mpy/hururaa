@@ -3723,8 +3723,8 @@
       "groups": [
         {
           "id": "bf1d34ae-b12a-4cf4-8d8b-da276595ce6f",
-          "name": "hururaa-admins",
-          "path": "/hururaa-admins",
+          "name": "hururaa.admin",
+          "path": "/hururaa.admin",
           "parentId": "e15fffb9-9a1a-439e-8073-38246ebd6cb8",
           "subGroups": [],
           "attributes": {},
@@ -3737,8 +3737,8 @@
         },
         {
           "id": "9035bcbc-448f-48ed-b8cc-565b80866294",
-          "name": "te-fenua-agents",
-          "path": "/te-fenua-agents",
+          "name": "te-fenua.agent",
+          "path": "/te-fenua.agent",
           "parentId": "e15fffb9-9a1a-439e-8073-38246ebd6cb8",
           "subGroups": [],
           "attributes": {},
@@ -3783,8 +3783,8 @@
       "groups": [
         {
           "id": "9eee2700-0c73-45d6-969c-ad330a354806",
-          "name": "escales-agents",
-          "path": "/escales-agents",
+          "name": "escales.agent",
+          "path": "/escales.agent",
           "parentId": "aa28778f-0406-473d-ad99-28777255bd38",
           "subGroups": [],
           "attributes": {},
@@ -3829,8 +3829,8 @@
       "groups": [
         {
           "id": "5d678087-ff1b-498b-9140-d89d99b35dfa",
-          "name": "anahei-agents",
-          "path": "/anahei-agents",
+          "name": "anahei.agent",
+          "path": "/anahei.agent",
           "parentId": "ca556865-1433-4c44-b31a-4d4c173915b0",
           "subGroups": [],
           "attributes": {},

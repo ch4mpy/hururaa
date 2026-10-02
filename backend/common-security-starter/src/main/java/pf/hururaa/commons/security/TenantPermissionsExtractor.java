@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
  * "organization": {
  *   "dsi": {
  *     "resource_access": { "hururaa-api": { "roles": [ "hururaa.admin" ] } },
- *     "groups": [ "/hururaa-admins" ]
+ *     "groups": [ "/hururaa.admin" ]
  *   },
  *   "dpam": {
  *     "groups": [ ]

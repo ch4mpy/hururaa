@@ -40,11 +40,11 @@ export const DEV_DIRECTIONS: DevDirection[] = [
     ],
     groups: [
       {
-        name: 'hururaa-admins',
+        name: 'hururaa.admin',
         roles: [{ clientId: 'hururaa-api', roles: ['hururaa.admin'] }],
       },
       {
-        name: 'te-fenua-agents',
+        name: 'te-fenua.agent',
         roles: [
           { clientId: 'te-fenua-api', roles: ['te-fenua.parcels.read', 'te-fenua.parcels.edit'] },
         ],
@@ -57,7 +57,7 @@ export const DEV_DIRECTIONS: DevDirection[] = [
     applications: [{ name: 'Escales', clientPrefix: 'escales', managers: ['dpam.manager'] }],
     groups: [
       {
-        name: 'escales-agents',
+        name: 'escales.agent',
         roles: [
           { clientId: 'escales-api', roles: ['escales.stopovers.read', 'escales.stopovers.edit'] },
         ],
@@ -70,7 +70,7 @@ export const DEV_DIRECTIONS: DevDirection[] = [
     applications: [{ name: 'Anahei', clientPrefix: 'anahei', managers: ['daf.manager'] }],
     groups: [
       {
-        name: 'anahei-agents',
+        name: 'anahei.agent',
         roles: [{ clientId: 'anahei-api', roles: ['anahei.files.read', 'anahei.files.edit'] }],
       },
     ],
@@ -78,22 +78,22 @@ export const DEV_DIRECTIONS: DevDirection[] = [
 ];
 
 export const DEV_USERS: DevUser[] = [
-  { username: 'dsi.admin', direction: 'dsi', groups: ['hururaa-admins'] },
+  { username: 'dsi.admin', direction: 'dsi', groups: ['hururaa.admin'] },
   { username: 'dsi.manager', direction: 'dsi', groups: [] },
-  { username: 'dsi.agent', direction: 'dsi', groups: ['te-fenua-agents'] },
+  { username: 'dsi.agent', direction: 'dsi', groups: ['te-fenua.agent'] },
   { username: 'dpam.admin', direction: 'dpam', groups: [] },
   { username: 'dpam.manager', direction: 'dpam', groups: [] },
-  { username: 'dpam.agent', direction: 'dpam', groups: ['escales-agents'] },
+  { username: 'dpam.agent', direction: 'dpam', groups: ['escales.agent'] },
   { username: 'daf.admin', direction: 'daf', groups: [] },
   { username: 'daf.manager', direction: 'daf', groups: [] },
-  { username: 'daf.agent', direction: 'daf', groups: ['anahei-agents'] },
+  { username: 'daf.agent', direction: 'daf', groups: ['anahei.agent'] },
 ];
 
-/** The delegation a dev user holds, if any (Hurura'a's own comes from the `hururaa-admins` group). */
+/** The delegation a dev user holds, if any (Hurura'a's own comes from the `hururaa.admin` group). */
 export function devDelegationOf(
   username: string,
 ): 'hururaa-admin' | 'admin' | 'manager' | undefined {
-  if (DEV_USERS.some((u) => u.username === username && u.groups.includes('hururaa-admins'))) {
+  if (DEV_USERS.some((u) => u.username === username && u.groups.includes('hururaa.admin'))) {
     return 'hururaa-admin';
   }
   for (const direction of DEV_DIRECTIONS) {

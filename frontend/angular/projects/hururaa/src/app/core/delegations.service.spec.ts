@@ -60,8 +60,7 @@ describe('DelegationsService', () => {
     expect(service.canReadDirection('dpam')).toBe(true);
     expect(service.canEditApplicationsOf('dpam')).toBe(true);
     expect(service.canManageApplication(escales)).toBe(true);
-    expect(service.canCreateGroupsIn('dpam')).toBe(true);
-    expect(service.canGrantRolesOf(escales)).toBe(true);
+    expect(service.canManageGroup({ direction: 'dpam', applicationId: 9 })).toBe(true);
     expect(service.hasAny()).toBe(true);
   });
 
@@ -96,9 +95,9 @@ describe('DelegationsService', () => {
     expect(service.canEditApplicationsOf('dpam')).toBe(true);
     expect(service.canManageApplication(escales)).toBe(true);
     expect(service.canEditApplicationsOf('daf')).toBe(false);
-    expect(service.canGrantRolesOf(escales)).toBe(true);
-    expect(service.canCreateGroupsIn('dpam')).toBe(true);
-    expect(service.canCreateGroupsIn('daf')).toBe(false);
+    expect(service.canManageGroup({ direction: 'dpam', applicationId: 9 })).toBe(true);
+    expect(service.canManageGroup({ direction: 'dpam' })).toBe(true);
+    expect(service.canManageGroup({ direction: 'daf', applicationId: 9 })).toBe(false);
   });
 
   it('lets managers manage the applications they manage, not edit them', () => {
@@ -111,7 +110,9 @@ describe('DelegationsService', () => {
 
     expect(service.canManageApplication(escales)).toBe(true);
     expect(service.canEditApplicationsOf('dpam')).toBe(false);
-    expect(service.canGrantRolesOf(escales)).toBe(true);
-    expect(service.canCreateGroupsIn('dpam')).toBe(true);
+    expect(service.canManageGroup({ direction: 'dpam', applicationId: 3 })).toBe(true);
+    // another application of the direction, or a group belonging to none
+    expect(service.canManageGroup({ direction: 'dpam', applicationId: 9 })).toBe(false);
+    expect(service.canManageGroup({ direction: 'dpam' })).toBe(false);
   });
 });

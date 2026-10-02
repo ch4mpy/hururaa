@@ -109,15 +109,13 @@ export class DelegationsService {
     );
   }
 
-  /** Whether the user may create groups in the direction. */
-  canCreateGroupsIn(direction: string): boolean {
-    return (
-      this.isAdmin() || this.isDirectionAdmin(direction) || this.isManagerInDirection(direction)
-    );
-  }
-
-  /** Whether the user may grant the application's roles through groups. */
-  canGrantRolesOf(application: { id: number; direction: string }): boolean {
-    return this.canManageApplication(application);
+  /**
+   * Whether the user may change a group's roles and members, or delete it: managing its
+   * application, or its direction when it belongs to none.
+   */
+  canManageGroup(group: { direction: string; applicationId?: number | null }): boolean {
+    return group.applicationId
+      ? this.canManageApplication({ id: group.applicationId, direction: group.direction })
+      : this.canEditApplicationsOf(group.direction);
   }
 }

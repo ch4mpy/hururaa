@@ -6,7 +6,7 @@
 
   | user         | direction | delegation                                                       |
   |==============|===========|==================================================================|
-  | dsi.admin    | dsi       | administrator of dsi, and Hurura'a admin (group /hururaa-admins) |
+  | dsi.admin    | dsi       | administrator of dsi, and Hurura'a admin (group /hururaa.admin)  |
   | dsi.manager  | dsi       | manager of Hurura'a and Te Fenua                                 |
   | dpam.admin   | dpam      | administrator of dpam                                            |
   | dpam.manager | dpam      | manager of Escales                                               |

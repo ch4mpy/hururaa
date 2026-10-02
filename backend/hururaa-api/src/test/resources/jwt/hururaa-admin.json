@@ -8,7 +8,7 @@
           "roles": ["hururaa.admin"]
         }
       },
-      "groups": ["/hururaa-admins"]
+      "groups": ["/hururaa.admin"]
     }
   }
 }

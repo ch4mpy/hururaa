@@ -2,7 +2,6 @@ package pf.hururaa.direction;
 
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -14,13 +13,12 @@ import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
-import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 
 /**
- * Joins what Keycloak knows of a direction or a group (it exists, its name, its role mappings) with
- * the delegations Hurura'a stores for it, into the objects the access rules are written against.
+ * Joins what Keycloak knows of a direction or a group (it exists, its name) with the delegations
+ * Hurura'a stores for it, into the objects the access rules are written against.
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
@@ -35,8 +33,6 @@ public class DelegationResolver {
   private final DirectionAdminRepository directionAdminRepository;
 
   private final ApplicationRepository applicationRepository;
-
-  private final KeycloakAdminApiProperties keycloakProperties;
 
   /**
    * @throws HururaaProblemException {@code DIRECTION_NOT_FOUND} if the direction does not exist
@@ -70,21 +66,9 @@ public class DelegationResolver {
         .orElseThrow(() -> new HururaaProblemException(ProblemType.GROUP_NOT_FOUND,
             "No group %s in direction %s".formatted(groupName, directionAlias),
             Map.of("direction", directionAlias, "group", groupName)));
-    final var grantingApplicationsManagers = new HashSet<Set<String>>();
-    for (final var application : applicationRepository
-        .findByDirectionOrderByNameAsc(directionAlias)) {
-      if (grants(directionAlias, groupName, application)) {
-        grantingApplicationsManagers.add(Set.copyOf(application.getManagers()));
-      }
-    }
-    return new DelegatedGroup(group.id(), group.name(), direction, grantingApplicationsManagers);
-  }
-
-  private boolean grants(String direction, String groupName, Application application)
-      throws HururaaProblemException {
-    return !groupService
-        .findClientRoles(direction, groupName,
-            keycloakProperties.apiClientId(application.getClientPrefix()))
-        .isEmpty();
+    return new DelegatedGroup(group.id(), group.name(), direction, Application
+        .owningGroup(applicationRepository.findByDirectionOrderByNameAsc(directionAlias),
+            group.name())
+        .orElse(null));
   }
 }

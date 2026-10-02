@@ -51,7 +51,7 @@ describe('PermissionHistory', () => {
           authorUsername: 'dpam.admin',
           authorFirstName: 'Teva',
           authorLastName: 'Tetuanui',
-          group: 'escales-agents',
+          group: 'escales.agent',
           role: 'escales.stopovers.read',
           applicationName: 'Escales',
         },
@@ -62,7 +62,7 @@ describe('PermissionHistory', () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent;
     expect(text).toContain(
-      'Le groupe escales-agents attribue le rôle escales.stopovers.read de Escales',
+      'Le groupe escales.agent attribue le rôle escales.stopovers.read de Escales',
     );
     expect(text).toContain('Teva Tetuanui');
   });
@@ -88,10 +88,10 @@ describe('PermissionHistory', () => {
   });
 
   it("asks a group's history", () => {
-    render({ direction: 'dpam', group: 'escales-agents' });
+    render({ direction: 'dpam', group: 'escales.agent' });
 
     http
-      .expectOne((r) => r.url === '/api/directions/dpam/groups/escales-agents/history')
+      .expectOne((r) => r.url === '/api/directions/dpam/groups/escales.agent/history')
       .flush({ content: [] });
   });
 });

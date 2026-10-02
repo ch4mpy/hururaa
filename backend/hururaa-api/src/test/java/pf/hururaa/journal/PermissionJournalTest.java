@@ -48,9 +48,10 @@ class PermissionJournalTest {
 
   @Test
   void whenJournaling_thenAuthoredByTheAuthenticatedUserAndListedNewestFirst() {
-    journal.groupCreated(DPAM, "escales-agents");
-    journal.groupRoleGranted(DPAM, "escales-agents", escales(), "escales.stopovers.read");
-    journal.groupMemberAdded(DPAM, "escales-agents", DPAM_AGENT);
+    journal.groupCreated(escales(), "escales.agent");
+    journal.groupRoleGranted(escales(), "escales.agent", "escales.stopovers.read");
+    journal.groupMemberAdded(DPAM, escales(), "escales.agent", DPAM_AGENT);
+    journal.groupMemberAdded(DPAM, null, "legacy-group", DPAM_AGENT);
 
     final var events = repository.findByDirectionOrderByIdDesc(DPAM, PageRequest.of(0, 10));
 
@@ -59,11 +60,13 @@ class PermissionJournalTest {
             PermissionEvent::getGroupName, PermissionEvent::getApplicationName,
             PermissionEvent::getRole, PermissionEvent::getUserId)
         .containsExactly(
-            tuple(PermissionEventType.GROUP_MEMBER_ADDED, DPAM_ADMIN, "escales-agents", null,
+            tuple(PermissionEventType.GROUP_MEMBER_ADDED, DPAM_ADMIN, "legacy-group", null,
                 null, DPAM_AGENT),
-            tuple(PermissionEventType.GROUP_ROLE_GRANTED, DPAM_ADMIN, "escales-agents",
+            tuple(PermissionEventType.GROUP_MEMBER_ADDED, DPAM_ADMIN, "escales.agent",
+                "Escales", null, DPAM_AGENT),
+            tuple(PermissionEventType.GROUP_ROLE_GRANTED, DPAM_ADMIN, "escales.agent",
                 "Escales", "escales.stopovers.read", null),
-            tuple(PermissionEventType.GROUP_CREATED, DPAM_ADMIN, "escales-agents", null, null,
+            tuple(PermissionEventType.GROUP_CREATED, DPAM_ADMIN, "escales.agent", "Escales", null,
                 null));
     assertThat(events.getContent()).allSatisfy(event -> {
       assertThat(event.getOccurredAt()).isNotNull();

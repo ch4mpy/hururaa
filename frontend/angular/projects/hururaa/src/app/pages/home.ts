@@ -72,10 +72,10 @@ interface DevLink {
                 dossier...), que l'application vérifie à chaque action de l'utilisateur.
               </dd>
               <dt i18n="@@home.vocabulary.group.term">Groupe</dt>
-              <dd i18n="@@home.vocabulary.group">
-                Un ensemble d'agents d'une direction, auquel sont attribués des rôles des
-                applications de cette direction : c'est en rejoignant un groupe qu'un agent reçoit
-                ses rôles.
+              <dd i18n="@@home.vocabulary.applicationGroup">
+                Un ensemble d'agents d'une direction, propre à l'une de ses applications dont il
+                porte le préfixe (escales.agent) et attribue des rôles : c'est en rejoignant un
+                groupe qu'un agent reçoit ses rôles.
               </dd>
             </dl>
 
@@ -87,8 +87,8 @@ interface DevLink {
                     <i class="ri-government-line mr-2" aria-hidden="true"></i>
                     <span i18n="@@home.level.hururaaAdmins.title">1. Administrateurs Hurura'a</span>
                   </ng-template>
-                  <p class="m-0" i18n="@@home.level.hururaaAdmins">
-                    Le groupe hururaa-admins de la DSI, qui exploite Hurura'a, agit à tous les
+                  <p class="m-0" i18n="@@home.level.hururaaAdmin">
+                    Le groupe hururaa.admin de la DSI, qui exploite Hurura'a, agit à tous les
                     niveaux. Lui seul désigne les administrateurs des directions et change une
                     application de direction.
                   </p>
@@ -100,10 +100,10 @@ interface DevLink {
                     <i class="ri-building-2-line mr-2" aria-hidden="true"></i>
                     <span i18n="@@home.level.direction.title">2. Direction</span>
                   </ng-template>
-                  <p class="m-0" i18n="@@home.level.direction">
+                  <p class="m-0" i18n="@@home.level.direction.applicationGroups">
                     Les administrateurs d'une direction enregistrent ses applications, les renomment
                     ou les désenregistrent, définissent leurs rôles, désignent parmi ses membres
-                    leurs gestionnaires et gèrent les groupes de la direction.
+                    leurs gestionnaires et gèrent les groupes de ces applications.
                   </p>
                 </p-card>
               </div>
@@ -113,10 +113,10 @@ interface DevLink {
                     <i class="ri-apps-2-line mr-2" aria-hidden="true"></i>
                     <span i18n="@@home.level.application.title">3. Application</span>
                   </ng-template>
-                  <p class="m-0" i18n="@@home.level.application">
+                  <p class="m-0" i18n="@@home.level.application.groups">
                     Les gestionnaires d'une application définissent ses rôles et ses autres
-                    gestionnaires, regroupent les rôles dans des groupes de la direction et y
-                    affectent les utilisateurs.
+                    gestionnaires, créent ses groupes, leur attribuent ses rôles et y affectent les
+                    utilisateurs.
                   </p>
                 </p-card>
               </div>
@@ -124,16 +124,17 @@ interface DevLink {
 
             <h3 i18n="@@home.rules">Les règles</h3>
             <ul>
-              <li i18n="@@home.rules.sameDirection">
-                Un groupe n'attribue que des rôles des applications de sa propre direction.
+              <li i18n="@@home.rules.groupApplication">
+                Un groupe appartient à une application, dont son nom porte le préfixe, et n'attribue
+                que ses rôles.
               </li>
-              <li i18n="@@home.rules.groupMembers">
-                Pour ajouter ou retirer les membres d'un groupe, il faut gérer toutes les
-                applications dont il attribue des rôles.
+              <li i18n="@@home.rules.groupManagers">
+                Les rôles et les membres d'un groupe sont gérés par les gestionnaires de son
+                application et par les administrateurs de sa direction.
               </li>
-              <li i18n="@@home.rules.move">
-                Une application ne change de direction qu'une fois qu'aucun groupe de sa direction
-                n'attribue plus ses rôles ; ses gestionnaires perdent alors leur délégation.
+              <li i18n="@@home.rules.moveWithoutGroups">
+                Une application ne change de direction qu'une fois ses groupes supprimés ; ses
+                gestionnaires perdent alors leur délégation.
               </li>
               <li i18n="@@home.rules.immediate">
                 Une délégation (administrateur, gestionnaire) prend effet immédiatement. Un rôle

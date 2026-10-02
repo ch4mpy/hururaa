@@ -142,13 +142,16 @@ class PermissionHistoryServiceTest {
     commitAs("dir-admin", () -> directionAdminRepository
         .save(DirectionAdmin.builder().direction("hist-merged").userId("admin-1").build()));
     Thread.sleep(5);
+    // journaled only: the application's own (audited) changes are not the point here
+    final var application = Application.builder().id(4242L).clientPrefix("hist").name("Hist")
+        .direction("hist-merged").build();
     commitAs("dir-admin", () -> {
-      journal.groupCreated("hist-merged", "agents");
+      journal.groupCreated(application, "hist.agents");
       return null;
     });
     Thread.sleep(5);
     commitAs("dir-admin", () -> {
-      journal.groupMemberAdded("hist-merged", "agents", "agent-1");
+      journal.groupMemberAdded("hist-merged", application, "hist.agents", "agent-1");
       return null;
     });
 
@@ -160,7 +163,13 @@ class PermissionHistoryServiceTest {
         Set.of(PermissionChangeCategory.GROUP_MEMBER)), PageRequest.of(0, 20)).getContent())
         .extracting(change -> change.subject().id())
         .containsExactly("agent-1");
-    assertThat(find(new PermissionHistoryFilter("hist-merged", null, "agents", Set.of()),
+    assertThat(find(new PermissionHistoryFilter("hist-merged", null, "hist.agents", Set.of()),
+        PageRequest.of(0, 20)).getContent())
+        .extracting(PermissionChange::type)
+        .containsExactly(PermissionChangeType.GROUP_MEMBER_ADDED,
+            PermissionChangeType.GROUP_CREATED);
+    // a group's changes are also those of its application
+    assertThat(find(new PermissionHistoryFilter("hist-merged", 4242L, null, Set.of()),
         PageRequest.of(0, 20)).getContent())
         .extracting(PermissionChange::type)
         .containsExactly(PermissionChangeType.GROUP_MEMBER_ADDED,

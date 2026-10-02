@@ -21,7 +21,7 @@ import pf.hururaa.direction.domain.User;
 class GroupServiceTest {
   private static final String DIRECTION = "dpam";
   private static final String ORG_ID = "org-1";
-  private static final String GROUP = "escales-agents";
+  private static final String GROUP = "escales.agent";
   private static final String GROUP_ID = "g1";
   private static final String USER_ID = "user-1";
   private static final String CLIENT_ID = "escales-api";
