@@ -78,9 +78,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -88,7 +88,7 @@ public class GroupController {
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-@PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.hasDelegate(authentication.name)")
   public List<GroupResponse> getGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
@@ -106,7 +106,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to manage at least one of the direction's applications.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * the direction, or to manage at least one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -115,7 +116,8 @@ public class GroupController {
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("#direction.isManagedBy(authentication.name)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isGroupCreatableBy(authentication.name)")
   public ResponseEntity<Void> createGroup(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestBody @Valid GroupRequest request,
@@ -137,8 +139,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to manage at least one of the direction's applications, and every
-   * application whose roles the group grants.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * the direction, or to manage at least one of its applications and every application whose
+   * roles the group grants.
    * </p>
    *
    * @param direction the direction's alias
@@ -147,7 +150,8 @@ public class GroupController {
   @DeleteMapping(path = GROUP_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-@PreAuthorize("#group.isManageableBy(authentication.name)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #group.isManageableBy(authentication.name)")
   public void deleteGroup(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -164,9 +168,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -175,7 +179,7 @@ public class GroupController {
    */
   @GetMapping(path = ROLES_PATH)
   @Transactional(readOnly = true)
-@PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #group.direction.hasDelegate(authentication.name)")
   public List<GroupRoleResponse> getGroupRoles(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
@@ -198,7 +202,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a manager of the application.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * the direction, or a manager of the application.
    * </p>
    *
    * @param direction the direction's alias
@@ -210,7 +215,9 @@ public class GroupController {
   @PutMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("#application.isManagedBy(authentication.name)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #group.direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name)")
   public void addGroupRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -232,7 +239,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a manager of the application.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * the direction, or a manager of the application.
    * </p>
    *
    * @param direction the direction's alias
@@ -244,7 +252,9 @@ public class GroupController {
   @DeleteMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("#application.isManagedBy(authentication.name)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #group.direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name)")
   public void removeGroupRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -271,9 +281,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -283,7 +293,7 @@ public class GroupController {
    */
   @GetMapping(path = MEMBERS_PATH)
   @Transactional(readOnly = true)
-@PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #group.direction.hasDelegate(authentication.name)")
   public PagedModel<UserResponse> getGroupMembers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
@@ -300,8 +310,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to manage at least one of the direction's applications, and every
-   * application whose roles the group grants.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * the direction, or to manage at least one of its applications and every application whose
+   * roles the group grants.
    * </p>
    *
    * @param direction the direction's alias
@@ -311,7 +322,8 @@ public class GroupController {
   @PutMapping(path = MEMBER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-@PreAuthorize("#group.isManageableBy(authentication.name)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #group.isManageableBy(authentication.name)")
   public void addGroupMember(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -329,8 +341,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to manage at least one of the direction's applications, and every
-   * application whose roles the group grants.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * the direction, or to manage at least one of its applications and every application whose
+   * roles the group grants.
    * </p>
    *
    * @param direction the direction's alias
@@ -340,7 +353,8 @@ public class GroupController {
   @DeleteMapping(path = MEMBER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-@PreAuthorize("#group.isManageableBy(authentication.name)")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #group.isManageableBy(authentication.name)")
   public void removeGroupMember(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")

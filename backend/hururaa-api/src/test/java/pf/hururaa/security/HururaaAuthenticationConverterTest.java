@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pf.hururaa.security.HururaaJwtFixture.ROLES_NAMESPACE;
 import static pf.hururaa.security.HururaaJwtFixture.fixtureClaims;
 import static pf.hururaa.security.HururaaJwtFixture.jwt;
-import static pf.hururaa.uaa.HururaaPermission.APPLICATIONS_MANAGE;
+import static pf.hururaa.uaa.HururaaPermission.ADMIN;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
 import pf.hururaa.commons.security.TenantPermissionsExtractor;
@@ -25,7 +25,7 @@ class HururaaAuthenticationConverterTest {
 
     assertThat(authentication).isInstanceOf(HururaaJwtAuthentication.class);
     assertThat(((HururaaAuthentication) authentication).getPermissionsByTenant().get("dsi"))
-        .contains(APPLICATIONS_MANAGE.value());
+        .contains(ADMIN.value());
   }
 
   @Test
@@ -48,7 +48,7 @@ class HururaaAuthenticationConverterTest {
   }
 
   @Test
-  void grantsThePlatformOrganizationsHururaaPermissionsAsAuthorities() {
+  void grantsTheHururaaRolesHeldInTheDsiAsAuthorities() {
     final var authentication = converter(ROLES_NAMESPACE).convert(jwt(fixtureClaims()));
 
     assertThat(authentication.getAuthorities())

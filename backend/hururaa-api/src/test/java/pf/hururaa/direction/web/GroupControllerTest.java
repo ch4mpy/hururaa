@@ -197,14 +197,15 @@ class GroupControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenAddMember_thenForbidden() throws Exception {
-    when(groupService.findByName(DSI, "sipf"))
-        .thenReturn(Optional.of(new Group("g0", DSI, "sipf")));
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenAddMemberToAnyGroup_thenNoContent() throws Exception {
+    when(groupService.findClientRoles(DPAM, GROUP, "pgc-api")).thenReturn(List.of("pgc.read"));
 
-    // platform administrators read everything, but only application managers grant roles
-    api.put(Map.of(), GroupController.MEMBER_PATH, DSI, "sipf", DPAM_AGENT)
-        .andExpect(status().isForbidden());
+    // a group granting roles of an application nobody here manages: Hurura'a administrators act
+    // at every level all the same
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verify(groupService).addMember(DPAM, GROUP, DPAM_AGENT);
   }
 
   @Test
@@ -224,5 +225,42 @@ class GroupControllerTest {
         .get(GroupController.BASE_PATH, "no-such-direction")
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(ProblemType.DIRECTION_NOT_FOUND.uri().toString()));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenCreateGroup_thenCreated() throws Exception {
+    when(groupService.save(DPAM, "new-group")).thenReturn(new Group("g2", DPAM, "new-group"));
+
+    api.post(new GroupRequest("new-group"), GroupController.BASE_PATH, DPAM)
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenGrantRoleOfAnyApplicationOfTheDirection_thenNoContent()
+      throws Exception {
+    api.put(Map.of(), GroupController.ROLE_PATH, DPAM, GROUP, 7L, "pgc.read")
+        .andExpect(status().isNoContent());
+    verify(groupService).addClientRole(DPAM, GROUP, "pgc-api", "pgc.read");
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenAddMemberToGroupGrantingUnmanagedRoles_thenNoContent()
+      throws Exception {
+    when(groupService.findClientRoles(DPAM, GROUP, "pgc-api")).thenReturn(List.of("pgc.read"));
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verify(groupService).addMember(DPAM, GROUP, DPAM_AGENT);
+  }
+
+  @Test
+  @WithJwt("jwt/dsi-admin.json")
+  void givenAdminOfAnotherDirection_whenAddMember_thenForbidden() throws Exception {
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
+        .andExpect(status().isForbidden());
+    verify(groupService, never()).addMember(anyString(), anyString(), anyString());
   }
 }

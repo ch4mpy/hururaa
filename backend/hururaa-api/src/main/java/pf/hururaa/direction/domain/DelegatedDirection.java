@@ -30,6 +30,11 @@ public record DelegatedDirection(String alias, String name, Set<String> admins,
     return managers.contains(userId);
   }
 
+  /** Whether the user may create groups in the direction. */
+  public boolean isGroupCreatableBy(String userId) {
+    return isAdministeredBy(userId) || isManagedBy(userId);
+  }
+
   /** Whether the user has a say on the direction, at any level of the delegation chain. */
   public boolean hasDelegate(String userId) {
     return isAdministeredBy(userId) || isManagedBy(userId);

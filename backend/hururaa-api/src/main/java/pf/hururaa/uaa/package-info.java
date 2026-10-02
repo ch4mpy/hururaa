@@ -2,16 +2,16 @@
  * Hurura'a's delegation chain:
  *
  * <ol>
- * <li><b>platform administrators</b> hold
- * {@link pf.hururaa.uaa.HururaaPermission Hurura'a's roles} in the
- * {@link pf.hururaa.uaa.UaaProperties#getPlatformOrganization() platform organization} (a token
- * role, turned into an authority): they register applications, assign them to directions, and
- * designate each direction's administrators;</li>
- * <li><b>direction administrators</b> (a {@code DirectionAdmin} row) designate, among the members of
- * their direction, the managers of each of its applications;</li>
- * <li><b>application managers</b> (a user id in {@code Application.managers}) define the
- * application's roles, aggregate them into groups of the direction, and assign users to those
- * groups.</li>
+ * <li><b>Hurura'a administrators</b> hold {@link pf.hururaa.uaa.HururaaPermission#ADMIN
+ * hururaa.admin} in the
+ * {@link pf.hururaa.uaa.UaaProperties#getPlatformOrganization() DSI}, which runs Hurura'a (a
+ * token role, turned into an authority): they act at every level, and alone create
+ * directions, designate their administrators and move applications between directions;</li>
+ * <li><b>direction administrators</b> (a {@code DirectionAdmin} row) register, rename and
+ * unregister the applications of their direction, and define their roles and managers;</li>
+ * <li><b>application managers</b> (a user id in {@code Application.managers}) define the roles and
+ * the other managers of the applications they manage, aggregate roles into groups of the
+ * direction, and assign users to those groups.</li>
  * </ol>
  *
  * <p>

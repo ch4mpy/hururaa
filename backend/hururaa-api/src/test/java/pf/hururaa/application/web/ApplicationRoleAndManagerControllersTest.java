@@ -107,19 +107,19 @@ class ApplicationRoleAndManagerControllersTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenGetRoles_thenOk() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenGetRoles_thenOk() throws Exception {
     api.get(ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID).andExpect(status().isOk());
   }
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenCreateRole_thenForbidden() throws Exception {
+  void givenDirectionAdmin_whenCreateRole_thenCreated() throws Exception {
     api
         .post(new ApplicationRoleRequest("escales.stopovers.delete", null),
             ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
-        .andExpect(status().isForbidden());
-    verify(clientRoleService, never()).save(anyString(), anyString(), any());
+        .andExpect(status().isCreated());
+    verify(clientRoleService).save("escales-api", "escales.stopovers.delete", null);
   }
 
   @Test
@@ -186,18 +186,34 @@ class ApplicationRoleAndManagerControllersTest {
 
   @Test
   @WithJwt("jwt/dpam-manager.json")
-  void givenApplicationManager_whenAddManager_thenForbidden() throws Exception {
+  void givenApplicationManager_whenAddCoManager_thenSaved() throws Exception {
+    when(directionService.requireMember(DPAM, DPAM_AGENT))
+        .thenReturn(user(DPAM_AGENT, "dpam.agent"));
+
     api
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
-        .andExpect(status().isForbidden());
+        .andExpect(status().isNoContent());
+    verify(applicationRepository).save(any(Application.class));
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenAddManager_thenForbidden() throws Exception {
+  @WithJwt("jwt/dsi-manager.json")
+  void givenManagerOfAnotherApplication_whenAddManager_thenForbidden() throws Exception {
     api
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isForbidden());
+    verify(applicationRepository, never()).save(any());
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenAddManager_thenSaved() throws Exception {
+    when(directionService.requireMember(DPAM, DPAM_AGENT))
+        .thenReturn(user(DPAM_AGENT, "dpam.agent"));
+
+    api
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
+        .andExpect(status().isNoContent());
   }
 
   @Test

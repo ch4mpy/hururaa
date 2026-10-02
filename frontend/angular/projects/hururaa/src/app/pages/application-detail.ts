@@ -23,8 +23,9 @@ import { injectNotifier, userLabel } from './shared/labels';
 import { UserPicker } from './shared/user-picker';
 
 /**
- * An application: its identity and direction (edited by platform administrators), its roles
- * (defined by its managers) and its managers (designated by its direction's administrators).
+ * An application: its identity (edited by its direction's administrators, its direction by
+ * Hurura'a administrators only), its roles and its managers (defined by its direction's
+ * administrators and by its managers).
  */
 @Component({
   selector: 'app-application-detail',
@@ -49,7 +50,7 @@ import { UserPicker } from './shared/user-picker';
           · <code>{{ app.bffClientId }}</code> · <code>{{ app.apiClientId }}</code>
         </p>
 
-        @if (delegations.canManageApplications()) {
+        @if (canEdit()) {
           <h2 i18n="@@application.settings">Rattachement</h2>
           <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-wrap align-items-end gap-3">
             <div class="flex flex-column gap-1">
@@ -82,22 +83,22 @@ import { UserPicker } from './shared/user-picker';
               (onClick)="unregister()"
             />
           </form>
-          <small class="block mt-2" i18n="@@application.move.hint"
-            >Changer de direction retire les gestionnaires de l'application. C'est refusé tant que
-            des groupes de la direction actuelle attribuent ses rôles.</small
-          >
+          @if (delegations.isAdmin()) {
+            <small class="block mt-2" i18n="@@application.move.hint"
+              >Changer de direction retire les gestionnaires de l'application. C'est refusé tant que
+              des groupes de la direction actuelle attribuent ses rôles.</small
+            >
+          }
         }
 
-        @if (canRead()) {
+        @if (canManage()) {
           <h2 i18n="@@application.roles">Rôles</h2>
           <p-table [value]="roles.value() ?? []" [loading]="roles.isLoading()">
             <ng-template #header>
               <tr>
                 <th i18n="@@application.role.name">Nom</th>
                 <th i18n="@@application.role.description">Description</th>
-                @if (isManager()) {
-                  <th><span class="sr-only" i18n="@@actions">Actions</span></th>
-                }
+                <th><span class="sr-only" i18n="@@actions">Actions</span></th>
               </tr>
             </ng-template>
             <ng-template #body let-role>
@@ -106,18 +107,16 @@ import { UserPicker } from './shared/user-picker';
                   <code>{{ role.name }}</code>
                 </td>
                 <td>{{ role.description }}</td>
-                @if (isManager()) {
-                  <td class="text-right">
-                    <p-button
-                      icon="ri-delete-bin-line"
-                      severity="danger"
-                      [text]="true"
-                      i18n-ariaLabel="@@application.role.delete"
-                      ariaLabel="Supprimer le rôle"
-                      (onClick)="deleteRole(role.name)"
-                    />
-                  </td>
-                }
+                <td class="text-right">
+                  <p-button
+                    icon="ri-delete-bin-line"
+                    severity="danger"
+                    [text]="true"
+                    i18n-ariaLabel="@@application.role.delete"
+                    ariaLabel="Supprimer le rôle"
+                    (onClick)="deleteRole(role.name)"
+                  />
+                </td>
               </tr>
             </ng-template>
             <ng-template #emptymessage>
@@ -127,36 +126,32 @@ import { UserPicker } from './shared/user-picker';
             </ng-template>
           </p-table>
 
-          @if (isManager()) {
-            <form
-              [formGroup]="roleForm"
-              (ngSubmit)="createRole()"
-              class="flex flex-wrap align-items-end gap-3 mt-3"
-            >
-              <div class="flex flex-column gap-1">
-                <label for="roleName" i18n="@@application.role.name">Nom</label>
-                <input
-                  pInputText
-                  id="roleName"
-                  formControlName="name"
-                  [placeholder]="app.clientPrefix + '.ressource.action'"
-                />
-              </div>
-              <div class="flex flex-column gap-1 flex-grow-1">
-                <label for="roleDescription" i18n="@@application.role.description"
-                  >Description</label
-                >
-                <input pInputText id="roleDescription" formControlName="description" />
-              </div>
-              <p-button
-                type="submit"
-                icon="ri-add-line"
-                [disabled]="roleForm.invalid"
-                i18n-label="@@application.role.create"
-                label="Définir le rôle"
+          <form
+            [formGroup]="roleForm"
+            (ngSubmit)="createRole()"
+            class="flex flex-wrap align-items-end gap-3 mt-3"
+          >
+            <div class="flex flex-column gap-1">
+              <label for="roleName" i18n="@@application.role.name">Nom</label>
+              <input
+                pInputText
+                id="roleName"
+                formControlName="name"
+                [placeholder]="app.clientPrefix + '.ressource.action'"
               />
-            </form>
-          }
+            </div>
+            <div class="flex flex-column gap-1 flex-grow-1">
+              <label for="roleDescription" i18n="@@application.role.description">Description</label>
+              <input pInputText id="roleDescription" formControlName="description" />
+            </div>
+            <p-button
+              type="submit"
+              icon="ri-add-line"
+              [disabled]="roleForm.invalid"
+              i18n-label="@@application.role.create"
+              label="Définir le rôle"
+            />
+          </form>
 
           <h2 i18n="@@application.managers">Gestionnaires</h2>
           <p-table [value]="managers.value() ?? []" [loading]="managers.isLoading()">
@@ -164,18 +159,16 @@ import { UserPicker } from './shared/user-picker';
               <tr>
                 <td>{{ labelOf(manager) }}</td>
                 <td>{{ manager.email }}</td>
-                @if (isDirectionAdmin()) {
-                  <td class="text-right">
-                    <p-button
-                      icon="ri-user-unfollow-line"
-                      severity="danger"
-                      [text]="true"
-                      i18n-ariaLabel="@@application.manager.remove"
-                      ariaLabel="Retirer ce gestionnaire"
-                      (onClick)="removeManager(manager)"
-                    />
-                  </td>
-                }
+                <td class="text-right">
+                  <p-button
+                    icon="ri-user-unfollow-line"
+                    severity="danger"
+                    [text]="true"
+                    i18n-ariaLabel="@@application.manager.remove"
+                    ariaLabel="Retirer ce gestionnaire"
+                    (onClick)="removeManager(manager)"
+                  />
+                </td>
               </tr>
             </ng-template>
             <ng-template #emptymessage>
@@ -184,17 +177,15 @@ import { UserPicker } from './shared/user-picker';
               </tr>
             </ng-template>
           </p-table>
-          @if (isDirectionAdmin()) {
-            <div class="mt-3">
-              <app-user-picker
-                [direction]="app.direction"
-                inputId="manager-picker"
-                i18n-label="@@application.manager.add"
-                label="Désigner gestionnaire"
-                (picked)="addManager($event)"
-              />
-            </div>
-          }
+          <div class="mt-3">
+            <app-user-picker
+              [direction]="app.direction"
+              inputId="manager-picker"
+              i18n-label="@@application.manager.add"
+              label="Désigner gestionnaire"
+              (picked)="addManager($event)"
+            />
+          </div>
         } @else {
           <p i18n="@@application.noSay">
             Les rôles et les gestionnaires de cette application ne sont visibles que de ceux qui ont
@@ -228,26 +219,26 @@ export class ApplicationDetail {
     stream: () => this.directionsApi.getDirections(),
   });
 
-  protected readonly isManager = computed(() =>
-    this.delegations.isApplicationManager(this.applicationId()),
-  );
-
   /** The direction managing the application: its roles and managers are addressed under it. */
   private readonly direction = computed(() => this.application.value()?.direction);
 
-  protected readonly isDirectionAdmin = computed(() => {
+  /** Mirrors the access rule of the API's application update and delete endpoints. */
+  protected readonly canEdit = computed(() => {
     const direction = this.direction();
-    return !!direction && this.delegations.isDirectionAdmin(direction);
+    return !!direction && this.delegations.canEditApplicationsOf(direction);
   });
 
   /** Mirrors the access rule of the API's application roles and managers endpoints. */
-  protected readonly canRead = computed(
-    () => this.delegations.canManageApplications() || this.isDirectionAdmin() || this.isManager(),
-  );
+  protected readonly canManage = computed(() => {
+    const direction = this.direction();
+    return (
+      !!direction && this.delegations.canManageApplication({ id: this.applicationId(), direction })
+    );
+  });
 
   private readonly directionApplication = computed(() => {
     const direction = this.direction();
-    return direction && this.canRead() ? { direction, id: this.applicationId() } : undefined;
+    return direction && this.canManage() ? { direction, id: this.applicationId() } : undefined;
   });
 
   protected readonly roles = rxResource({
@@ -281,6 +272,15 @@ export class ApplicationDetail {
         this.form.reset({ name: app.name, direction: app.direction });
       }
     });
+    // only Hurura'a administrators move applications between directions
+    effect(() => {
+      const direction = this.form.controls.direction;
+      if (this.delegations.isAdmin()) {
+        direction.enable();
+      } else {
+        direction.disable();
+      }
+    });
     inject(ResourceEventsService)
       .of(ResourceTypes.APPLICATION)
       .pipe(takeUntilDestroyed())
@@ -296,7 +296,7 @@ export class ApplicationDetail {
   protected save(): void {
     const { name, direction } = this.form.getRawValue();
     this.applicationsApi
-      .updateApplication(this.applicationId(), { name, direction })
+      .updateApplication(this.loadedDirection(), this.applicationId(), { name, direction })
       .subscribe(() => {
         this.notify($localize`:@@application.saved:Application ${name}:name: mise à jour`);
         this.application.reload();
@@ -310,13 +310,15 @@ export class ApplicationDetail {
       header: $localize`:@@application.unregister:Désenregistrer`,
       message: $localize`:@@application.unregister.confirm:Désenregistrer l'application ${name}:name: ? Ses clients Keycloak ne sont pas supprimés.`,
     }).subscribe(() =>
-      this.applicationsApi.deleteApplication(this.applicationId()).subscribe(() => {
-        this.notify(
-          $localize`:@@application.unregistered:Application ${name}:name: désenregistrée`,
-        );
-        this.delegations.refresh();
-        void this.router.navigate(['/applications']);
-      }),
+      this.applicationsApi
+        .deleteApplication(this.loadedDirection(), this.applicationId())
+        .subscribe(() => {
+          this.notify(
+            $localize`:@@application.unregistered:Application ${name}:name: désenregistrée`,
+          );
+          this.delegations.refresh();
+          void this.router.navigate(['/applications']);
+        }),
     );
   }
 

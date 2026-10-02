@@ -3,25 +3,24 @@ import { DelegationsApi, DelegationsResponse } from '@api/hururaa-api';
 import { Observable, catchError, of, shareReplay, tap } from 'rxjs';
 import { UserService } from './user.service';
 
-/** Hurura'a's own roles, held in the platform organization (see the API's `HururaaPermission`). */
-export const PlatformPermissions = {
-  /** Register applications and set the direction managing each of them. */
-  APPLICATIONS_MANAGE: 'hururaa.applications.manage',
-  /** Designate the administrators of every direction. */
-  DIRECTION_ADMINS_MANAGE: 'hururaa.direction-admins.manage',
+/** Hurura'a's own roles, held in the DSI (see the API's `HururaaPermission`). */
+export const HururaaRoles = {
+  /** Act at every level of Hurura'a. */
+  ADMIN: 'hururaa.admin',
 } as const;
 
 export const NO_DELEGATION: DelegationsResponse = {
-  platformPermissions: [],
+  hururaaRoles: [],
   platformOrganization: '',
   administeredDirections: [],
   managedApplications: [],
 };
 
 /**
- * What the current user may do in Hurura'a, level by level of the delegation chain (platform
+ * What the current user may do in Hurura'a, level by level of the delegation chain (Hurura'a
  * administrator, direction administrator, application manager), backed by `hururaa-api`'s
- * `/me/delegations`. Menus and actions adapt to it; the API enforces the same rules anyway.
+ * `/me/delegations`. Menus and actions adapt to it, mirroring the API's access rules, which the API
+ * enforces anyway.
  *
  * Refetched whenever the user logs in or out, and on demand (`refresh()`) after a change that may
  * affect the current user's own delegations.
@@ -36,19 +35,22 @@ export class DelegationsService {
 
   readonly current = this.delegations.asReadonly();
 
-  readonly canManageApplications = computed(() =>
-    this.delegations().platformPermissions.includes(PlatformPermissions.APPLICATIONS_MANAGE),
-  );
+  /**
+   * Whether the user is a Hurura'a administrator: they act at every level, and alone designate
+   * direction administrators and move applications between directions.
+   */
+  readonly isAdmin = computed(() => this.delegations().hururaaRoles.includes(HururaaRoles.ADMIN));
 
-  readonly canManageDirectionAdmins = computed(() =>
-    this.delegations().platformPermissions.includes(PlatformPermissions.DIRECTION_ADMINS_MANAGE),
+  /** The directions the user may register applications in (`undefined`: all of them). */
+  readonly registrationDirections = computed(() =>
+    this.isAdmin() ? undefined : this.delegations().administeredDirections,
   );
 
   /** Whether the user holds any delegation at all (otherwise Hurura'a has nothing to offer). */
   readonly hasAny = computed(() => {
     const d = this.delegations();
     return (
-      d.platformPermissions.length > 0 ||
+      d.hururaaRoles.length > 0 ||
       d.administeredDirections.length > 0 ||
       d.managedApplications.length > 0
     );
@@ -91,9 +93,31 @@ export class DelegationsService {
   /** Whether the user has a say on the direction (what the API requires to read its groups & co). */
   canReadDirection(direction: string): boolean {
     return (
-      this.canManageDirectionAdmins() ||
-      this.isDirectionAdmin(direction) ||
-      this.isManagerInDirection(direction)
+      this.isAdmin() || this.isDirectionAdmin(direction) || this.isManagerInDirection(direction)
     );
+  }
+
+  /** Whether the user may rename or unregister the direction's applications. */
+  canEditApplicationsOf(direction: string): boolean {
+    return this.isAdmin() || this.isDirectionAdmin(direction);
+  }
+
+  /** Whether the user may read and define an application's roles and managers. */
+  canManageApplication(application: { id: number; direction: string }): boolean {
+    return (
+      this.canEditApplicationsOf(application.direction) || this.isApplicationManager(application.id)
+    );
+  }
+
+  /** Whether the user may create groups in the direction. */
+  canCreateGroupsIn(direction: string): boolean {
+    return (
+      this.isAdmin() || this.isDirectionAdmin(direction) || this.isManagerInDirection(direction)
+    );
+  }
+
+  /** Whether the user may grant the application's roles through groups. */
+  canGrantRolesOf(application: { id: number; direction: string }): boolean {
+    return this.canManageApplication(application);
   }
 }

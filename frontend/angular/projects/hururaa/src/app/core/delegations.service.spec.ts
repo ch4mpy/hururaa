@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideApi as provideGatewayApi } from '@api/gateway';
 import { DelegationsResponse, provideApi as provideHururaaApi } from '@api/hururaa-api';
-import { DelegationsService, PlatformPermissions } from './delegations.service';
+import { DelegationsService, HururaaRoles } from './delegations.service';
 
 const escales = {
   id: 3,
@@ -47,23 +47,27 @@ describe('DelegationsService', () => {
     expect(service.hasAny()).toBe(false);
   });
 
-  it('exposes the platform permissions', () => {
+  it("lets Hurura'a administrators act at every level", () => {
     login({
-      platformPermissions: [PlatformPermissions.APPLICATIONS_MANAGE],
+      hururaaRoles: [HururaaRoles.ADMIN],
       platformOrganization: 'dsi',
       administeredDirections: [],
       managedApplications: [],
     });
 
-    expect(service.canManageApplications()).toBe(true);
-    expect(service.canManageDirectionAdmins()).toBe(false);
-    expect(service.canReadDirection('dpam')).toBe(false);
+    expect(service.isAdmin()).toBe(true);
+    expect(service.registrationDirections()).toBeUndefined();
+    expect(service.canReadDirection('dpam')).toBe(true);
+    expect(service.canEditApplicationsOf('dpam')).toBe(true);
+    expect(service.canManageApplication(escales)).toBe(true);
+    expect(service.canCreateGroupsIn('dpam')).toBe(true);
+    expect(service.canGrantRolesOf(escales)).toBe(true);
     expect(service.hasAny()).toBe(true);
   });
 
   it('tells apart direction administrators and application managers', () => {
     login({
-      platformPermissions: [],
+      hururaaRoles: [],
       platformOrganization: 'dsi',
       administeredDirections: ['daf'],
       managedApplications: [escales],
@@ -77,5 +81,37 @@ describe('DelegationsService', () => {
     expect(service.canReadDirection('daf')).toBe(true);
     expect(service.canReadDirection('dpam')).toBe(true);
     expect(service.canReadDirection('dsi')).toBe(false);
+    expect(service.isAdmin()).toBe(false);
+    expect(service.registrationDirections()).toEqual(['daf']);
+  });
+
+  it("lets direction administrators manage their direction's applications only", () => {
+    login({
+      hururaaRoles: [],
+      platformOrganization: 'dsi',
+      administeredDirections: ['dpam'],
+      managedApplications: [],
+    });
+
+    expect(service.canEditApplicationsOf('dpam')).toBe(true);
+    expect(service.canManageApplication(escales)).toBe(true);
+    expect(service.canEditApplicationsOf('daf')).toBe(false);
+    expect(service.canGrantRolesOf(escales)).toBe(true);
+    expect(service.canCreateGroupsIn('dpam')).toBe(true);
+    expect(service.canCreateGroupsIn('daf')).toBe(false);
+  });
+
+  it('lets managers manage the applications they manage, not edit them', () => {
+    login({
+      hururaaRoles: [],
+      platformOrganization: 'dsi',
+      administeredDirections: [],
+      managedApplications: [escales],
+    });
+
+    expect(service.canManageApplication(escales)).toBe(true);
+    expect(service.canEditApplicationsOf('dpam')).toBe(false);
+    expect(service.canGrantRolesOf(escales)).toBe(true);
+    expect(service.canCreateGroupsIn('dpam')).toBe(true);
   });
 });

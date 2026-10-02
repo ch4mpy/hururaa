@@ -55,27 +55,25 @@ class DelegationControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenGetDelegations_thenPlatformPermissions() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenGetDelegations_thenHururaaRoles() throws Exception {
     api
         .get(DelegationController.BASE_PATH)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.platformOrganization").value("dsi"))
-        .andExpect(jsonPath("$.platformPermissions[0]")
-            .value(HururaaPermission.Names.APPLICATIONS_MANAGE))
-        .andExpect(jsonPath("$.platformPermissions[1]")
-            .value(HururaaPermission.Names.DIRECTION_ADMINS_MANAGE))
+        .andExpect(jsonPath("$.hururaaRoles.length()").value(1))
+        .andExpect(jsonPath("$.hururaaRoles[0]").value(HururaaPermission.Names.ADMIN))
         .andExpect(jsonPath("$.administeredDirections").isEmpty());
   }
 
   @Test
-  @WithJwt("jwt/dpam-sipf-lookalike.json")
-  void givenHururaaRolesOutsideThePlatformOrganization_whenGetDelegations_thenNone()
+  @WithJwt("jwt/dpam-hururaa-admin-lookalike.json")
+  void givenHururaaRolesOutsideTheDsi_whenGetDelegations_thenNone()
       throws Exception {
     api
         .get(DelegationController.BASE_PATH)
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.platformPermissions").isEmpty());
+        .andExpect(jsonPath("$.hururaaRoles").isEmpty());
   }
 
   @Test

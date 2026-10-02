@@ -85,11 +85,12 @@ interface DevLink {
                 <p-card>
                   <ng-template #title>
                     <i class="ri-government-line mr-2" aria-hidden="true"></i>
-                    <span i18n="@@home.level.platform.title">1. Plateforme</span>
+                    <span i18n="@@home.level.hururaaAdmins.title">1. Administrateurs Hurura'a</span>
                   </ng-template>
-                  <p class="m-0" i18n="@@home.level.platform">
-                    Le SIPF enregistre les applications, les rattache à une direction et désigne les
-                    administrateurs de chaque direction.
+                  <p class="m-0" i18n="@@home.level.hururaaAdmins">
+                    Le groupe hururaa-admins de la DSI, qui exploite Hurura'a, agit à tous les
+                    niveaux. Lui seul désigne les administrateurs des directions et change une
+                    application de direction.
                   </p>
                 </p-card>
               </div>
@@ -100,8 +101,9 @@ interface DevLink {
                     <span i18n="@@home.level.direction.title">2. Direction</span>
                   </ng-template>
                   <p class="m-0" i18n="@@home.level.direction">
-                    Les administrateurs d'une direction désignent, parmi ses membres, les
-                    gestionnaires de chacune de ses applications.
+                    Les administrateurs d'une direction enregistrent ses applications, les renomment
+                    ou les désenregistrent, définissent leurs rôles, désignent parmi ses membres
+                    leurs gestionnaires et gèrent les groupes de la direction.
                   </p>
                 </p-card>
               </div>
@@ -112,8 +114,9 @@ interface DevLink {
                     <span i18n="@@home.level.application.title">3. Application</span>
                   </ng-template>
                   <p class="m-0" i18n="@@home.level.application">
-                    Les gestionnaires d'une application définissent ses rôles, les regroupent dans
-                    des groupes de la direction et y affectent les utilisateurs.
+                    Les gestionnaires d'une application définissent ses rôles et ses autres
+                    gestionnaires, regroupent les rôles dans des groupes de la direction et y
+                    affectent les utilisateurs.
                   </p>
                 </p-card>
               </div>
@@ -492,8 +495,8 @@ export class Home {
 
   protected delegationLabel(username: string): string {
     switch (devDelegationOf(username)) {
-      case 'platform':
-        return $localize`:@@home.data.delegation.platform:Administrateur de la plateforme`;
+      case 'hururaa-admin':
+        return $localize`:@@home.data.delegation.hururaaAdmin:Administrateur Hurura'a`;
       case 'admin':
         return $localize`:@@home.data.delegation.admin:Administrateur de sa direction`;
       case 'manager':

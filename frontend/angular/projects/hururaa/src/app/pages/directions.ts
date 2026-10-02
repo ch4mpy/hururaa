@@ -35,10 +35,18 @@ import { UserService } from '../core/user.service';
                   <p-tag severity="warn" i18n-value="@@directions.admin" value="Administrateur" />
                 }
                 @if (delegations.isManagerInDirection(direction.alias)) {
-                  <p-tag severity="success" i18n-value="@@directions.manager" value="Gestionnaire" />
+                  <p-tag
+                    severity="success"
+                    i18n-value="@@directions.manager"
+                    value="Gestionnaire"
+                  />
                 }
                 @if (direction.alias === delegations.current().platformOrganization) {
-                  <p-tag severity="danger" i18n-value="@@directions.platform" value="Plateforme" />
+                  <p-tag
+                    severity="danger"
+                    i18n-value="@@directions.runsHururaa"
+                    value="Exploite Hurura'a"
+                  />
                 }
               </div>
             </p-card>

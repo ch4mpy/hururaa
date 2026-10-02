@@ -445,17 +445,8 @@
       "hururaa-api": [
         {
           "id": "d9cf4aa8-647e-4771-ab22-2644dfbb3224",
-          "name": "hururaa.applications.manage",
-          "description": "Enregistrer les applications et les rattacher aux directions (organisation plateforme uniquement)",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
-          "attributes": {}
-        },
-        {
-          "id": "f3147abe-2d3a-4f05-87d2-3fb49c1e155f",
-          "name": "hururaa.direction-admins.manage",
-          "description": "Désigner les administrateurs des directions (organisation plateforme uniquement)",
+          "name": "hururaa.admin",
+          "description": "Administrer Hurura'a à tous les niveaux : directions, applications, rôles, groupes et attributions (effectif dans la DSI uniquement)",
           "composite": false,
           "clientRole": true,
           "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
@@ -586,10 +577,10 @@
   "users": [
     {
       "id": "d053cfc8-5a34-4fcb-9431-bb47617c18c6",
-      "username": "sipf.admin",
+      "username": "hururaa.admin",
       "firstName": "Hina",
       "lastName": "Teriitahi",
-      "email": "sipf.admin@gov.pf",
+      "email": "hururaa.admin@gov.pf",
       "emailVerified": true,
       "enabled": true,
       "createdTimestamp": 1790700000000,
@@ -3731,7 +3722,7 @@
       "attributes": {},
       "members": [
         {
-          "username": "sipf.admin",
+          "username": "hururaa.admin",
           "groups": [
             "bf1d34ae-b12a-4cf4-8d8b-da276595ce6f"
           ],
@@ -3759,16 +3750,15 @@
       "groups": [
         {
           "id": "bf1d34ae-b12a-4cf4-8d8b-da276595ce6f",
-          "name": "sipf",
-          "path": "/sipf",
+          "name": "hururaa-admins",
+          "path": "/hururaa-admins",
           "parentId": "e15fffb9-9a1a-439e-8073-38246ebd6cb8",
           "subGroups": [],
           "attributes": {},
           "realmRoles": [],
           "clientRoles": {
             "hururaa-api": [
-              "hururaa.applications.manage",
-              "hururaa.direction-admins.manage"
+              "hururaa.admin"
             ]
           }
         },

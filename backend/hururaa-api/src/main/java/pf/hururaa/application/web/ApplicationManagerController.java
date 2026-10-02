@@ -63,9 +63,9 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: platform administrator
-   * ({@code hururaa.applications.manage}), administrator of its direction, or manager of the
-   * application. The application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -75,7 +75,7 @@ public class ApplicationManagerController {
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-@PreAuthorize("(hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')"
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.isAdministeredBy(authentication.name)"
       + " or #application.isManagedBy(authentication.name))"
       + " and #application.direction == #direction.alias")
@@ -99,8 +99,9 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be an administrator of {@code direction}, which must manage the
-   * application.
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -110,7 +111,9 @@ public class ApplicationManagerController {
   @PutMapping(path = MANAGER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("#direction.isAdministeredBy(authentication.name)"
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
       + " and #application.direction == #direction.alias")
   public void addApplicationManager(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -133,8 +136,9 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be an administrator of {@code direction}, which must manage the
-   * application.
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -144,7 +148,9 @@ public class ApplicationManagerController {
   @DeleteMapping(path = MANAGER_PATH)
   @Transactional
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("#direction.isAdministeredBy(authentication.name)"
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
       + " and #application.direction == #direction.alias")
   public void removeApplicationManager(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,

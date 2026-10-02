@@ -25,7 +25,7 @@ import { UserPicker } from './shared/user-picker';
 const PAGE_SIZE = 10;
 
 /**
- * A direction: its administrators (designated by platform administrators), its applications, its
+ * A direction: its administrators (designated by Hurura'a administrators), its applications, its
  * groups (created by its application managers) and its members.
  */
 @Component({
@@ -68,7 +68,7 @@ const PAGE_SIZE = 10;
             <tr>
               <td>{{ labelOf(admin) }}</td>
               <td>{{ admin.email }}</td>
-              @if (delegations.canManageDirectionAdmins()) {
+              @if (delegations.isAdmin()) {
                 <td class="text-right">
                   <p-button
                     icon="ri-user-unfollow-line"
@@ -88,7 +88,7 @@ const PAGE_SIZE = 10;
             </tr>
           </ng-template>
         </p-table>
-        @if (delegations.canManageDirectionAdmins()) {
+        @if (delegations.isAdmin()) {
           <div class="mt-3">
             <app-user-picker
               [direction]="direction()"
@@ -112,8 +112,12 @@ const PAGE_SIZE = 10;
             <li i18n="@@direction.groups.empty">Aucun groupe</li>
           }
         </ul>
-        @if (delegations.isManagerInDirection(direction())) {
-          <form [formGroup]="groupForm" (ngSubmit)="createGroup()" class="flex align-items-end gap-3">
+        @if (delegations.canCreateGroupsIn(direction())) {
+          <form
+            [formGroup]="groupForm"
+            (ngSubmit)="createGroup()"
+            class="flex align-items-end gap-3"
+          >
             <div class="flex flex-column gap-1">
               <label for="groupName" i18n="@@direction.group.name">Nom du groupe</label>
               <input pInputText id="groupName" formControlName="name" />
@@ -211,7 +215,7 @@ export class DirectionDetail {
   /** Bound from the `:direction` route parameter. */
   readonly direction = input.required<string>();
 
-  /** Mirrors the API's rule for reading a direction: platform administrator or delegate. */
+  /** Mirrors the API's rule for reading a direction: Hurura'a administrator or delegate. */
   protected readonly canRead = computed(() => this.delegations.canReadDirection(this.direction()));
 
   protected readonly applications = rxResource({
@@ -239,7 +243,12 @@ export class DirectionDetail {
         : undefined,
     stream: ({ params }) =>
       params
-        ? this.directionsApi.getDirectionUsers(params.direction, params.search, params.page, PAGE_SIZE)
+        ? this.directionsApi.getDirectionUsers(
+            params.direction,
+            params.search,
+            params.page,
+            PAGE_SIZE,
+          )
         : of({ content: [] }),
   });
 
@@ -322,7 +331,9 @@ export class DirectionDetail {
 
   protected addAdmin(user: UserResponse): void {
     this.directionsApi.addDirectionAdmin(this.direction(), user.id).subscribe(() => {
-      this.notify($localize`:@@direction.admin.added:${userLabel(user)}:user: désigné administrateur`);
+      this.notify(
+        $localize`:@@direction.admin.added:${userLabel(user)}:user: désigné administrateur`,
+      );
       this.admins.reload();
     });
   }

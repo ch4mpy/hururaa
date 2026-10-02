@@ -40,17 +40,14 @@ export const DEV_DIRECTIONS: DevDirection[] = [
     ],
     groups: [
       {
-        name: 'sipf',
-        roles: [
-          {
-            clientId: 'hururaa-api',
-            roles: ['hururaa.applications.manage', 'hururaa.direction-admins.manage'],
-          },
-        ],
+        name: 'hururaa-admins',
+        roles: [{ clientId: 'hururaa-api', roles: ['hururaa.admin'] }],
       },
       {
         name: 'te-fenua-agents',
-        roles: [{ clientId: 'te-fenua-api', roles: ['te-fenua.parcels.read', 'te-fenua.parcels.edit'] }],
+        roles: [
+          { clientId: 'te-fenua-api', roles: ['te-fenua.parcels.read', 'te-fenua.parcels.edit'] },
+        ],
       },
     ],
   },
@@ -81,7 +78,7 @@ export const DEV_DIRECTIONS: DevDirection[] = [
 ];
 
 export const DEV_USERS: DevUser[] = [
-  { username: 'sipf.admin', direction: 'dsi', groups: ['sipf'] },
+  { username: 'hururaa.admin', direction: 'dsi', groups: ['hururaa-admins'] },
   { username: 'dsi.admin', direction: 'dsi', groups: [] },
   { username: 'dsi.manager', direction: 'dsi', groups: [] },
   { username: 'dsi.agent', direction: 'dsi', groups: ['te-fenua-agents'] },
@@ -93,10 +90,12 @@ export const DEV_USERS: DevUser[] = [
   { username: 'daf.agent', direction: 'daf', groups: ['anahei-agents'] },
 ];
 
-/** The delegation a dev user holds, if any (the platform one comes from the `sipf` group). */
-export function devDelegationOf(username: string): 'platform' | 'admin' | 'manager' | undefined {
-  if (username === 'sipf.admin') {
-    return 'platform';
+/** The delegation a dev user holds, if any (Hurura'a's own comes from the `hururaa-admins` group). */
+export function devDelegationOf(
+  username: string,
+): 'hururaa-admin' | 'admin' | 'manager' | undefined {
+  if (username === 'hururaa.admin') {
+    return 'hururaa-admin';
   }
   for (const direction of DEV_DIRECTIONS) {
     if (direction.admins.includes(username)) {

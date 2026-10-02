@@ -36,6 +36,7 @@ import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.direction.web.DirectionController;
@@ -56,11 +57,14 @@ public class ApplicationController {
   public static final String APPLICATION_PATH =
       BASE_PATH + "/{" + APPLICATION_ID_PLACEHOLDER + "}";
   /**
-   * Where an application's roles and managers are addressed: under its direction, so that their
-   * access rules can read the direction's administrators.
+   * Where an application is changed, and its roles and managers addressed: under its direction, so
+   * that the access rules can read the direction's administrators.
    */
-  public static final String DIRECTION_APPLICATION_PATH = DirectionController.DIRECTION_PATH
-      + "/applications/{" + APPLICATION_ID_PLACEHOLDER + "}";
+  public static final String DIRECTION_PLACEHOLDER = DirectionController.DIRECTION_PLACEHOLDER;
+  public static final String DIRECTION_APPLICATIONS_PATH =
+      DirectionController.DIRECTION_PATH + "/applications";
+  public static final String DIRECTION_APPLICATION_PATH =
+      DIRECTION_APPLICATIONS_PATH + "/{" + APPLICATION_ID_PLACEHOLDER + "}";
 
   private final ApplicationRepository applicationRepository;
 
@@ -82,9 +86,8 @@ public class ApplicationController {
    *
    * @param direction when set, only the applications managed by that direction are returned
    * @param manageable when {@code true}, only the applications the user has management rights on
-   *        are returned: all of them for a platform administrator
-   *        ({@code hururaa.applications.manage}), those of the directions they administer, and
-   *        those they manage
+   *        are returned: all of them for a Hurura'a administrator ({@code hururaa.admin}), those of
+   *        the directions they administer, and those they manage
    * @return the applications
    */
   @GetMapping(path = BASE_PATH)
@@ -98,7 +101,7 @@ public class ApplicationController {
     final var applications = direction == null || direction.isBlank()
         ? applicationRepository.findAllByOrderByNameAsc()
         : applicationRepository.findByDirectionOrderByNameAsc(direction);
-    if (!manageable || hasAuthority(authentication, HururaaPermission.Names.APPLICATIONS_MANAGE)) {
+    if (!manageable || hasAuthority(authentication, HururaaPermission.Names.ADMIN)) {
       return applications.stream().map(applicationMapper::toApplicationResponse).toList();
     }
     final var administeredDirections = directionAdminRepository
@@ -115,24 +118,29 @@ public class ApplicationController {
   }
 
   /**
-   * Registers an application for existing Keycloak clients ({@code <prefix>-bff} and
-   * {@code <prefix>-api}) and assigns it to the direction managing it.
+   * Registers an application in the direction managing it, creating its Keycloak clients
+   * ({@code <prefix>-bff} and {@code <prefix>-api}) when they don't exist yet.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the {@code hururaa.applications.manage} permission in the platform organization.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), or an administrator
+   * of the direction.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param request the application to register
    * @return the location of the registered application
    */
-  @PostMapping(path = BASE_PATH)
+  @PostMapping(path = DIRECTION_APPLICATIONS_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name)")
   public ResponseEntity<Void> createApplication(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestBody @Valid ApplicationCreationRequest request,
       Authentication authentication) throws HururaaProblemException {
-    final var application = applicationService.create(applicationMapper.toApplication(request));
+    final var application = applicationService
+        .create(applicationMapper.toApplication(request, direction.alias()));
     log.info("{} registered application {} for direction {}", authentication.getName(),
         application.getClientPrefix(), application.getDirection());
     resourceEvents.publish(eventFor(application, application.getDirection(), EventType.CREATE));
@@ -165,17 +173,24 @@ public class ApplicationController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the {@code hururaa.applications.manage} permission in the platform organization.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), or an administrator
+   * of {@code direction} keeping the application in it (only Hurura'a administrators move
+   * applications). The application must be managed by {@code direction}.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    * @param request the application's new name and direction
    */
-  @PutMapping(path = APPLICATION_PATH)
+  @PutMapping(path = DIRECTION_APPLICATION_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or (#direction.isAdministeredBy(authentication.name)"
+      + " and #request.direction == #direction.alias))"
+      + " and #application.direction == #direction.alias")
   public void updateApplication(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @RequestBody @Valid ApplicationUpdateRequest request,
@@ -196,16 +211,21 @@ public class ApplicationController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the {@code hururaa.applications.manage} permission in the platform organization.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), or an administrator
+   * of {@code direction}. The application must be managed by {@code direction}.
    * </p>
    *
+   * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
    */
-  @DeleteMapping(path = APPLICATION_PATH)
+  @DeleteMapping(path = DIRECTION_APPLICATION_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')")
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name))"
+      + " and #application.direction == #direction.alias")
   public void deleteApplication(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       Authentication authentication) throws HururaaProblemException {

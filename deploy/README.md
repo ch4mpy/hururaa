@@ -32,7 +32,7 @@ continuously to `https://hururaa.c4-soft.com` by
 - The API starts with the Liquibase `dev` context: the dev applications and delegations, whose
   manager and administrator ids are those of the realm's users. The demo users deliberately keep
   their public password, `secret` (in clear in the realm export, which the rendering leaves
-  alone): anyone can sign in as any of them, platform administrators included. A deployment
+  alone): anyone can sign in as any of them, Hurura'a administrators included. A deployment
   beyond the demo must replace them.
 - Every service has a healthcheck when the image allows it (the Spring apps answer on
   `/actuator/health/readiness`, on their management port), and `docker compose up --wait` in the

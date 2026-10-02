@@ -28,12 +28,15 @@ public abstract class ApplicationMapper {
         keycloakProperties.apiClientId(domain.getClientPrefix()));
   }
 
-  public Application toApplication(ApplicationCreationRequest request) {
+  /**
+   * @param direction alias of the direction managing the application
+   */
+  public Application toApplication(ApplicationCreationRequest request, String direction) {
     return Application
         .builder()
         .clientPrefix(request.clientPrefix())
         .name(request.name())
-        .direction(request.direction())
+        .direction(direction)
         .build();
   }
 

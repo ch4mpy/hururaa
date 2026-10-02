@@ -874,12 +874,12 @@
           <context context-type="linenumber">38,40</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="directions.platform" datatype="html">
-        <source>Plateforme</source>
-        <target>Platform</target>
+      <trans-unit id="directions.runsHururaa" datatype="html">
+        <source>Exploite Hurura&apos;a</source>
+        <target>Runs Hurura&apos;a</target>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">41,43</context>
+          <context context-type="linenumber">48,50</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete" datatype="html">
@@ -1142,20 +1142,20 @@
           <context context-type="linenumber">93,94</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.level.platform.title" datatype="html">
-        <source>1. Plateforme</source>
-        <target>1. Platform</target>
+      <trans-unit id="home.level.hururaaAdmins.title" datatype="html">
+        <source>1. Administrateurs Hurura&apos;a</source>
+        <target>1. Hurura&apos;a administrators</target>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">102,103</context>
+          <context context-type="linenumber">88,90</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.level.platform" datatype="html">
-        <source> Le SIPF enregistre les applications, les rattache à une direction et désigne les administrateurs de chaque direction. </source>
-        <target> The SIPF registers applications, assigns them to a department and appoints the administrators of each department. </target>
+      <trans-unit id="home.level.hururaaAdmins" datatype="html">
+        <source> Le groupe hururaa-admins de la DSI, qui exploite Hurura&apos;a, agit à tous les niveaux. Lui seul désigne les administrateurs des directions et change une application de direction. </source>
+        <target> The DSI&apos;s hururaa-admins group, which runs Hurura&apos;a, acts at every level. It alone appoints the departments&apos; administrators and moves an application to another department. </target>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">102,103</context>
+          <context context-type="linenumber">91,93</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.direction.title" datatype="html">
@@ -1167,11 +1167,11 @@
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.direction" datatype="html">
-        <source> Les administrateurs d&apos;une direction désignent, parmi ses membres, les gestionnaires de chacune de ses applications. </source>
-        <target> A department&apos;s administrators appoint, among its members, the managers of each of its applications. </target>
+        <source> Les administrateurs d&apos;une direction enregistrent ses applications, les renomment ou les désenregistrent, définissent leurs rôles, désignent parmi ses membres leurs gestionnaires et gèrent les groupes de la direction. </source>
+        <target> A department&apos;s administrators register its applications, rename or unregister them, define their roles, appoint their managers among its members and manage the department&apos;s groups. </target>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">114,115</context>
+          <context context-type="linenumber">104,106</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.application.title" datatype="html">
@@ -1183,8 +1183,8 @@
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.application" datatype="html">
-        <source> Les gestionnaires d&apos;une application définissent ses rôles, les regroupent dans des groupes de la direction et y affectent les utilisateurs. </source>
-        <target> An application&apos;s managers define its roles, bundle them into the department&apos;s groups and assign users to those groups. </target>
+        <source> Les gestionnaires d&apos;une application définissent ses rôles et ses autres gestionnaires, regroupent les rôles dans des groupes de la direction et y affectent les utilisateurs. </source>
+        <target> An application&apos;s managers define its roles and its other managers, bundle the roles into the department&apos;s groups and assign users to those groups. </target>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
           <context context-type="linenumber">126,127</context>
@@ -1702,12 +1702,12 @@
           <context context-type="linenumber">537</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.data.delegation.platform" datatype="html">
-        <source>Administrateur de la plateforme</source>
-        <target>Platform administrator</target>
+      <trans-unit id="home.data.delegation.hururaaAdmin" datatype="html">
+        <source>Administrateur Hurura&apos;a</source>
+        <target>Hurura&apos;a administrator</target>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">548</context>
+          <context context-type="linenumber">499</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.delegation.admin" datatype="html">

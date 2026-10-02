@@ -32,7 +32,7 @@ public final class HururaaFixtures {
   public static final String DPAM = "dpam";
   public static final String DAF = "daf";
 
-  public static final String SIPF_ADMIN = "d053cfc8-5a34-4fcb-9431-bb47617c18c6";
+  public static final String HURURAA_ADMIN = "d053cfc8-5a34-4fcb-9431-bb47617c18c6";
   public static final String DSI_ADMIN = "e6ff96c5-0d55-4a1e-8716-8e0210551d1a";
   public static final String DSI_MANAGER = "c6bca76e-e2cb-45ee-bbfe-2538652279b1";
   public static final String DPAM_ADMIN = "de10aa56-81e4-4e66-a1d7-824d4b6a33d1";
@@ -96,10 +96,10 @@ public final class HururaaFixtures {
 
   /**
    * What a {@code @WebMvcTest} slice of this API needs besides its controller: the method-security
-   * setup of {@code common-security-starter}, this API's JWT converter (platform permissions as
-   * authorities), and the real {@link DelegationResolver} the path variable converters resolve
-   * directions and groups with, with their properties bound from {@code application.yml} (its
-   * repositories and Keycloak services being mocked by each test).
+   * setup of {@code common-security-starter}, this API's JWT converter (the Hurura'a roles held in
+   * the DSI as authorities), and the real {@link DelegationResolver} the path variable converters
+   * resolve directions and groups with, with their properties bound from {@code application.yml}
+   * (its repositories and Keycloak services being mocked by each test).
    */
   @TestConfiguration
   @EnableConfigurationProperties({UaaProperties.class, KeycloakAdminApiProperties.class})

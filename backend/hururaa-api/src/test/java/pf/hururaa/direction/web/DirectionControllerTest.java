@@ -12,7 +12,7 @@ import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.DSI;
-import static pf.hururaa.HururaaFixtures.SIPF_ADMIN;
+import static pf.hururaa.HururaaFixtures.HURURAA_ADMIN;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.user;
 import java.time.Instant;
@@ -46,7 +46,7 @@ import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 
 /**
- * Level 1 of the delegation chain: platform administrators designate each direction's
+ * Level 1 of the delegation chain: Hurura'a administrators designate each direction's
  * administrators.
  */
 @WebMvcTest(controllers = DirectionController.class)
@@ -122,8 +122,8 @@ class DirectionControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenGetAdminsOfAnyDirection_thenOk() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenGetAdminsOfAnyDirection_thenOk() throws Exception {
     when(directionAdminRepository.findByDirectionOrderByUserId(DPAM))
         .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
     when(directionService.findMember(DPAM, DPAM_ADMIN))
@@ -146,8 +146,8 @@ class DirectionControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenDesignateAdmin_thenSaved() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenDesignateAdmin_thenSaved() throws Exception {
     when(directionService.requireMember(DPAM, DPAM_AGENT))
         .thenReturn(user(DPAM_AGENT, "dpam.agent"));
 
@@ -158,8 +158,8 @@ class DirectionControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenRevokeAdmin_thenDeleted() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenRevokeAdmin_thenDeleted() throws Exception {
     final var admin = DirectionAdmin.builder().direction(DSI).userId("someone").build();
     when(directionAdminRepository.findByDirectionAndUserId(DSI, "someone"))
         .thenReturn(Optional.of(admin));
@@ -188,14 +188,14 @@ class DirectionControllerTest {
   void givenDirectionAdmin_whenGetHistory_thenOk() throws Exception {
     when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(1, 5)))
         .thenReturn(new PageImpl<>(List.of(new DelegationChange(7L,
-            Instant.parse("2026-10-01T08:00:00Z"), user(SIPF_ADMIN, "sipf.admin"),
+            Instant.parse("2026-10-01T08:00:00Z"), user(HURURAA_ADMIN, "hururaa.admin"),
             Delegation.DIRECTION_ADMIN, Change.GRANTED, user(DPAM_ADMIN, "dpam.admin"), null,
             null)), PageRequest.of(1, 5), 6));
 
     api
         .get(DirectionController.HISTORY_PATH + "?page=1&size=5", DPAM)
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content[0].authorUsername").value("sipf.admin"))
+        .andExpect(jsonPath("$.content[0].authorUsername").value("hururaa.admin"))
         .andExpect(jsonPath("$.content[0].delegateUsername").value("dpam.admin"))
         .andExpect(jsonPath("$.content[0].change").value("GRANTED"))
         .andExpect(jsonPath("$.page.totalElements").value(6));

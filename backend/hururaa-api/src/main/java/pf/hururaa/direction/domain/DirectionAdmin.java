@@ -21,8 +21,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * A member of a direction designated, by the platform administrators, to decide who manages each
- * of the direction's applications.
+ * A member of a direction designated, by the Hurura'a administrators, to manage the direction's
+ * applications: register, rename and unregister them, define their roles and managers.
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */

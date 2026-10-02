@@ -2,7 +2,13 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApplicationRolesApi, GroupRoleResponse, GroupsApi, UserResponse } from '@api/hururaa-api';
+import {
+  ApplicationRolesApi,
+  ApplicationsApi,
+  GroupRoleResponse,
+  GroupsApi,
+  UserResponse,
+} from '@api/hururaa-api';
 import { PfPageComponent } from 'pf-ui';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -38,7 +44,7 @@ const PAGE_SIZE = 10;
   template: `
     <pf-page [withPadding]="true">
       <ng-template #title>{{ group() }}</ng-template>
-      @if (isManager()) {
+      @if (canManageMembers()) {
         <ng-template #toolbar>
           <p-button
             severity="danger"
@@ -73,7 +79,9 @@ const PAGE_SIZE = 10;
               <code>{{ role.role }}</code>
             </td>
             <td class="text-right">
-              @if (delegations.isApplicationManager(role.applicationId)) {
+              @if (
+                delegations.canGrantRolesOf({ id: role.applicationId, direction: direction() })
+              ) {
                 <p-button
                   icon="ri-close-line"
                   severity="danger"
@@ -93,13 +101,13 @@ const PAGE_SIZE = 10;
         </ng-template>
       </p-table>
 
-      @if (managedApplications().length) {
+      @if (grantableApplications().length) {
         <div class="flex flex-wrap align-items-end gap-3 mt-3">
           <div class="flex flex-column gap-1">
             <label for="grantApplication" i18n="@@group.role.application">Application</label>
             <p-select
               inputId="grantApplication"
-              [options]="managedApplications()"
+              [options]="grantableApplications()"
               optionLabel="name"
               optionValue="id"
               [ngModel]="grantApplicationId()"
@@ -140,7 +148,7 @@ const PAGE_SIZE = 10;
           <tr>
             <td>{{ labelOf(member) }}</td>
             <td>{{ member.email }}</td>
-            @if (isManager()) {
+            @if (canManageMembers()) {
               <td class="text-right">
                 <p-button
                   icon="ri-user-unfollow-line"
@@ -160,7 +168,7 @@ const PAGE_SIZE = 10;
           </tr>
         </ng-template>
       </p-table>
-      @if (isManager()) {
+      @if (canManageMembers()) {
         <div class="mt-3">
           <app-user-picker
             [direction]="direction()"
@@ -190,13 +198,24 @@ export class GroupDetail {
   /** Bound from the `:group` route parameter. */
   readonly group = input.required<string>();
 
-  protected readonly isManager = computed(() =>
-    this.delegations.isManagerInDirection(this.direction()),
+  /**
+   * Whether to offer changing the group's members, or deleting it: for a manager who is not an
+   * administrator, the API also requires managing every application whose roles the group grants.
+   */
+  protected readonly canManageMembers = computed(() =>
+    this.delegations.canCreateGroupsIn(this.direction()),
   );
 
+  private readonly applicationsApi = inject(ApplicationsApi);
+
+  private readonly directionApplications = rxResource({
+    params: () => this.direction(),
+    stream: ({ params }) => this.applicationsApi.getApplications(params),
+  });
+
   /** The applications of this direction whose roles the user may grant. */
-  protected readonly managedApplications = computed(() =>
-    this.delegations.current().managedApplications.filter((a) => a.direction === this.direction()),
+  protected readonly grantableApplications = computed(() =>
+    (this.directionApplications.value() ?? []).filter((a) => this.delegations.canGrantRolesOf(a)),
   );
 
   protected readonly roles = rxResource({

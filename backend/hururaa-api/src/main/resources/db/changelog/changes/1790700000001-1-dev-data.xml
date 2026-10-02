@@ -4,15 +4,15 @@
   the dev realm (keycloak/import/public-facing-realm.json) and the delegations of its users, whose
   ids are fixed in that realm export.
 
-  | user         | direction | delegation                                             |
-  |==============|===========|========================================================|
-  | sipf.admin   | dsi       | platform admin: Keycloak group /sipf (hururaa.* roles) |
-  | dsi.admin    | dsi       | administrator of dsi                                   |
-  | dsi.manager  | dsi       | manager of Hurura'a and Te Fenua                       |
-  | dpam.admin   | dpam      | administrator of dpam                                  |
-  | dpam.manager | dpam      | manager of Escales                                     |
-  | daf.admin    | daf       | administrator of daf                                   |
-  | daf.manager  | daf       | manager of Anahei                                      |
+  | user          | direction | delegation                                                     |
+  |===============|===========|================================================================|
+  | hururaa.admin | dsi       | Hurura'a admin: Keycloak group /hururaa-admins (hururaa.admin) |
+  | dsi.admin     | dsi       | administrator of dsi                                           |
+  | dsi.manager   | dsi       | manager of Hurura'a and Te Fenua                               |
+  | dpam.admin    | dpam      | administrator of dpam                                          |
+  | dpam.manager  | dpam      | manager of Escales                                             |
+  | daf.admin     | daf       | administrator of daf                                           |
+  | daf.manager   | daf       | manager of Anahei                                              |
 -->
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"

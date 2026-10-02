@@ -10,20 +10,20 @@ import java.util.stream.Stream;
  * API, granted like any application role through the groups of a direction.
  * </p>
  * <p>
- * They only take effect in the <b>platform organization</b> (see {@link UaaProperties}): holding
- * them in another direction grants nothing. Everything below the platform level (who administers a
- * direction, who manages an application) is not a token role but a delegation stored by Hurura'a,
- * see {@link pf.hururaa.direction.domain.DelegatedDirection}.
+ * They only take effect in the <b>DSI</b>, which runs Hurura'a (see {@link UaaProperties}): holding
+ * them in another direction grants nothing. Who administers a direction, who manages an
+ * application, is not a token role but a delegation stored by Hurura'a, see
+ * {@link pf.hururaa.direction.domain.DelegatedDirection}.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
 public enum HururaaPermission {
-  /** Register applications, and set which direction manages each of them. */
-  APPLICATIONS_MANAGE(Names.APPLICATIONS_MANAGE),
-
-  /** Designate the administrators of every direction. */
-  DIRECTION_ADMINS_MANAGE(Names.DIRECTION_ADMINS_MANAGE);
+  /**
+   * Act at every level: create directions, designate their administrators, register applications
+   * in any direction and move them, define their roles and managers, manage every group.
+   */
+  ADMIN(Names.ADMIN);
 
   private final String value;
 
@@ -49,8 +49,7 @@ public enum HururaaPermission {
    * {@link #value()}, and a literal repeated in access rules is how a permission name drifts.
    */
   public static final class Names {
-    public static final String APPLICATIONS_MANAGE = "hururaa.applications.manage";
-    public static final String DIRECTION_ADMINS_MANAGE = "hururaa.direction-admins.manage";
+    public static final String ADMIN = "hururaa.admin";
 
     private Names() {}
   }

@@ -69,7 +69,7 @@ public class DelegationHistoryService {
    * @param direction a direction alias
    * @param pageable page index and size; sort is ignored (newest change first)
    * @return the delegation changes in the direction, newest first, with their author and
-   *         delegate resolved from Keycloak (a user who left the direction and the platform is
+   *         delegate resolved from Keycloak (a user who left both the direction and the DSI is
    *         returned with their id as username)
    * @throws HururaaProblemException {@code DIRECTION_NOT_FOUND} if the direction does not exist
    */
@@ -217,8 +217,8 @@ public class DelegationHistoryService {
   }
 
   /**
-   * Resolves users first among the direction's members, then among the platform organization's
-   * (where the platform administrators designating direction administrators are), once per id.
+   * Resolves users first among the direction's members, then among the DSI's
+   * (where the Hurura'a administrators designating direction administrators are), once per id.
    */
   private class UserResolver {
     private final String direction;

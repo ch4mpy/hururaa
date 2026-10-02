@@ -44,7 +44,7 @@ class MeControllerTest {
     // a direction administrator or an application manager usually holds no token role: their
     // delegations are stored by hururaa-api
     final var me = controller.getMe(authentication(HururaaOidcUserFixture
-        .hururaaOidcUser(Map.of("dpam", Set.of(), "dsi", Set.of("hururaa.applications.manage")))));
+        .hururaaOidcUser(Map.of("dpam", Set.of(), "dsi", Set.of("hururaa.admin")))));
 
     assertThat(me.directions()).containsExactly("dpam", "dsi");
   }

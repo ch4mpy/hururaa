@@ -1,11 +1,21 @@
-import { HttpClient, HttpContext, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { HururaaProblemDetail, ProblemType } from '@api/hururaa-api';
 import { firstValueFrom } from 'rxjs';
 import { ErrorBannerService } from './error-banner.service';
-import { SKIP_ERROR_BANNER, httpErrorInterceptor, httpErrorMessage } from './http-error.interceptor';
+import {
+  SKIP_ERROR_BANNER,
+  httpErrorInterceptor,
+  httpErrorMessage,
+} from './http-error.interceptor';
 
 describe('httpErrorInterceptor', () => {
   let http: HttpClient;
@@ -38,7 +48,9 @@ describe('httpErrorInterceptor', () => {
 
   it('shows the localized message of a typed problem and re-throws the error', async () => {
     const response = firstValueFrom(http.get('/api/applications/42'));
-    backend.expectOne('/api/applications/42').flush(applicationNotFound, { status: 404, statusText: 'Not Found' });
+    backend
+      .expectOne('/api/applications/42')
+      .flush(applicationNotFound, { status: 404, statusText: 'Not Found' });
 
     await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
     expect(banner.message()).toBe('Application n° 42 introuvable');
@@ -46,7 +58,9 @@ describe('httpErrorInterceptor', () => {
 
   it('falls back to a generic message when the body is not a typed problem', async () => {
     const response = firstValueFrom(http.get('/api/forms'));
-    backend.expectOne('/api/forms').flush('boom', { status: 500, statusText: 'Internal Server Error' });
+    backend
+      .expectOne('/api/forms')
+      .flush('boom', { status: 500, statusText: 'Internal Server Error' });
 
     await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
     expect(banner.message()).toBe('Erreur du serveur, veuillez réessayer plus tard');
@@ -63,7 +77,9 @@ describe('httpErrorInterceptor', () => {
   it('leaves the banner alone when the caller opted out', async () => {
     const context = new HttpContext().set(SKIP_ERROR_BANNER, true);
     const response = firstValueFrom(http.get('/api/applications/42', { context }));
-    backend.expectOne('/api/applications/42').flush(applicationNotFound, { status: 404, statusText: 'Not Found' });
+    backend
+      .expectOne('/api/applications/42')
+      .flush(applicationNotFound, { status: 404, statusText: 'Not Found' });
 
     await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
     expect(banner.message()).toBeUndefined();
@@ -82,9 +98,9 @@ describe('httpErrorInterceptor', () => {
     });
 
     it('prefers the typed problem message over the status one', () => {
-      expect(httpErrorMessage(new HttpErrorResponse({ status: 404, error: applicationNotFound }))).toBe(
-        'Application n° 42 introuvable',
-      );
+      expect(
+        httpErrorMessage(new HttpErrorResponse({ status: 404, error: applicationNotFound })),
+      ).toBe('Application n° 42 introuvable');
     });
   });
 });

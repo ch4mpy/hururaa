@@ -3,7 +3,7 @@ package pf.hururaa.direction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
-import static pf.hururaa.HururaaFixtures.SIPF_ADMIN;
+import static pf.hururaa.HururaaFixtures.HURURAA_ADMIN;
 import static pf.hururaa.HururaaFixtures.user;
 import java.util.HashSet;
 import java.util.Optional;
@@ -43,7 +43,7 @@ import pf.hururaa.uaa.UaaProperties;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import(DelegationHistoryService.class)
 class DelegationHistoryServiceTest {
-  static final String PLATFORM = "sipf";
+  static final String DSI_ALIAS = "dsi";
 
   @Autowired
   DelegationHistoryService service;
@@ -71,14 +71,14 @@ class DelegationHistoryServiceTest {
   @Test
   void givenAdminDesignatedThenRevoked_whenFindByDirection_thenBothChangesNewestFirst()
       throws Exception {
-    when(uaaProperties.getPlatformOrganization()).thenReturn(PLATFORM);
-    when(directionService.findMember(PLATFORM, SIPF_ADMIN))
-        .thenReturn(Optional.of(user(SIPF_ADMIN, "sipf.admin")));
+    when(uaaProperties.getPlatformOrganization()).thenReturn(DSI_ALIAS);
+    when(directionService.findMember(DSI_ALIAS, HURURAA_ADMIN))
+        .thenReturn(Optional.of(user(HURURAA_ADMIN, "hururaa.admin")));
     when(directionService.findMember("hist-admins", "admin-1"))
         .thenReturn(Optional.of(user("admin-1", "admin.one")));
-    final var admin = commitAs(SIPF_ADMIN, () -> directionAdminRepository
+    final var admin = commitAs(HURURAA_ADMIN, () -> directionAdminRepository
         .save(DirectionAdmin.builder().direction("hist-admins").userId("admin-1").build()));
-    commitAs(SIPF_ADMIN, () -> {
+    commitAs(HURURAA_ADMIN, () -> {
       directionAdminRepository.deleteById(admin.getId());
       return null;
     });
@@ -89,8 +89,8 @@ class DelegationHistoryServiceTest {
         .extracting(DelegationChange::delegation, DelegationChange::change,
             change -> change.delegate().username(), change -> change.author().username())
         .containsExactly(
-            tuple(Delegation.DIRECTION_ADMIN, Change.REVOKED, "admin.one", "sipf.admin"),
-            tuple(Delegation.DIRECTION_ADMIN, Change.GRANTED, "admin.one", "sipf.admin"));
+            tuple(Delegation.DIRECTION_ADMIN, Change.REVOKED, "admin.one", "hururaa.admin"),
+            tuple(Delegation.DIRECTION_ADMIN, Change.GRANTED, "admin.one", "hururaa.admin"));
     assertThat(actual.getContent().get(0).revision())
         .isGreaterThan(actual.getContent().get(1).revision());
   }
@@ -109,7 +109,7 @@ class DelegationHistoryServiceTest {
       current.getManagers().add("manager-2");
       return applicationRepository.save(current);
     });
-    commitAs("platform-admin", () -> {
+    commitAs("hururaa-admin", () -> {
       final var current = applicationRepository.findById(withSecondManager.getId()).orElseThrow();
       current.setDirection("hist-to");
       current.getManagers().clear();
@@ -120,8 +120,8 @@ class DelegationHistoryServiceTest {
         .extracting(DelegationChange::change, change -> change.delegate().id(),
             change -> change.author().id(), DelegationChange::applicationName)
         .containsExactly(
-            tuple(Change.REVOKED, "manager-1", "platform-admin", "Hist App"),
-            tuple(Change.REVOKED, "manager-2", "platform-admin", "Hist App"),
+            tuple(Change.REVOKED, "manager-1", "hururaa-admin", "Hist App"),
+            tuple(Change.REVOKED, "manager-2", "hururaa-admin", "Hist App"),
             tuple(Change.GRANTED, "manager-2", "dir-admin", "Hist App"),
             tuple(Change.GRANTED, "manager-1", "dir-admin", "Hist App"));
     assertThat(history("hist-to", PageRequest.of(0, 20)).getContent()).isEmpty();
@@ -130,7 +130,7 @@ class DelegationHistoryServiceTest {
   @Test
   void givenThreeChanges_whenFindSecondPageOfOne_thenMiddleChangeAndTotal() {
     for (final var userId : new String[] {"paged-1", "paged-2", "paged-3"}) {
-      commitAs(SIPF_ADMIN, () -> directionAdminRepository
+      commitAs(HURURAA_ADMIN, () -> directionAdminRepository
           .save(DirectionAdmin.builder().direction("hist-paged").userId(userId).build()));
     }
 

@@ -6,12 +6,12 @@ Statut : proposée.
 
 Hurura'a organise une chaîne de délégation à trois niveaux :
 
-1. la plateforme (le SIPF) enregistre les applications, les rattache à une direction et désigne
-   les administrateurs de chaque direction ;
-2. les administrateurs d'une direction désignent les gestionnaires de chacune de ses
-   applications ;
-3. les gestionnaires d'une application définissent ses rôles, les regroupent dans des groupes de la
-   direction et y affectent les utilisateurs.
+1. les administrateurs Hurura'a de la DSI agissent à tous les niveaux, et seuls désignent les
+   administrateurs de chaque direction et changent une application de direction ;
+2. les administrateurs d'une direction enregistrent, renomment et désenregistrent ses
+   applications, définissent leurs rôles et désignent leurs gestionnaires ;
+3. les gestionnaires d'une application définissent ses rôles et ses autres gestionnaires,
+   regroupent les rôles dans des groupes de la direction et y affectent les utilisateurs.
 
 Keycloak ne sait pas rattacher un client à une organisation, ni exprimer « gestionnaire de
 l'application X » autrement que par un rôle. Un rôle par application sur `hururaa-api`
@@ -24,18 +24,19 @@ application et par direction.
 1. Tout en rôles Keycloak (`hururaa-api`) : les trois niveaux sont lus dans le jeton. Aucune
    base à maintenir, mais des rôles dynamiques, des groupes techniques, et une délégation ne prend
    effet qu'au renouvellement du jeton du délégataire.
-2. Tout en base Hurura'a, y compris le niveau plateforme. Plus de rôle Hurura'a du tout : le premier
-   administrateur de la plateforme doit être amorcé en base.
-3. Niveau plateforme en rôles Keycloak (`hururaa.applications.manage`,
-   `hururaa.direction-admins.manage`, effectifs uniquement dans l'organisation plateforme
-   `uaa.platform-organization`), niveaux direction et application en base Hurura'a (tables
-   `DIRECTION_ADMINS` et `APPLICATION_MANAGERS`, auditées par Envers).
+2. Tout en base Hurura'a, y compris les administrateurs Hurura'a. Plus de rôle Hurura'a du tout :
+   le premier administrateur Hurura'a doit être amorcé en base.
+3. Administrateurs Hurura'a en rôle Keycloak (`hururaa.admin`, porté par le groupe
+   `hururaa-admins` de la DSI, effectif uniquement dans la DSI, `uaa.platform-organization`),
+   niveaux direction et application en base Hurura'a (tables `DIRECTION_ADMINS` et
+   `APPLICATION_MANAGERS`, auditées par Envers).
 
 ## Décision
 
-Option 3, mise en œuvre dans le PoC. Le niveau plateforme reste administrable avec les outils de
-Hurura'a lui-même : Hurura'a est une application de la DSI, dont les gestionnaires affectent les
-utilisateurs au groupe `sipf` qui porte ses rôles.
+Option 3, mise en œuvre dans le PoC. Les administrateurs Hurura'a se désignent avec Hurura'a
+lui-même : la DSI, qui exploite Hurura'a, en est aussi une direction comme les autres. Hurura'a est
+l'une de ses applications, dont les administrateurs et gestionnaires affectent les utilisateurs au
+groupe `hururaa-admins` qui porte son rôle `hururaa.admin`.
 
 ## Conséquences
 
@@ -48,5 +49,5 @@ utilisateurs au groupe `sipf` qui porte ses rôles.
   est divulguée aux membres de la direction.
 - Les identifiants des délégataires (ids Keycloak) sont en base Hurura'a : un utilisateur supprimé
   de Keycloak ou sorti de la direction y reste listé (par son id) jusqu'à ce qu'on le retire.
-- Les rôles `hururaa.*` portés par un groupe d'une autre direction que la plateforme ne donnent
-  rien (couvert par les tests).
+- Le rôle `hururaa.admin` porté par un groupe d'une autre direction que la DSI ne donne rien
+  (couvert par les tests).

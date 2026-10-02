@@ -16,8 +16,7 @@ export const routes: Routes = [
       },
       {
         path: 'applications/:applicationId',
-        loadComponent: () =>
-          import('./pages/application-detail').then((m) => m.ApplicationDetail),
+        loadComponent: () => import('./pages/application-detail').then((m) => m.ApplicationDetail),
         title: $localize`:@@page.application:Application`,
       },
       {

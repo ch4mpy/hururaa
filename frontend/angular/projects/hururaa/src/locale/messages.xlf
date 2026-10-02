@@ -20,28 +20,28 @@
         <source>Application</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/app.routes.ts</context>
-          <context context-type="linenumber">21</context>
+          <context context-type="linenumber">20</context>
         </context-group>
       </trans-unit>
       <trans-unit id="page.directions" datatype="html">
         <source>Directions</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/app.routes.ts</context>
-          <context context-type="linenumber">26</context>
+          <context context-type="linenumber">25</context>
         </context-group>
       </trans-unit>
       <trans-unit id="page.direction" datatype="html">
         <source>Direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/app.routes.ts</context>
-          <context context-type="linenumber">31</context>
+          <context context-type="linenumber">30</context>
         </context-group>
       </trans-unit>
       <trans-unit id="page.group" datatype="html">
         <source>Groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/app.routes.ts</context>
-          <context context-type="linenumber">36</context>
+          <context context-type="linenumber">35</context>
         </context-group>
       </trans-unit>
       <trans-unit id="footer.text" datatype="html">
@@ -109,7 +109,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">120</context>
+          <context context-type="linenumber">119</context>
         </context-group>
       </trans-unit>
       <trans-unit id="http.error.network" datatype="html">
@@ -249,109 +249,109 @@
         <source>Gérée par la direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">47,48</context>
+          <context context-type="linenumber">48,49</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.settings" datatype="html">
         <source>Rattachement</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">53,54</context>
+          <context context-type="linenumber">54,55</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.name" datatype="html">
         <source>Nom</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">56,57</context>
+          <context context-type="linenumber">57,58</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">52</context>
+          <context context-type="linenumber">53</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">100,101</context>
+          <context context-type="linenumber">101,102</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.direction" datatype="html">
         <source>Direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">60,62</context>
+          <context context-type="linenumber">61,63</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">52,53</context>
+          <context context-type="linenumber">53,54</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">104,106</context>
+          <context context-type="linenumber">105,107</context>
         </context-group>
       </trans-unit>
       <trans-unit id="save" datatype="html">
         <source>Enregistrer</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">74,76</context>
+          <context context-type="linenumber">75,77</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.unregister" datatype="html">
         <source>Désenregistrer</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">81,82</context>
+          <context context-type="linenumber">82,83</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">300</context>
+          <context context-type="linenumber">310</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.move.hint" datatype="html">
         <source>Changer de direction retire les gestionnaires de l&apos;application. C&apos;est refusé tant que des groupes de la direction actuelle attribuent ses rôles.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">86,89</context>
+          <context context-type="linenumber">88,91</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.roles" datatype="html">
         <source>Rôles</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">92,93</context>
+          <context context-type="linenumber">95,96</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.name" datatype="html">
         <source>Nom</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">97</context>
+          <context context-type="linenumber">100</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">137,139</context>
+          <context context-type="linenumber">135,137</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.description" datatype="html">
         <source>Description</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">97,99</context>
+          <context context-type="linenumber">100,101</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">147,149</context>
+          <context context-type="linenumber">144,145</context>
         </context-group>
       </trans-unit>
       <trans-unit id="actions" datatype="html">
         <source>Actions</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">99,100</context>
+          <context context-type="linenumber">101,102</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">56,57</context>
+          <context context-type="linenumber">70,71</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.delete" datatype="html">
@@ -362,172 +362,172 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">324</context>
+          <context context-type="linenumber">341</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.roles.empty" datatype="html">
         <source>Aucun rôle défini</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">125,127</context>
+          <context context-type="linenumber">124,126</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.create" datatype="html">
         <source>Définir le rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">156,158</context>
+          <context context-type="linenumber">152,156</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.managers" datatype="html">
         <source>Gestionnaires</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">161,162</context>
+          <context context-type="linenumber">156,157</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.manager.remove" datatype="html">
         <source>Retirer ce gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">174,175</context>
+          <context context-type="linenumber">168,169</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.managers.empty" datatype="html">
         <source>Aucun gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">183,185</context>
+          <context context-type="linenumber">176,178</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.manager.add" datatype="html">
         <source>Désigner gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">193,194</context>
+          <context context-type="linenumber">185,186</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.noSay" datatype="html">
         <source> Les rôles et les gestionnaires de cette application ne sont visibles que de ceux qui ont délégation sur elle. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">200,202</context>
+          <context context-type="linenumber">191,193</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.saved" datatype="html">
         <source>Application <x id="name" equiv-text="name"/> mise à jour</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">291</context>
+          <context context-type="linenumber">301</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.unregister.confirm" datatype="html">
         <source>Désenregistrer l&apos;application <x id="name" equiv-text="name"/> ? Ses clients Keycloak ne sont pas supprimés.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">301</context>
+          <context context-type="linenumber">311</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.unregistered" datatype="html">
         <source>Application <x id="name" equiv-text="name"/> désenregistrée</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">304</context>
+          <context context-type="linenumber">317</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.created" datatype="html">
         <source>Rôle <x id="name" equiv-text="name"/> défini</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">317</context>
+          <context context-type="linenumber">334</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.delete.confirm" datatype="html">
         <source>Supprimer le rôle <x id="role" equiv-text="role"/> ? Il sera retiré de tous les groupes qui l&apos;attribuent.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">325</context>
+          <context context-type="linenumber">342</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.role.deleted" datatype="html">
         <source>Rôle <x id="role" equiv-text="role"/> supprimé</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">328</context>
+          <context context-type="linenumber">347</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.manager.added" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> désigné gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">337</context>
+          <context context-type="linenumber">358</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.manager.removed" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> n&apos;est plus gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/application-detail.ts</context>
-          <context context-type="linenumber">347</context>
+          <context context-type="linenumber">370</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.title" datatype="html">
         <source>Applications</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">35,37</context>
+          <context context-type="linenumber">36,38</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.register" datatype="html">
         <source>Enregistrer une application</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">42,43</context>
+          <context context-type="linenumber">43,44</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">88,90</context>
+          <context context-type="linenumber">89,91</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.clients" datatype="html">
         <source>Clients Keycloak</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">53,55</context>
+          <context context-type="linenumber">54,56</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.empty" datatype="html">
         <source> Aucune application sur laquelle vous avez des droits de gestion </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">75,77</context>
+          <context context-type="linenumber">76,78</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.clientPrefix" datatype="html">
         <source>Préfixe des clients</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">92,93</context>
+          <context context-type="linenumber">93,94</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.clientPrefix.hint" datatype="html">
         <source>Les clients Keycloak « préfixe-bff » et « préfixe-api » sont créés s&apos;ils n&apos;existent pas encore.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">95,97</context>
+          <context context-type="linenumber">96,98</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.register.submit" datatype="html">
         <source>Enregistrer</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">127,130</context>
+          <context context-type="linenumber">126,129</context>
         </context-group>
       </trans-unit>
       <trans-unit id="applications.registered" datatype="html">
         <source>Application <x id="name" equiv-text="request.name"/> enregistrée</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications.ts</context>
-          <context context-type="linenumber">171</context>
+          <context context-type="linenumber">177</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.applications" datatype="html">
@@ -597,147 +597,147 @@
         <source>Nom du groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">118,119</context>
+          <context context-type="linenumber">122,123</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.group.create" datatype="html">
         <source>Créer le groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">126,129</context>
+          <context context-type="linenumber">130,133</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.members" datatype="html">
         <source>Membres</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">131,132</context>
+          <context context-type="linenumber">135,136</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.members.search" datatype="html">
         <source>Rechercher</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">133,135</context>
+          <context context-type="linenumber">137,139</context>
         </context-group>
       </trans-unit>
       <trans-unit id="user.name" datatype="html">
         <source>Nom</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">153</context>
+          <context context-type="linenumber">157</context>
         </context-group>
       </trans-unit>
       <trans-unit id="user.username" datatype="html">
         <source>Identifiant</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">153,154</context>
+          <context context-type="linenumber">157,158</context>
         </context-group>
       </trans-unit>
       <trans-unit id="user.email" datatype="html">
         <source>Courriel</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">154,156</context>
+          <context context-type="linenumber">158,160</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history" datatype="html">
         <source>Historique des délégations</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">166,168</context>
+          <context context-type="linenumber">170,172</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.date" datatype="html">
         <source>Date</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">178,179</context>
+          <context context-type="linenumber">182,183</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.author" datatype="html">
         <source>Par</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">180</context>
+          <context context-type="linenumber">184</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.change" datatype="html">
         <source>Changement</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">180,181</context>
+          <context context-type="linenumber">184,185</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.delegate" datatype="html">
         <source>Personne concernée</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">181,183</context>
+          <context context-type="linenumber">185,187</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.empty" datatype="html">
         <source>Aucun changement enregistré</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">194,196</context>
+          <context context-type="linenumber">198,200</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.unknownAuthor" datatype="html">
         <source>Inconnu</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">303</context>
+          <context context-type="linenumber">312</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.adminGranted" datatype="html">
         <source>Désigné administrateur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">314</context>
+          <context context-type="linenumber">323</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.adminRevoked" datatype="html">
         <source>Retiré des administrateurs</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">315</context>
+          <context context-type="linenumber">324</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.managerGranted" datatype="html">
         <source>Désigné gestionnaire de <x id="application" equiv-text="application"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">319</context>
+          <context context-type="linenumber">328</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.history.managerRevoked" datatype="html">
         <source>Retiré des gestionnaires de <x id="application" equiv-text="application"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">320</context>
+          <context context-type="linenumber">329</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.admin.added" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> désigné administrateur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">325</context>
+          <context context-type="linenumber">335</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.admin.removed" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> n&apos;est plus administrateur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">333</context>
+          <context context-type="linenumber">344</context>
         </context-group>
       </trans-unit>
       <trans-unit id="direction.group.created" datatype="html">
         <source>Groupe <x id="name" equiv-text="name"/> créé</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/direction-detail.ts</context>
-          <context context-type="linenumber">343</context>
+          <context context-type="linenumber">354</context>
         </context-group>
       </trans-unit>
       <trans-unit id="directions.title" datatype="html">
@@ -765,152 +765,152 @@
         <source>Gestionnaire</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">38,40</context>
+          <context context-type="linenumber">41,43</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="directions.platform" datatype="html">
-        <source>Plateforme</source>
+      <trans-unit id="directions.runsHururaa" datatype="html">
+        <source>Exploite Hurura&apos;a</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/directions.ts</context>
-          <context context-type="linenumber">41,43</context>
+          <context context-type="linenumber">48,50</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete" datatype="html">
         <source>Supprimer le groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">40,41</context>
+          <context context-type="linenumber">54,55</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">272</context>
+          <context context-type="linenumber">300</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.of" datatype="html">
         <source>Groupe de la direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">46,47</context>
+          <context context-type="linenumber">60,61</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.roles" datatype="html">
         <source>Rôles attribués</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">50,51</context>
+          <context context-type="linenumber">64,65</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.application" datatype="html">
         <source>Application</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">54,55</context>
+          <context context-type="linenumber">68,69</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">91,93</context>
+          <context context-type="linenumber">107,109</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.name" datatype="html">
         <source>Rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">55,56</context>
+          <context context-type="linenumber">69,70</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">102,103</context>
+          <context context-type="linenumber">118,119</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.remove" datatype="html">
         <source>Ne plus attribuer ce rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">74,75</context>
+          <context context-type="linenumber">90,91</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.roles.empty" datatype="html">
         <source>Ce groupe n&apos;attribue aucun rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">83,85</context>
+          <context context-type="linenumber">99,101</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.add" datatype="html">
         <source>Attribuer le rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">115,116</context>
+          <context context-type="linenumber">131,132</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.members" datatype="html">
         <source>Membres</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">121,123</context>
+          <context context-type="linenumber">137,139</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.remove" datatype="html">
         <source>Retirer du groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">142,143</context>
+          <context context-type="linenumber">158,159</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.members.empty" datatype="html">
         <source>Aucun membre</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">151,153</context>
+          <context context-type="linenumber">167,169</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.add" datatype="html">
         <source>Ajouter au groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">161,162</context>
+          <context context-type="linenumber">177,178</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.added" datatype="html">
         <source>Le groupe attribue désormais <x id="role" equiv-text="role"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">241</context>
+          <context context-type="linenumber">269</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.removed" datatype="html">
         <source>Le groupe n&apos;attribue plus <x id="role" equiv-text="role.role"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">250</context>
+          <context context-type="linenumber">278</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.added" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> ajouté au groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">257</context>
+          <context context-type="linenumber">285</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.removed" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> retiré du groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">264</context>
+          <context context-type="linenumber">292</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete.confirm" datatype="html">
         <source>Supprimer le groupe <x id="group" equiv-text="group"/> ? Ses membres perdront les rôles qu&apos;il leur attribue.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">273</context>
+          <context context-type="linenumber">301</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.deleted" datatype="html">
         <source>Groupe <x id="group" equiv-text="group"/> supprimé</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/group-detail.ts</context>
-          <context context-type="linenumber">276</context>
+          <context context-type="linenumber">304</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.title" datatype="html">
@@ -1004,517 +1004,517 @@
           <context context-type="linenumber">82,83</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.level.platform.title" datatype="html">
-        <source>1. Plateforme</source>
+      <trans-unit id="home.level.hururaaAdmins.title" datatype="html">
+        <source>1. Administrateurs Hurura&apos;a</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">88,89</context>
+          <context context-type="linenumber">88,90</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.level.platform" datatype="html">
-        <source> Le SIPF enregistre les applications, les rattache à une direction et désigne les administrateurs de chaque direction. </source>
+      <trans-unit id="home.level.hururaaAdmins" datatype="html">
+        <source> Le groupe hururaa-admins de la DSI, qui exploite Hurura&apos;a, agit à tous les niveaux. Lui seul désigne les administrateurs des directions et change une application de direction. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">91,92</context>
+          <context context-type="linenumber">91,93</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.direction.title" datatype="html">
         <source>2. Direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">100,102</context>
+          <context context-type="linenumber">101,103</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.direction" datatype="html">
-        <source> Les administrateurs d&apos;une direction désignent, parmi ses membres, les gestionnaires de chacune de ses applications. </source>
+        <source> Les administrateurs d&apos;une direction enregistrent ses applications, les renomment ou les désenregistrent, définissent leurs rôles, désignent parmi ses membres leurs gestionnaires et gèrent les groupes de la direction. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">103,104</context>
+          <context context-type="linenumber">104,106</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.application.title" datatype="html">
         <source>3. Application</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">112,114</context>
+          <context context-type="linenumber">114,116</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.level.application" datatype="html">
-        <source> Les gestionnaires d&apos;une application définissent ses rôles, les regroupent dans des groupes de la direction et y affectent les utilisateurs. </source>
+        <source> Les gestionnaires d&apos;une application définissent ses rôles et ses autres gestionnaires, regroupent les rôles dans des groupes de la direction et y affectent les utilisateurs. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">115,116</context>
+          <context context-type="linenumber">117,119</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.rules" datatype="html">
         <source>Les règles</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">122,124</context>
+          <context context-type="linenumber">125,127</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.rules.sameDirection" datatype="html">
         <source> Un groupe n&apos;attribue que des rôles des applications de sa propre direction. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">125,127</context>
+          <context context-type="linenumber">128,130</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.rules.groupMembers" datatype="html">
         <source> Pour ajouter ou retirer les membres d&apos;un groupe, il faut gérer toutes les applications dont il attribue des rôles. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">128,130</context>
+          <context context-type="linenumber">131,133</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.rules.move" datatype="html">
         <source> Une application ne change de direction qu&apos;une fois qu&apos;aucun groupe de sa direction n&apos;attribue plus ses rôles ; ses gestionnaires perdent alors leur délégation. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">132,133</context>
+          <context context-type="linenumber">135,136</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.rules.immediate" datatype="html">
         <source> Une délégation (administrateur, gestionnaire) prend effet immédiatement. Un rôle obtenu en rejoignant un groupe prend effet quand l&apos;application renouvelle le jeton de l&apos;utilisateur. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">136,138</context>
+          <context context-type="linenumber">139,141</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data" datatype="html">
         <source>2. Environnement de dev</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">146,147</context>
+          <context context-type="linenumber">149,150</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.intro" datatype="html">
         <source> Le royaume Keycloak « public-facing » et la base de Hurura&apos;a sont initialisés avec ce jeu de données. Tous les utilisateurs ont le mot de passe « secret ». </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">149,151</context>
+          <context context-type="linenumber">152,154</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.applications" datatype="html">
         <source>Applications par direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">153,154</context>
+          <context context-type="linenumber">156,157</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.direction" datatype="html">
         <source>Direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">157,158</context>
+          <context context-type="linenumber">160,161</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">180,181</context>
+          <context context-type="linenumber">183,184</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">198,199</context>
+          <context context-type="linenumber">201,202</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">227,228</context>
+          <context context-type="linenumber">230,231</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.application" datatype="html">
         <source>Application</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">158,159</context>
+          <context context-type="linenumber">161,162</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.clients" datatype="html">
         <source>Clients Keycloak</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">159,160</context>
+          <context context-type="linenumber">162,163</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.managers" datatype="html">
         <source>Gestionnaires</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">160,162</context>
+          <context context-type="linenumber">163,165</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.groups" datatype="html">
         <source>Groupes par direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">176,177</context>
+          <context context-type="linenumber">179,180</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.admins" datatype="html">
         <source>Administrateurs</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">181,182</context>
+          <context context-type="linenumber">184,185</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.groupList" datatype="html">
         <source>Groupes</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">182,184</context>
+          <context context-type="linenumber">185,187</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">228,229</context>
+          <context context-type="linenumber">231,232</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.permissions" datatype="html">
         <source>Permissions par groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">194,195</context>
+          <context context-type="linenumber">197,198</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.group" datatype="html">
         <source>Groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">199,200</context>
+          <context context-type="linenumber">202,203</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.client" datatype="html">
         <source>Client</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">200,201</context>
+          <context context-type="linenumber">203,204</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.roles" datatype="html">
         <source>Rôles</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">201,203</context>
+          <context context-type="linenumber">204,206</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.users" datatype="html">
         <source>Groupes par utilisateur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">222,223</context>
+          <context context-type="linenumber">225,226</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.user" datatype="html">
         <source>Utilisateur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">226,227</context>
+          <context context-type="linenumber">229,230</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.delegation" datatype="html">
         <source>Délégation</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">229,231</context>
+          <context context-type="linenumber">232,234</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links" datatype="html">
         <source>3. Composants logiciels</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">248,249</context>
+          <context context-type="linenumber">251,252</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.intro" datatype="html">
         <source> Chaque lien s&apos;ouvre dans un nouvel onglet. L&apos;environnement de dev doit être lancé (voir le README). </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">251,253</context>
+          <context context-type="linenumber">254,256</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.component" datatype="html">
         <source>Composant</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">257,258</context>
+          <context context-type="linenumber">260,261</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.access" datatype="html">
         <source>Accès</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">258,259</context>
+          <context context-type="linenumber">261,262</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.note" datatype="html">
         <source>Remarque</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">259,261</context>
+          <context context-type="linenumber">262,264</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.newTab" datatype="html">
         <source>(nouvel onglet)</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">277,279</context>
+          <context context-type="linenumber">280,282</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution" datatype="html">
         <source>4. Solution technique</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">293,294</context>
+          <context context-type="linenumber">296,297</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.identity.title" datatype="html">
         <source>Identité : Keycloak</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">300,302</context>
+          <context context-type="linenumber">303,305</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.identity.realm" datatype="html">
         <source> Keycloak 26, un seul royaume (public-facing) ; une organisation par direction. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">304,305</context>
+          <context context-type="linenumber">307,308</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.identity.clients" datatype="html">
         <source> Deux clients OAuth2 par application : « préfixe-bff » pour la connexion des utilisateurs (authorization code avec PKCE, refresh token) et « préfixe-api » pour son API (client credentials), qui porte les rôles de l&apos;application. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">307,309</context>
+          <context context-type="linenumber">310,312</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.identity.claim" datatype="html">
         <source> Les rôles des groupes d&apos;une organisation sont rangés, dans les jetons, sous la claim « organization » de cette direction. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">312,313</context>
+          <context context-type="linenumber">315,316</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.backend.title" datatype="html">
         <source>Backend : Spring Boot</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">322,324</context>
+          <context context-type="linenumber">325,327</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.backend.gateway" datatype="html">
         <source> BFF OAuth2 (Spring Cloud Gateway, oauth2Login, TokenRelay) : le navigateur n&apos;a qu&apos;un cookie de session, jamais de jeton. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">326,328</context>
+          <context context-type="linenumber">329,331</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.backend.api" datatype="html">
         <source> API REST Hurura&apos;a (Spring Boot 4, Java 26) : pilote l&apos;Admin API de Keycloak avec un client généré depuis sa spec OpenAPI, et applique les règles de délégation. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">330,332</context>
+          <context context-type="linenumber">333,335</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.backend.data" datatype="html">
         <source> PostgreSQL avec Liquibase et Hibernate Envers (historique des délégations) pour les applications et les délégations, que Keycloak ne sait pas porter. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">335,336</context>
+          <context context-type="linenumber">338,339</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.backend.events" datatype="html">
         <source> Événements RabbitMQ relayés en Server-Sent Events par le BFF : les écrans se rafraîchissent quand un autre utilisateur modifie ce qu&apos;ils affichent. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">339,340</context>
+          <context context-type="linenumber">342,343</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.backend.errors" datatype="html">
         <source> Erreurs au format RFC 9457 (problem details), traduites par le frontend. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">343,344</context>
+          <context context-type="linenumber">346,347</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.frontend.title" datatype="html">
         <source>Frontend : Angular</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">352,354</context>
+          <context context-type="linenumber">355,357</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.frontend.angular" datatype="html">
         <source> Angular 21 (composants standalone, zoneless, signaux), une build par langue (français, anglais). </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">356,358</context>
+          <context context-type="linenumber">359,361</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.frontend.i18n" datatype="html">
         <source> Entièrement internationalisée, libellés d&apos;accessibilité (aria-label) et messages d&apos;erreur du serveur compris : les erreurs de l&apos;API sont des types de problème fermés, que le frontend traduit lui-même, paramètres inclus ; les libellés internes de PrimeNG et de pf-ui suivent la langue de la build. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">360,363</context>
+          <context context-type="linenumber">363,366</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.frontend.ui" datatype="html">
         <source> Composants du design system de la Polynésie française (pf-ui, basé sur PrimeNG 21 et PrimeFlex) et icônes Remix Icon. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">366,367</context>
+          <context context-type="linenumber">369,370</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.frontend.clients" datatype="html">
         <source> Clients HTTP générés depuis les specs OpenAPI du BFF et de l&apos;API. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">370,371</context>
+          <context context-type="linenumber">373,374</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.infra.title" datatype="html">
         <source>Infrastructure de dev</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">379,380</context>
+          <context context-type="linenumber">382,383</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.infra.compose" datatype="html">
         <source> Docker Compose : Keycloak, PostgreSQL, RabbitMQ, Mailpit et un reverse proxy nginx qui sert tout sur la même origine. </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">383,384</context>
+          <context context-type="linenumber">386,387</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.solution.infra.observability" datatype="html">
         <source> Observabilité OpenTelemetry vers Grafana LGTM (logs, traces, métriques). </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">387,389</context>
+          <context context-type="linenumber">390,392</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.spa" datatype="html">
         <source>Frontend (français)</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">430</context>
+          <context context-type="linenumber">433</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.spaEn" datatype="html">
         <source>Frontend (anglais)</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">435</context>
+          <context context-type="linenumber">438</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.bff" datatype="html">
         <source>BFF : utilisateur courant</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">437</context>
+          <context context-type="linenumber">440</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.api" datatype="html">
         <source>API, à travers le BFF : applications</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">442</context>
+          <context context-type="linenumber">445</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.api.note" datatype="html">
         <source>Nécessite d&apos;être connecté</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">445</context>
+          <context context-type="linenumber">448</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.keycloakAdmin" datatype="html">
         <source>Keycloak : console d&apos;administration</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">448</context>
+          <context context-type="linenumber">451</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.keycloakAdmin.note" datatype="html">
         <source>admin / secret</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">451</context>
+          <context context-type="linenumber">454</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.keycloakAccount" datatype="html">
         <source>Keycloak : espace compte du royaume</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">455</context>
+          <context context-type="linenumber">458</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.oidc" datatype="html">
         <source>Keycloak : configuration OpenID</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">460</context>
+          <context context-type="linenumber">463</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.rabbitmq" datatype="html">
         <source>RabbitMQ : console de gestion</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">465</context>
+          <context context-type="linenumber">468</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.rabbitmq.note" datatype="html">
         <source>Identifiants dans le fichier .env</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">468</context>
+          <context context-type="linenumber">471</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.mailpit" datatype="html">
         <source>Mailpit : courriels envoyés par Keycloak</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">471</context>
+          <context context-type="linenumber">474</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.grafana" datatype="html">
         <source>Grafana : logs, traces et métriques</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">477</context>
+          <context context-type="linenumber">480</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.postgres" datatype="html">
         <source>PostgreSQL : base de Hurura&apos;a</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">483</context>
+          <context context-type="linenumber">486</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.links.postgres.note" datatype="html">
         <source>Pas d&apos;interface web ; mot de passe dans le fichier .env</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">485</context>
+          <context context-type="linenumber">488</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="home.data.delegation.platform" datatype="html">
-        <source>Administrateur de la plateforme</source>
+      <trans-unit id="home.data.delegation.hururaaAdmin" datatype="html">
+        <source>Administrateur Hurura&apos;a</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">496</context>
+          <context context-type="linenumber">499</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.delegation.admin" datatype="html">
         <source>Administrateur de sa direction</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">498</context>
+          <context context-type="linenumber">501</context>
         </context-group>
       </trans-unit>
       <trans-unit id="home.data.delegation.manager" datatype="html">
         <source>Gestionnaire d&apos;applications</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/home.ts</context>
-          <context context-type="linenumber">500</context>
+          <context context-type="linenumber">503</context>
         </context-group>
       </trans-unit>
       <trans-unit id="toast.saved" datatype="html">

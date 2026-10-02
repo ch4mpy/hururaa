@@ -14,8 +14,8 @@ import lombok.Data;
 public class UaaProperties {
 
   /**
-   * Alias of the organization running the platform (the SIPF's direction): the only one in which
-   * {@link HururaaPermission Hurura'a's own roles} take effect.
+   * Alias of the DSI, which runs Hurura'a: a direction like the others, and the only organization
+   * in which {@link HururaaPermission Hurura'a's own roles} take effect.
    */
   @NotBlank
   private final String platformOrganization;

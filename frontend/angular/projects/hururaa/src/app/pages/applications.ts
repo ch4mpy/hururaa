@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -15,7 +15,8 @@ import { injectNotifier } from './shared/labels';
 
 /**
  * The applications the user has management rights on, with the direction managing each of them.
- * Platform administrators register new ones here (for Keycloak clients that must exist already).
+ * Hurura'a administrators register new ones here in any direction, direction administrators in
+ * theirs (the Keycloak clients are created when missing).
  */
 @Component({
   selector: 'app-applications',
@@ -34,7 +35,7 @@ import { injectNotifier } from './shared/labels';
       <ng-template #title>
         <span i18n="@@applications.title">Applications</span>
       </ng-template>
-      @if (delegations.canManageApplications()) {
+      @if (registrationDirections().length) {
         <ng-template #toolbar>
           <p-button
             icon="ri-add-line"
@@ -105,9 +106,7 @@ import { injectNotifier } from './shared/labels';
           <p-select
             inputId="direction"
             formControlName="direction"
-            [options]="directions.value() ?? []"
-            optionLabel="alias"
-            optionValue="alias"
+            [options]="registrationDirections()"
             appendTo="body"
           />
         </div>
@@ -139,13 +138,20 @@ export class Applications {
 
   /**
    * Only the applications the user has management rights on (the API decides: all of them for a
-   * platform administrator, those of the directions they administer, those they manage).
+   * Hurura'a administrator, those of the directions they administer, those they manage).
    */
   protected readonly applications = rxResource({
     stream: () => this.api.getApplications(undefined, true),
   });
   private readonly directionsApi = inject(DirectionsApi);
   protected readonly directions = rxResource({ stream: () => this.directionsApi.getDirections() });
+
+  /** The aliases of the directions the user may register applications in. */
+  protected readonly registrationDirections = computed(
+    () =>
+      this.delegations.registrationDirections() ??
+      (this.directions.value() ?? []).map((direction) => direction.alias),
+  );
 
   protected readonly creating = signal(false);
 
@@ -163,8 +169,8 @@ export class Applications {
   }
 
   protected create(): void {
-    const request = this.form.getRawValue();
-    this.api.createApplication(request, 'response').subscribe((response) => {
+    const { direction, ...request } = this.form.getRawValue();
+    this.api.createApplication(direction, request, 'response').subscribe((response) => {
       this.creating.set(false);
       this.form.reset();
       this.notify(

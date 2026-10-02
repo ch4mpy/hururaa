@@ -89,9 +89,9 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -100,7 +100,7 @@ public class DirectionController {
    */
   @GetMapping(path = ADMINS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.hasDelegate(authentication.name)")
   public List<UserResponse> getDirectionAdmins(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
@@ -121,7 +121,7 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the {@code hururaa.direction-admins.manage} permission in the platform organization.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}).
    * </p>
    *
    * @param direction the direction's alias
@@ -130,7 +130,7 @@ public class DirectionController {
   @PutMapping(path = ADMIN_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')")
   public void addDirectionAdmin(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
@@ -151,7 +151,7 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the {@code hururaa.direction-admins.manage} permission in the platform organization.
+   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}).
    * </p>
    *
    * @param direction the direction's alias
@@ -160,7 +160,7 @@ public class DirectionController {
   @DeleteMapping(path = ADMIN_PATH)
   @Transactional
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')")
   public void removeDirectionAdmin(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
@@ -185,9 +185,9 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -198,7 +198,7 @@ public class DirectionController {
    */
   @GetMapping(path = USERS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.hasDelegate(authentication.name)")
   public PagedModel<UserResponse> getDirectionUsers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -214,9 +214,9 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -225,7 +225,7 @@ public class DirectionController {
    */
   @GetMapping(path = USER_GROUPS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.hasDelegate(authentication.name)")
   public List<GroupResponse> getDirectionUserGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -244,19 +244,19 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: platform administrator
-   * ({@code hururaa.direction-admins.manage}), administrator of the direction, or manager of one of
-   * its applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
    * </p>
    *
    * @param direction the direction's alias
    * @param pageParams the requested page index and size
    * @return a page of the direction's delegation changes, with their author and delegate (one who
-   *         has left the direction and the platform is returned with their id as username)
+   *         has left both the direction and the DSI is returned with their id as username)
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMINS_MANAGE + "')"
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.hasDelegate(authentication.name)")
   public PagedModel<DelegationChangeResponse> getDirectionHistory(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,

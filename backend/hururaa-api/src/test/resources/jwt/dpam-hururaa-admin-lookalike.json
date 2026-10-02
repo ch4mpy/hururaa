@@ -5,10 +5,10 @@
     "dpam": {
       "resource_access": {
         "hururaa-api": {
-          "roles": ["hururaa.applications.manage", "hururaa.direction-admins.manage"]
+          "roles": ["hururaa.admin"]
         }
       },
-      "groups": ["/sipf"]
+      "groups": ["/hururaa-admins"]
     }
   }
 }

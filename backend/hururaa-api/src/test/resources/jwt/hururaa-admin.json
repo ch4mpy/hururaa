@@ -1,14 +1,14 @@
 {
   "sub": "d053cfc8-5a34-4fcb-9431-bb47617c18c6",
-  "preferred_username": "sipf.admin",
+  "preferred_username": "hururaa.admin",
   "organization": {
     "dsi": {
       "resource_access": {
         "hururaa-api": {
-          "roles": ["hururaa.applications.manage", "hururaa.direction-admins.manage"]
+          "roles": ["hururaa.admin"]
         }
       },
-      "groups": ["/sipf"]
+      "groups": ["/hururaa-admins"]
     }
   }
 }

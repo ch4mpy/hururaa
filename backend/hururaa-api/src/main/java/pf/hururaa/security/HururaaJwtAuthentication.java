@@ -13,8 +13,8 @@ import pf.hururaa.commons.security.HururaaAuthentication;
 
 /**
  * The resource server's {@link HururaaAuthentication}: an {@link OAuthentication} built from the
- * JWT access token, exposing the OpenID claims, the per-tenant permissions, and the platform
- * permissions as authorities (see {@link HururaaAuthenticationConverter}).
+ * JWT access token, exposing the OpenID claims, the per-tenant permissions, and the Hurura'a roles
+ * held in the DSI as authorities (see {@link HururaaAuthenticationConverter}).
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
@@ -26,7 +26,8 @@ public class HururaaJwtAuthentication extends OAuthentication<OpenidToken>
   private final Map<String, Set<String>> permissionsByTenant;
 
   /**
-   * @param authorities the platform permissions (see {@link HururaaAuthenticationConverter})
+   * @param authorities the Hurura'a roles held in the DSI (see
+   *        {@link HururaaAuthenticationConverter})
    */
   public HururaaJwtAuthentication(Jwt jwt, Map<String, Set<String>> permissionsByTenant,
       Collection<? extends GrantedAuthority> authorities) {

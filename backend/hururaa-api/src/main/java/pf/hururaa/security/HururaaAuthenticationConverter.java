@@ -16,7 +16,7 @@ import pf.hururaa.uaa.UaaProperties;
  *
  * <p>
  * The {@link HururaaPermission Hurura'a roles} held in the
- * {@link UaaProperties#getPlatformOrganization() platform organization}, the only one in which they
+ * {@link UaaProperties#getPlatformOrganization() DSI}, the only organization in which they
  * take effect, become the authentication's authorities: access rules check them with
  * {@code hasAuthority(...)}.
  * </p>
@@ -39,13 +39,13 @@ public class HururaaAuthenticationConverter implements JwtAbstractAuthentication
   @Override
   public AbstractAuthenticationToken convert(Jwt jwt) {
     final var permissionsByTenant = permissionsExtractor.extract(jwt.getClaims());
-    final var platformAuthorities = permissionsByTenant
+    final var hururaaAuthorities = permissionsByTenant
         .getOrDefault(uaaProperties.getPlatformOrganization(), Set.of())
         .stream()
         .filter(HururaaPermission.ALL::contains)
         .sorted()
         .map(SimpleGrantedAuthority::new)
         .toList();
-    return new HururaaJwtAuthentication(jwt, permissionsByTenant, platformAuthorities);
+    return new HururaaJwtAuthentication(jwt, permissionsByTenant, hururaaAuthorities);
   }
 }

@@ -12,11 +12,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static pf.hururaa.HururaaFixtures.DAF;
 import static pf.hururaa.HururaaFixtures.DPAM;
 import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
 import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
 import java.util.List;
 import java.util.Optional;
@@ -77,6 +79,7 @@ class ApplicationControllerTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
     when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
       final Application application = invocation.getArgument(0);
@@ -89,7 +92,7 @@ class ApplicationControllerTest {
   }
 
   private static ApplicationCreationRequest anaheiRequest() {
-    return new ApplicationCreationRequest("anahei", "Anahei", "daf");
+    return new ApplicationCreationRequest("anahei", "Anahei");
   }
 
   // ---------- read ----------
@@ -117,8 +120,8 @@ class ApplicationControllerTest {
   private static final String MANAGEABLE = ApplicationController.BASE_PATH + "?manageable=true";
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenGetManageableApplications_thenAll() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenGetManageableApplications_thenAll() throws Exception {
     when(applicationRepository.findAllByOrderByNameAsc()).thenReturn(List.of(escales(), teFenua()));
 
     api.get(MANAGEABLE).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
@@ -182,23 +185,27 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/dsi-admin.json")
-  void givenDirectionAdmin_whenCreateApplication_thenForbidden() throws Exception {
-    api.post(anaheiRequest(), ApplicationController.BASE_PATH).andExpect(status().isForbidden());
+  void givenAdminOfAnotherDirection_whenCreateApplication_thenForbidden() throws Exception {
+    api
+        .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
+        .andExpect(status().isForbidden());
     verify(applicationRepository, never()).save(any());
   }
 
   @Test
-  @WithJwt("jwt/dpam-sipf-lookalike.json")
-  void givenPlatformRolesOutsideThePlatformOrganization_whenCreateApplication_thenForbidden()
+  @WithJwt("jwt/dpam-hururaa-admin-lookalike.json")
+  void givenHururaaAdminRoleOutsideTheDsi_whenCreateApplication_thenForbidden()
       throws Exception {
-    api.post(anaheiRequest(), ApplicationController.BASE_PATH).andExpect(status().isForbidden());
+    api
+        .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
+        .andExpect(status().isForbidden());
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenCreateApplication_thenCreatedAndEventPublished() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenCreateApplication_thenCreatedAndEventPublished() throws Exception {
     api
-        .post(anaheiRequest(), ApplicationController.BASE_PATH)
+        .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
         .andExpect(status().isCreated())
         .andExpect(header().string("Location", endsWith("/applications/42")));
 
@@ -210,12 +217,12 @@ class ApplicationControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
+  @WithJwt("jwt/hururaa-admin.json")
   void givenTakenPrefix_whenCreateApplication_thenConflict() throws Exception {
     when(applicationRepository.existsByClientPrefix("anahei")).thenReturn(true);
 
     api
-        .post(anaheiRequest(), ApplicationController.BASE_PATH)
+        .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
         .andExpect(status().isConflict())
         .andExpect(
             jsonPath("$.type").value(ProblemType.APPLICATION_ALREADY_EXISTS.uri().toString()))
@@ -223,21 +230,22 @@ class ApplicationControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenCreateApplication_thenItsKeycloakClientsAreProvisioned()
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenCreateApplication_thenItsKeycloakClientsAreProvisioned()
       throws Exception {
-    api.post(anaheiRequest(), ApplicationController.BASE_PATH).andExpect(status().isCreated());
+    api
+        .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
+        .andExpect(status().isCreated());
 
     verify(clientProvisioningService).ensureApplicationClients("anahei", "Anahei");
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
+  @WithJwt("jwt/hururaa-admin.json")
   void givenUnknownDirection_whenCreateApplication_thenNotFound() throws Exception {
-    when(directionService.exists("daf")).thenReturn(false);
-
     api
-        .post(anaheiRequest(), ApplicationController.BASE_PATH)
+        .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH,
+            "no-such-direction")
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(ProblemType.DIRECTION_NOT_FOUND.uri().toString()));
     // nothing is created in Keycloak for an application that can't be registered
@@ -245,28 +253,61 @@ class ApplicationControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
+  @WithJwt("jwt/hururaa-admin.json")
   void givenInvalidPrefix_whenCreateApplication_thenUnprocessable() throws Exception {
     api
-        .post(new ApplicationCreationRequest("Not A Prefix", "X", "daf"),
-            ApplicationController.BASE_PATH)
+        .post(new ApplicationCreationRequest("Not A Prefix", "X"),
+            ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
         .andExpect(status().isUnprocessableContent())
         .andExpect(jsonPath("$.invalidFields.clientPrefix").exists());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenCreateApplicationInTheirDirection_thenCreated() throws Exception {
+    api
+        .post(new ApplicationCreationRequest("pgc", "PGC"),
+            ApplicationController.DIRECTION_APPLICATIONS_PATH, DPAM)
+        .andExpect(status().isCreated());
+
+    final var saved = ArgumentCaptor.forClass(Application.class);
+    verify(applicationRepository).save(saved.capture());
+    assertThat(saved.getValue().getDirection()).isEqualTo(DPAM);
   }
 
   // ---------- update ----------
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenMovingApplication_thenManagersDroppedAndBothDirectionsNotified()
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenRenamingApplication_thenNoContent() throws Exception {
+    api
+        .put(new ApplicationUpdateRequest("Escales 2", DPAM),
+            ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenMovingApplication_thenForbidden() throws Exception {
+    api
+        .put(new ApplicationUpdateRequest("Escales", DSI),
+            ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isForbidden());
+    verify(applicationRepository, never()).save(any());
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenMovingApplication_thenManagersDroppedAndBothDirectionsNotified()
       throws Exception {
     when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "escales-agents")));
     when(groupService.findClientRoles(DPAM, "escales-agents", "escales-api"))
         .thenReturn(List.of());
 
     api
-        .put(new ApplicationUpdateRequest("Escales", DSI), ApplicationController.APPLICATION_PATH,
-            ESCALES_ID)
+        .put(new ApplicationUpdateRequest("Escales", DSI),
+            ApplicationController.DIRECTION_APPLICATION_PATH,
+            DPAM, ESCALES_ID)
         .andExpect(status().isNoContent());
 
     final var saved = ArgumentCaptor.forClass(Application.class);
@@ -279,15 +320,16 @@ class ApplicationControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
+  @WithJwt("jwt/hururaa-admin.json")
   void givenRolesStillGranted_whenMovingApplication_thenConflict() throws Exception {
     when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "escales-agents")));
     when(groupService.findClientRoles(DPAM, "escales-agents", "escales-api"))
         .thenReturn(List.of("escales.stopovers.read"));
 
     api
-        .put(new ApplicationUpdateRequest("Escales", DSI), ApplicationController.APPLICATION_PATH,
-            ESCALES_ID)
+        .put(new ApplicationUpdateRequest("Escales", DSI),
+            ApplicationController.DIRECTION_APPLICATION_PATH,
+            DPAM, ESCALES_ID)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type")
             .value(ProblemType.APPLICATION_ROLES_STILL_GRANTED.uri().toString()))
@@ -297,11 +339,11 @@ class ApplicationControllerTest {
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
+  @WithJwt("jwt/hururaa-admin.json")
   void givenSameDirection_whenRenamingApplication_thenGrantsAreNotChecked() throws Exception {
     api
         .put(new ApplicationUpdateRequest("Escales 2", DPAM),
-            ApplicationController.APPLICATION_PATH, ESCALES_ID)
+            ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isNoContent());
     verify(groupService, never()).findAll(eq(DPAM));
   }
@@ -309,18 +351,27 @@ class ApplicationControllerTest {
   // ---------- delete ----------
 
   @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenDeleteApplication_thenNoContent() throws Exception {
+    api
+        .delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isNoContent());
+    verify(applicationRepository).delete(any(Application.class));
+  }
+
+  @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenDeleteApplication_thenForbidden() throws Exception {
-    api.delete(ApplicationController.APPLICATION_PATH, ESCALES_ID)
+    api.delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isForbidden());
   }
 
   @Test
-  @WithJwt("jwt/sipf-admin.json")
-  void givenPlatformAdmin_whenDeleteUngrantedApplication_thenNoContent() throws Exception {
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenDeleteUngrantedApplication_thenNoContent() throws Exception {
     when(groupService.findAll(DPAM)).thenReturn(List.of());
 
-    api.delete(ApplicationController.APPLICATION_PATH, ESCALES_ID)
+    api.delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isNoContent());
     verify(applicationRepository).delete(any(Application.class));
   }

@@ -48,8 +48,8 @@ roles granted by the organization's groups under each organization:
 ```json
 "organization": {
   "dsi": {
-    "resource_access": { "hururaa-api": { "roles": ["hururaa.applications.manage", "hururaa.direction-admins.manage"] } },
-    "groups": ["/sipf"]
+    "resource_access": { "hururaa-api": { "roles": ["hururaa.admin"] } },
+    "groups": ["/hururaa-admins"]
   }
 }
 ```

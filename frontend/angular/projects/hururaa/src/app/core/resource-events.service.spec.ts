@@ -42,7 +42,10 @@ describe('ResourceEventsService', () => {
   it('opens one stream per direction the user is a member of', () => {
     answerMe({ sub: 'u1', directions: ['dpam', 'dsi'] });
 
-    expect(streams.map((s) => s.url)).toEqual(['/gateway/bff/events/dpam', '/gateway/bff/events/dsi']);
+    expect(streams.map((s) => s.url)).toEqual([
+      '/gateway/bff/events/dpam',
+      '/gateway/bff/events/dsi',
+    ]);
   });
 
   it('relays the events of a stream, and drops those claiming another direction', () => {

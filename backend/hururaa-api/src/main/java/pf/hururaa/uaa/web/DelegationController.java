@@ -36,9 +36,9 @@ public class DelegationController {
   private final ApplicationMapper applicationMapper;
 
   /**
-   * What the current user may do in Hurura'a, level by level of the delegation chain: platform
-   * permissions (from the token), administered directions and managed applications (from the
-   * database). This is what the frontend adapts its menus and actions to.
+   * What the current user may do in Hurura'a, level by level of the delegation chain: Hurura'a
+   * roles held in the DSI (from the token), administered directions and managed applications (from
+   * the database). This is what the frontend adapts its menus and actions to.
    *
    * <h4>Access control</h4>
    * <p>

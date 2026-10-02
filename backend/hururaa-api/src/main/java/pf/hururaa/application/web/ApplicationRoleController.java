@@ -62,9 +62,9 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: platform administrator
-   * ({@code hururaa.applications.manage}), administrator of its direction, or manager of the
-   * application. The application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -73,7 +73,7 @@ public class ApplicationRoleController {
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-@PreAuthorize("(hasAuthority('" + HururaaPermission.Names.APPLICATIONS_MANAGE + "')"
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.isAdministeredBy(authentication.name)"
       + " or #application.isManagedBy(authentication.name))"
       + " and #application.direction == #direction.alias")
@@ -95,8 +95,9 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a manager of the application, which must be managed by
-   * {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -106,7 +107,9 @@ public class ApplicationRoleController {
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("#application.isManagedBy(authentication.name)"
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
       + " and #application.direction == #direction.alias")
   public ResponseEntity<Void> createApplicationRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -134,8 +137,9 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a manager of the application, which must be managed by
-   * {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -145,7 +149,9 @@ public class ApplicationRoleController {
   @DeleteMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("#application.isManagedBy(authentication.name)"
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
       + " and #application.direction == #direction.alias")
   public void deleteApplicationRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
