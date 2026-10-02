@@ -22,12 +22,15 @@ import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -41,6 +44,9 @@ import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.history.PermissionHistoryMapperImpl;
+import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.direction.domain.Group;
@@ -52,7 +58,7 @@ import pf.hururaa.problem.ProblemType;
 @WebMvcTest(controllers = ApplicationController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
 @Import({HururaaFixtures.WebMvcTestConfiguration.class, ApplicationMapperImpl.class,
-    ApplicationService.class})
+    ApplicationService.class, PermissionHistoryMapperImpl.class})
 @TestPropertySource(properties = "server.ssl.enabled=false")
 class ApplicationControllerTest {
 
@@ -76,6 +82,9 @@ class ApplicationControllerTest {
 
   @MockitoBean
   ResourceEventPublisher resourceEvents;
+
+  @MockitoBean
+  PermissionHistoryService permissionHistoryService;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -374,5 +383,38 @@ class ApplicationControllerTest {
     api.delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isNoContent());
     verify(applicationRepository).delete(any(Application.class));
+  }
+
+  // ---------- history ----------
+
+  @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenMemberWithoutDelegation_whenGetApplicationHistory_thenForbidden() throws Exception {
+    api
+        .get(ApplicationController.HISTORY_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenApplicationManager_whenGetApplicationHistory_thenFilteredOnTheApplication()
+      throws Exception {
+    final var filter = new PermissionHistoryFilter(DPAM, ESCALES_ID, null, Set.of());
+    when(permissionHistoryService.find(filter, PageRequest.of(0, 20)))
+        .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+    api
+        .get(ApplicationController.HISTORY_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isOk());
+    verify(permissionHistoryService).find(filter, PageRequest.of(0, 20));
+  }
+
+  @Test
+  @WithJwt("jwt/dsi-admin.json")
+  void givenApplicationOfAnotherDirection_whenGetApplicationHistory_thenForbidden()
+      throws Exception {
+    api
+        .get(ApplicationController.HISTORY_PATH, DSI, ESCALES_ID)
+        .andExpect(status().isForbidden());
   }
 }

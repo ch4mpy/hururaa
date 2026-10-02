@@ -1,5 +1,8 @@
 package pf.hururaa.direction.web;
 
+import org.springframework.web.bind.annotation.RequestParam;
+import org.jspecify.annotations.Nullable;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import pf.hururaa.history.domain.PermissionHistoryFilter;
+import pf.hururaa.history.domain.PermissionChangeCategory;
+import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.PermissionHistoryMapper;
+import pf.hururaa.history.PermissionChangeResponse;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
@@ -63,6 +71,7 @@ public class GroupController {
       + ROLE_PLACEHOLDER + "}";
   public static final String MEMBERS_PATH = GROUP_PATH + "/members";
   public static final String MEMBER_PATH = MEMBERS_PATH + "/{" + USER_ID_PLACEHOLDER + "}";
+  public static final String HISTORY_PATH = GROUP_PATH + "/history";
 
   private final GroupService groupService;
 
@@ -75,6 +84,10 @@ public class GroupController {
   private final ResourceEventPublisher resourceEvents;
 
   private final PermissionJournal permissionJournal;
+
+  private final PermissionHistoryService permissionHistoryService;
+
+  private final PermissionHistoryMapper permissionHistoryMapper;
 
   /**
    * Lists a direction's groups.
@@ -381,6 +394,40 @@ public class GroupController {
     log.info("{} removed {} from group {} of {}", authentication.getName(), userId,
         group.name(), direction);
     publish(direction, group.name(), EventType.UPDATE);
+  }
+
+  /**
+   * Lists who changed what about a group, and when, newest first: its creation and deletion, the
+   * roles it grants and its members.
+   *
+   * <h4>Access control</h4>
+   * <p>
+   * Requires the user to have a say on the direction: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
+   * applications.
+   * </p>
+   *
+   * @param direction the direction's alias
+   * @param group the group resolved from its name
+   * @param categories only the changes of these categories; all of them when absent
+   * @param pageParams the requested page index and size
+   * @return a page of the group's changes
+   */
+  @GetMapping(path = HISTORY_PATH)
+  @Transactional(readOnly = true)
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #group.direction.hasDelegate(authentication.name)")
+  public PagedModel<PermissionChangeResponse> getGroupHistory(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
+      @Parameter(schema = @Schema(type = "string"), description = "The group's name")
+      @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
+      @RequestParam(name = DirectionController.CATEGORIES_PARAM, required = false)
+      @Nullable Set<PermissionChangeCategory> categories,
+      @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
+    return new PagedModel<>(permissionHistoryService
+        .find(new PermissionHistoryFilter(direction, null, group.name(),
+            categories == null ? Set.of() : categories), pageParams.toPageable())
+        .map(permissionHistoryMapper::toPermissionChangeResponse));
   }
 
   /**

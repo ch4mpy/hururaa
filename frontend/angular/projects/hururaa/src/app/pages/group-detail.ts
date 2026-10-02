@@ -19,6 +19,7 @@ import { confirm } from '../core/confirm';
 import { DelegationsService } from '../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../core/resource-events.service';
 import { injectNotifier, userLabel } from './shared/labels';
+import { PermissionHistory } from './shared/permission-history';
 import { UserPicker } from './shared/user-picker';
 
 const PAGE_SIZE = 10;
@@ -40,6 +41,7 @@ const PAGE_SIZE = 10;
     SelectModule,
     TableModule,
     UserPicker,
+    PermissionHistory,
   ],
   template: `
     <pf-page [withPadding]="true">
@@ -179,6 +181,9 @@ const PAGE_SIZE = 10;
           />
         </div>
       }
+
+      <h2 i18n="@@group.history">Historique des permissions</h2>
+      <app-permission-history [direction]="direction()" [group]="group()" />
     </pf-page>
   `,
 })

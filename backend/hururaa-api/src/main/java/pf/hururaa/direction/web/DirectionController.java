@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
@@ -30,7 +32,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
-import pf.hururaa.direction.DelegationHistoryService;
 import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
@@ -38,6 +39,11 @@ import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.history.PermissionChangeResponse;
+import pf.hururaa.history.PermissionHistoryMapper;
+import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.domain.PermissionChangeCategory;
+import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.problem.ProblemType;
 import pf.hururaa.uaa.HururaaPermission;
@@ -61,6 +67,8 @@ public class DirectionController {
   public static final String USER_GROUPS_PATH =
       USERS_PATH + "/{" + USER_ID_PLACEHOLDER + "}/groups";
   public static final String HISTORY_PATH = DIRECTION_PATH + "/history";
+  /** The categories a permission history is filtered by (a repeatable query parameter). */
+  public static final String CATEGORIES_PARAM = "categories";
 
   private final DirectionService directionService;
 
@@ -68,7 +76,9 @@ public class DirectionController {
 
   private final DirectionAdminRepository directionAdminRepository;
 
-  private final DelegationHistoryService delegationHistoryService;
+  private final PermissionHistoryService permissionHistoryService;
+
+  private final PermissionHistoryMapper permissionHistoryMapper;
 
   private final DirectoryMapper directoryMapper;
 
@@ -305,9 +315,10 @@ public class DirectionController {
   }
 
   /**
-   * Lists who designated or revoked whom, and when, in a direction: its administrators, and the
-   * managers of its applications (including applications since moved to another direction or
-   * deleted). Replayed from the audit trail, newest change first.
+   * Lists who changed what permissions in a direction, and when, newest first: directions
+   * created, delegations (administrators and application managers), applications registered,
+   * renamed, moved or unregistered, application roles, groups, the roles they grant and their
+   * members. Changes made outside Hurura'a (in Keycloak's console) are not known.
    *
    * <h4>Access control</h4>
    * <p>
@@ -317,19 +328,24 @@ public class DirectionController {
    * </p>
    *
    * @param direction the direction's alias
+   * @param categories only the changes of these categories; all of them when absent
    * @param pageParams the requested page index and size
-   * @return a page of the direction's delegation changes, with their author and delegate (one who
-   *         has left both the direction and the DSI is returned with their id as username)
+   * @return a page of the direction's permission changes, with their author and the user they
+   *         concern (one who has left both the direction and the DSI is returned with their id as
+   *         username)
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
   @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
       + " or #direction.hasDelegate(authentication.name)")
-  public PagedModel<DelegationChangeResponse> getDirectionHistory(
+  public PagedModel<PermissionChangeResponse> getDirectionHistory(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
+      @RequestParam(name = CATEGORIES_PARAM, required = false)
+      @Nullable Set<PermissionChangeCategory> categories,
       @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
-    return new PagedModel<>(delegationHistoryService
-        .findByDirection(direction.alias(), pageParams.toPageable())
-        .map(directoryMapper::toDelegationChangeResponse));
+    return new PagedModel<>(permissionHistoryService
+        .find(PermissionHistoryFilter.ofDirection(direction.alias(),
+            categories == null ? Set.of() : categories), pageParams.toPageable())
+        .map(permissionHistoryMapper::toPermissionChangeResponse));
   }
 }

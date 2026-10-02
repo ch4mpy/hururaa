@@ -1,5 +1,8 @@
 package pf.hururaa.application.web;
 
+import org.springframework.data.web.PagedModel;
+import org.springdoc.core.annotations.ParameterObject;
+import java.util.Set;
 import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +31,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import pf.hururaa.direction.web.PageParams;
+import pf.hururaa.history.domain.PermissionHistoryFilter;
+import pf.hururaa.history.domain.PermissionChangeCategory;
+import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.PermissionHistoryMapper;
+import pf.hururaa.history.PermissionChangeResponse;
 import pf.hururaa.application.ApplicationService;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
@@ -65,6 +74,7 @@ public class ApplicationController {
       DirectionController.DIRECTION_PATH + "/applications";
   public static final String DIRECTION_APPLICATION_PATH =
       DIRECTION_APPLICATIONS_PATH + "/{" + APPLICATION_ID_PLACEHOLDER + "}";
+  public static final String HISTORY_PATH = DIRECTION_APPLICATION_PATH + "/history";
 
   private final ApplicationRepository applicationRepository;
 
@@ -75,6 +85,10 @@ public class ApplicationController {
   private final ResourceEventPublisher resourceEvents;
 
   private final DirectionAdminRepository directionAdminRepository;
+
+  private final PermissionHistoryService permissionHistoryService;
+
+  private final PermissionHistoryMapper permissionHistoryMapper;
 
   /**
    * Lists the registered applications, by name: which direction manages each of them is no secret.
@@ -233,6 +247,42 @@ public class ApplicationController {
     log.info("{} unregistered application {}", authentication.getName(),
         application.getClientPrefix());
     resourceEvents.publish(eventFor(application, application.getDirection(), EventType.DELETE));
+  }
+
+  /**
+   * Lists who changed what about an application, and when, newest first: its registration,
+   * renaming, moves and unregistration, its managers, its roles and the groups granting them.
+   *
+   * <h4>Access control</h4>
+   * <p>
+   * Requires the user to have a say on the application: Hurura'a administrator
+   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
+   * application must be managed by {@code direction}.
+   * </p>
+   *
+   * @param direction the direction managing the application
+   * @param application the application resolved from the {@code applicationId} path variable
+   * @param categories only the changes of these categories; all of them when absent
+   * @param pageParams the requested page index and size
+   * @return a page of the application's changes in {@code direction}
+   */
+  @GetMapping(path = HISTORY_PATH)
+  @Transactional(readOnly = true)
+  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
+      + " or #direction.isAdministeredBy(authentication.name)"
+      + " or #application.isManagedBy(authentication.name))"
+      + " and #application.direction == #direction.alias")
+  public PagedModel<PermissionChangeResponse> getApplicationHistory(
+      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
+      @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
+      @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
+      @RequestParam(name = DirectionController.CATEGORIES_PARAM, required = false)
+      @Nullable Set<PermissionChangeCategory> categories,
+      @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
+    return new PagedModel<>(permissionHistoryService
+        .find(new PermissionHistoryFilter(direction.alias(), application.getId(), null,
+            categories == null ? Set.of() : categories), pageParams.toPageable())
+        .map(permissionHistoryMapper::toPermissionChangeResponse));
   }
 
   static URI locationOf(Application application) {

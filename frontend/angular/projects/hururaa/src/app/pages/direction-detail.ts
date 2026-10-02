@@ -1,17 +1,8 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import {
-  ApplicationsApi,
-  DelegationChangeResponse,
-  DelegationChangeResponseChangeEnum,
-  DelegationChangeResponseDelegationEnum,
-  DirectionsApi,
-  GroupsApi,
-  UserResponse,
-} from '@api/hururaa-api';
+import { ApplicationsApi, DirectionsApi, GroupsApi, UserResponse } from '@api/hururaa-api';
 import { PfPageComponent } from 'pf-ui';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -19,7 +10,8 @@ import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { of } from 'rxjs';
 import { DelegationsService } from '../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../core/resource-events.service';
-import { injectNotifier, nameLabel, userLabel } from './shared/labels';
+import { injectNotifier, userLabel } from './shared/labels';
+import { PermissionHistory } from './shared/permission-history';
 import { UserPicker } from './shared/user-picker';
 
 const PAGE_SIZE = 10;
@@ -31,7 +23,6 @@ const PAGE_SIZE = 10;
 @Component({
   selector: 'app-direction-detail',
   imports: [
-    DatePipe,
     PfPageComponent,
     RouterLink,
     FormsModule,
@@ -40,6 +31,7 @@ const PAGE_SIZE = 10;
     InputTextModule,
     TableModule,
     UserPicker,
+    PermissionHistory,
   ],
   template: `
     <pf-page [withPadding]="true">
@@ -167,38 +159,8 @@ const PAGE_SIZE = 10;
           </ng-template>
         </p-table>
 
-        <h2 i18n="@@direction.history">Historique des délégations</h2>
-        <p-table
-          [value]="history.value()?.content ?? []"
-          [lazy]="true"
-          [paginator]="true"
-          [rows]="pageSize"
-          [totalRecords]="history.value()?.page?.totalElements ?? 0"
-          [loading]="history.isLoading()"
-          (onLazyLoad)="loadHistory($event)"
-        >
-          <ng-template #header>
-            <tr>
-              <th i18n="@@direction.history.date">Date</th>
-              <th i18n="@@direction.history.author">Par</th>
-              <th i18n="@@direction.history.change">Changement</th>
-              <th i18n="@@direction.history.delegate">Personne concernée</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-change>
-            <tr>
-              <td>{{ change.timestamp | date: 'short' }}</td>
-              <td>{{ authorOf(change) }}</td>
-              <td>{{ describe(change) }}</td>
-              <td>{{ delegateOf(change) }}</td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr>
-              <td colspan="4" i18n="@@direction.history.empty">Aucun changement enregistré</td>
-            </tr>
-          </ng-template>
-        </p-table>
+        <h2 i18n="@@direction.history">Historique des permissions</h2>
+        <app-permission-history [direction]="direction()" />
       }
     </pf-page>
   `,
@@ -252,17 +214,6 @@ export class DirectionDetail {
         : of({ content: [] }),
   });
 
-  private readonly historyPage = signal(0);
-
-  protected readonly history = rxResource({
-    params: () =>
-      this.canRead() ? { direction: this.direction(), page: this.historyPage() } : undefined,
-    stream: ({ params }) =>
-      params
-        ? this.directionsApi.getDirectionHistory(params.direction, params.page, PAGE_SIZE)
-        : of({ content: [] }),
-  });
-
   protected readonly groupForm = inject(FormBuilder).nonNullable.group({
     name: ['', [Validators.required, Validators.pattern(/^[a-z0-9][a-z0-9._-]*$/)]],
   });
@@ -272,12 +223,7 @@ export class DirectionDetail {
     events
       .of(ResourceTypes.DIRECTION)
       .pipe(takeUntilDestroyed())
-      .subscribe((event) => {
-        if (event.tenant === this.direction()) {
-          this.admins.reload();
-          this.history.reload();
-        }
-      });
+      .subscribe((event) => event.tenant === this.direction() && this.admins.reload());
     events
       .of(ResourceTypes.GROUP)
       .pipe(takeUntilDestroyed())
@@ -285,12 +231,7 @@ export class DirectionDetail {
     events
       .of(ResourceTypes.APPLICATION)
       .pipe(takeUntilDestroyed())
-      .subscribe((event) => {
-        this.applications.reload();
-        if (event.tenant === this.direction()) {
-          this.history.reload();
-        }
-      });
+      .subscribe(() => this.applications.reload());
   }
 
   protected searchMembers(search: string): void {
@@ -300,33 +241,6 @@ export class DirectionDetail {
 
   protected loadMembers(event: TableLazyLoadEvent): void {
     this.page.set(Math.floor((event.first ?? 0) / PAGE_SIZE));
-  }
-
-  protected loadHistory(event: TableLazyLoadEvent): void {
-    this.historyPage.set(Math.floor((event.first ?? 0) / PAGE_SIZE));
-  }
-
-  protected authorOf(change: DelegationChangeResponse): string {
-    return change.authorUsername
-      ? nameLabel(change.authorUsername, change.authorFirstName, change.authorLastName)
-      : $localize`:@@direction.history.unknownAuthor:Inconnu`;
-  }
-
-  protected delegateOf(change: DelegationChangeResponse): string {
-    return nameLabel(change.delegateUsername, change.delegateFirstName, change.delegateLastName);
-  }
-
-  protected describe(change: DelegationChangeResponse): string {
-    const granted = change.change === DelegationChangeResponseChangeEnum.granted;
-    if (change.delegation === DelegationChangeResponseDelegationEnum.directionAdmin) {
-      return granted
-        ? $localize`:@@direction.history.adminGranted:Désigné administrateur`
-        : $localize`:@@direction.history.adminRevoked:Retiré des administrateurs`;
-    }
-    const application = change.applicationName ?? '';
-    return granted
-      ? $localize`:@@direction.history.managerGranted:Désigné gestionnaire de ${application}:application:`
-      : $localize`:@@direction.history.managerRevoked:Retiré des gestionnaires de ${application}:application:`;
   }
 
   protected addAdmin(user: UserResponse): void {

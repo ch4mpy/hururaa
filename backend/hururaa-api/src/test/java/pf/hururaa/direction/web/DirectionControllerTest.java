@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,10 +40,12 @@ import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.journal.PermissionJournal;
-import pf.hururaa.direction.DelegationHistoryService;
-import pf.hururaa.direction.domain.DelegationChange;
-import pf.hururaa.direction.domain.DelegationChange.Change;
-import pf.hururaa.direction.domain.DelegationChange.Delegation;
+import pf.hururaa.history.PermissionHistoryMapperImpl;
+import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.domain.PermissionChange;
+import pf.hururaa.history.domain.PermissionChangeCategory;
+import pf.hururaa.history.domain.PermissionChangeType;
+import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.direction.domain.Direction;
 import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
@@ -57,7 +60,8 @@ import pf.hururaa.problem.HururaaProblemException;
  */
 @WebMvcTest(controllers = DirectionController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
-@Import({HururaaFixtures.WebMvcTestConfiguration.class, DirectoryMapperImpl.class})
+@Import({HururaaFixtures.WebMvcTestConfiguration.class, DirectoryMapperImpl.class,
+    PermissionHistoryMapperImpl.class})
 @TestPropertySource(properties = "server.ssl.enabled=false")
 class DirectionControllerTest {
 
@@ -77,7 +81,7 @@ class DirectionControllerTest {
   GroupService groupService;
 
   @MockitoBean
-  DelegationHistoryService delegationHistoryService;
+  PermissionHistoryService permissionHistoryService;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -189,31 +193,37 @@ class DirectionControllerTest {
   @WithJwt("jwt/dpam-agent.json")
   void givenMemberWithoutDelegation_whenGetHistory_thenForbidden() throws Exception {
     api.get(DirectionController.HISTORY_PATH, DPAM).andExpect(status().isForbidden());
-    verify(delegationHistoryService, never()).findByDirection(any(), any());
+    verify(permissionHistoryService, never()).find(any(), any());
   }
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenGetHistory_thenOk() throws Exception {
-    when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(1, 5)))
-        .thenReturn(new PageImpl<>(List.of(new DelegationChange(7L,
+    when(permissionHistoryService.find(
+        PermissionHistoryFilter.ofDirection(DPAM, Set.of(PermissionChangeCategory.DELEGATION,
+            PermissionChangeCategory.GROUP_MEMBER)),
+        PageRequest.of(1, 5)))
+        .thenReturn(new PageImpl<>(List.of(new PermissionChange(
             Instant.parse("2026-10-01T08:00:00Z"), user(HURURAA_ADMIN, "hururaa.admin"),
-            Delegation.DIRECTION_ADMIN, Change.GRANTED, user(DPAM_ADMIN, "dpam.admin"), null,
-            null)), PageRequest.of(1, 5), 6));
+            PermissionChangeType.DIRECTION_ADMIN_GRANTED, user(DPAM_ADMIN, "dpam.admin"), null,
+            null, null, null, null, null)), PageRequest.of(1, 5), 6));
 
     api
-        .get(DirectionController.HISTORY_PATH + "?page=1&size=5", DPAM)
+        .get(DirectionController.HISTORY_PATH
+            + "?page=1&size=5&categories=DELEGATION&categories=GROUP_MEMBER", DPAM)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].authorUsername").value("hururaa.admin"))
-        .andExpect(jsonPath("$.content[0].delegateUsername").value("dpam.admin"))
-        .andExpect(jsonPath("$.content[0].change").value("GRANTED"))
+        .andExpect(jsonPath("$.content[0].subjectUsername").value("dpam.admin"))
+        .andExpect(jsonPath("$.content[0].type").value("DIRECTION_ADMIN_GRANTED"))
+        .andExpect(jsonPath("$.content[0].category").value("DELEGATION"))
         .andExpect(jsonPath("$.page.totalElements").value(6));
   }
 
   @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenGetHistory_thenOk() throws Exception {
-    when(delegationHistoryService.findByDirection(DPAM, PageRequest.of(0, 20)))
+    when(permissionHistoryService.find(PermissionHistoryFilter.ofDirection(DPAM, Set.of()),
+        PageRequest.of(0, 20)))
         .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
     api.get(DirectionController.HISTORY_PATH, DPAM).andExpect(status().isOk());

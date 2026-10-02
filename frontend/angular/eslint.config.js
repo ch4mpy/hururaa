@@ -66,6 +66,7 @@ module.exports = defineConfig([
             'inputId',
             'optionLabel',
             'optionValue',
+            'display',
             'headerTitle',
             'headerDomain',
             'headerTitleTargetUrl',

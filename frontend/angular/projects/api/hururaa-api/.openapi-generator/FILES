@@ -22,7 +22,6 @@ model/applicationResponse.ts
 model/applicationRoleRequest.ts
 model/applicationRoleResponse.ts
 model/applicationUpdateRequest.ts
-model/delegationChangeResponse.ts
 model/delegationsResponse.ts
 model/directionCreationRequest.ts
 model/directionResponse.ts
@@ -32,8 +31,9 @@ model/groupRoleResponse.ts
 model/hururaaProblemDetail.ts
 model/models.ts
 model/pageMetadata.ts
-model/pagedModelDelegationChangeResponse.ts
+model/pagedModelPermissionChangeResponse.ts
 model/pagedModelUserResponse.ts
+model/permissionChangeResponse.ts
 model/problemType.ts
 model/userResponse.ts
 model/validationProblemDetail.ts

@@ -20,6 +20,7 @@ import { confirm } from '../core/confirm';
 import { DelegationsService } from '../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../core/resource-events.service';
 import { injectNotifier, userLabel } from './shared/labels';
+import { PermissionHistory } from './shared/permission-history';
 import { UserPicker } from './shared/user-picker';
 
 /**
@@ -38,6 +39,7 @@ import { UserPicker } from './shared/user-picker';
     SelectModule,
     TableModule,
     UserPicker,
+    PermissionHistory,
   ],
   template: `
     <pf-page [withPadding]="true">
@@ -186,6 +188,9 @@ import { UserPicker } from './shared/user-picker';
               (picked)="addManager($event)"
             />
           </div>
+
+          <h2 i18n="@@application.history">Historique des permissions</h2>
+          <app-permission-history [direction]="app.direction" [applicationId]="app.id" />
         } @else {
           <p i18n="@@application.noSay">
             Les rôles et les gestionnaires de cette application ne sont visibles que de ceux qui ont

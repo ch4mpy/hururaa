@@ -28,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.c4_soft.springaddons.security.oauth2.test.annotations.WithJwt;
@@ -37,6 +39,9 @@ import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.history.PermissionHistoryMapperImpl;
+import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.direction.jpa.DirectionAdminRepository;
@@ -50,7 +55,8 @@ import pf.hururaa.keycloak.GroupService;
  */
 @WebMvcTest(controllers = GroupController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
-@Import({HururaaFixtures.WebMvcTestConfiguration.class, DirectoryMapperImpl.class})
+@Import({HururaaFixtures.WebMvcTestConfiguration.class, DirectoryMapperImpl.class,
+    PermissionHistoryMapperImpl.class})
 @TestPropertySource(properties = "server.ssl.enabled=false")
 class GroupControllerTest {
 
@@ -88,6 +94,9 @@ class GroupControllerTest {
 
   @MockitoBean
   PermissionJournal permissionJournal;
+
+  @MockitoBean
+  PermissionHistoryService permissionHistoryService;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -321,5 +330,22 @@ class GroupControllerTest {
     api.post(new GroupRequest(GROUP), GroupController.BASE_PATH, DPAM)
         .andExpect(status().isCreated());
     verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenMemberWithoutDelegation_whenGetGroupHistory_thenForbidden() throws Exception {
+    api.get(GroupController.HISTORY_PATH, DPAM, GROUP).andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenManagerInTheDirection_whenGetGroupHistory_thenFilteredOnTheGroup() throws Exception {
+    when(permissionHistoryService.find(new PermissionHistoryFilter(DPAM, null, GROUP, Set.of()),
+        PageRequest.of(0, 20))).thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+    api.get(GroupController.HISTORY_PATH, DPAM, GROUP).andExpect(status().isOk());
+    verify(permissionHistoryService)
+        .find(new PermissionHistoryFilter(DPAM, null, GROUP, Set.of()), PageRequest.of(0, 20));
   }
 }
