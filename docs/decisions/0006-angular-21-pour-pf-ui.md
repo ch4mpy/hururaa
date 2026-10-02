@@ -37,5 +37,10 @@ Angular 22 suivra la publication d'un pf-ui 22.
   `primelocale`, les traductions officielles de PrimeFaces, dans la même langue.
 - pf-ui charge ses images par un chemin absolu (`/assets/img/...`) : le reverse proxy route
   `/assets/`.
+- `@ngx-translate/core` et `@ngx-translate/http-loader` restent en 17 : pf-ui 21 importe
+  `TranslateModule`, que la version 18 n'exporte plus (ses `peerDependencies`, `>=17.x`, le
+  laissent pourtant passer). Dependabot ignore leurs versions majeures.
+- TypeScript reste en 5.9 (`@angular/build` et `ng-packagr` 21 : `>=5.9 <6.0`) et
+  `ngx-device-detector` en 11 (la 12 dépend d'Angular 22) : ils suivront le passage en Angular 22.
 - Le bundle initial dépasse 1,5 Mo (avertissement de budget), essentiellement PrimeNG et les
   dépendances de pf-ui.
