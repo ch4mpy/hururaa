@@ -49,13 +49,20 @@ import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
-import pf.hururaa.uaa.HururaaPermission;
+import pf.hururaa.uaa.DelegationGroups;
 
 /**
  * The groups of the directions. A group belongs to an application of its direction, whose client
  * prefix starts its name ({@code escales.agent}): it is created under that application, and only
  * grants that application's roles. Once created, a group is addressed by its name under its
  * direction.
+ *
+ * <p>
+ * The {@link DelegationGroups delegation groups} ({@code hururaa.admins},
+ * {@code hururaa.<prefix>.product-owners}) are not listed, and every change to them is refused with
+ * {@code RESERVED_NAME}: their members are designated as direction administrators or application
+ * managers.
+ * </p>
  */
 @Tag(name = "Groups")
 @RestController
@@ -102,9 +109,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -112,8 +118,7 @@ public class GroupController {
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#direction.hasDelegate(authentication)")
   public List<GroupResponse> getGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
       throws HururaaProblemException {
@@ -121,6 +126,7 @@ public class GroupController {
     return groupService
         .findAll(direction.alias())
         .stream()
+        .filter(group -> !DelegationGroups.isReserved(group.name()))
         .map(group -> directoryMapper.toGroupResponse(group,
             Application.owningGroup(applications, group.name()).orElse(null)))
         .toList();
@@ -131,9 +137,9 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications. The application must be managed by {@code direction}.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications. The application must be managed by {@code
+   * direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -142,8 +148,7 @@ public class GroupController {
    */
   @GetMapping(path = APPLICATION_GROUPS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.hasDelegate(authentication.name))"
+  @PreAuthorize("#direction.hasDelegate(authentication)"
       + " and #application.direction == #direction.alias")
   public List<GroupResponse> getApplicationGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -154,6 +159,7 @@ public class GroupController {
         .findAll(direction.alias())
         .stream()
         .filter(group -> application.ownsGroup(group.name()))
+        .filter(group -> !DelegationGroups.isReserved(group.name()))
         .map(group -> directoryMapper.toGroupResponse(group, application))
         .toList();
   }
@@ -164,7 +170,7 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * Requires the user to be a Hurura'a administrator, an administrator of
    * the direction, or a manager of the application. The application must be managed by
    * {@code direction}.
    * </p>
@@ -176,9 +182,8 @@ public class GroupController {
    */
   @PostMapping(path = APPLICATION_GROUPS_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public ResponseEntity<Void> createGroup(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -187,6 +192,7 @@ public class GroupController {
       @RequestBody @Valid GroupRequest request,
       Authentication authentication) throws HururaaProblemException {
     final var name = application.groupName(request.name());
+    requireNotReserved(direction.alias(), name);
     final var isNew = groupService.findByName(direction.alias(), name).isEmpty();
     final var group = groupService.save(direction.alias(), name);
     if (isNew) {
@@ -208,9 +214,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -219,8 +224,7 @@ public class GroupController {
    */
   @GetMapping(path = GROUP_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#group.direction.hasDelegate(authentication)")
   public GroupResponse getGroup(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -233,7 +237,7 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * Requires the user to be a Hurura'a administrator, an administrator of
    * the direction, or a manager of the group's application.
    * </p>
    *
@@ -243,13 +247,13 @@ public class GroupController {
   @DeleteMapping(path = GROUP_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.isManageableBy(authentication.name)")
+  @PreAuthorize("#group.isManageableBy(authentication)")
   public void deleteGroup(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(group);
     groupService.delete(direction, group.name());
     permissionJournal.groupDeleted(direction, group.application(), group.name());
     log.info("{} deleted group {} of {}", authentication.getName(), group.name(), direction);
@@ -262,9 +266,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -273,8 +276,7 @@ public class GroupController {
    */
   @GetMapping(path = ROLES_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#group.direction.hasDelegate(authentication)")
   public List<GroupRoleResponse> getGroupRoles(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -298,7 +300,7 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * Requires the user to be a Hurura'a administrator, an administrator of
    * the direction, or a manager of the group's application.
    * </p>
    *
@@ -309,14 +311,14 @@ public class GroupController {
   @PutMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.isManageableBy(authentication.name)")
+  @PreAuthorize("#group.isManageableBy(authentication)")
   public void addGroupRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(group);
     final var application = requireApplication(group);
     if (groupService.addClientRole(direction, group.name(),
         keycloakProperties.apiClientId(application.getClientPrefix()), role)) {
@@ -332,7 +334,7 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * Requires the user to be a Hurura'a administrator, an administrator of
    * the direction, or a manager of the group's application.
    * </p>
    *
@@ -343,14 +345,14 @@ public class GroupController {
   @DeleteMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.isManageableBy(authentication.name)")
+  @PreAuthorize("#group.isManageableBy(authentication)")
   public void removeGroupRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(group);
     final var application = requireApplication(group);
     if (groupService.removeClientRole(direction, group.name(),
         keycloakProperties.apiClientId(application.getClientPrefix()), role)) {
@@ -371,9 +373,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -383,8 +384,7 @@ public class GroupController {
    */
   @GetMapping(path = MEMBERS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#group.direction.hasDelegate(authentication)")
   public PagedModel<UserResponse> getGroupMembers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -400,7 +400,7 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * Requires the user to be a Hurura'a administrator, an administrator of
    * the direction, or a manager of the group's application.
    * </p>
    *
@@ -411,14 +411,14 @@ public class GroupController {
   @PutMapping(path = MEMBER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.isManageableBy(authentication.name)")
+  @PreAuthorize("#group.isManageableBy(authentication)")
   public void addGroupMember(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(group);
     if (groupService.addMember(direction, group.name(), userId)) {
       permissionJournal.groupMemberAdded(direction, group.application(), group.name(), userId);
     }
@@ -432,7 +432,7 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), an administrator of
+   * Requires the user to be a Hurura'a administrator, an administrator of
    * the direction, or a manager of the group's application.
    * </p>
    *
@@ -443,14 +443,14 @@ public class GroupController {
   @DeleteMapping(path = MEMBER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.isManageableBy(authentication.name)")
+  @PreAuthorize("#group.isManageableBy(authentication)")
   public void removeGroupMember(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(group);
     if (groupService.removeMember(direction, group.name(), userId)) {
       permissionJournal.groupMemberRemoved(direction, group.application(), group.name(), userId);
     }
@@ -465,9 +465,8 @@ public class GroupController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -478,8 +477,7 @@ public class GroupController {
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #group.direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#group.direction.hasDelegate(authentication)")
   public PagedModel<PermissionChangeResponse> getGroupHistory(
       @PathVariable(name = DIRECTION_PLACEHOLDER) String direction,
       @Parameter(schema = @Schema(type = "string"), description = "The group's name")
@@ -508,6 +506,24 @@ public class GroupController {
           Map.of("direction", group.direction().alias(), "group", group.name()));
     }
     return application;
+  }
+
+  /**
+   * Only Hurura'a changes the delegation groups, along with the directions, the applications and
+   * the designations of their administrators and managers.
+   */
+  private static void requireNotReserved(DelegatedGroup group) throws HururaaProblemException {
+    requireNotReserved(group.direction().alias(), group.name());
+  }
+
+  private static void requireNotReserved(String direction, String group)
+      throws HururaaProblemException {
+    if (DelegationGroups.isReserved(group)) {
+      throw new HururaaProblemException(
+          ProblemType.RESERVED_NAME,
+          "Group %s of %s carries a delegation".formatted(group, direction),
+          Map.of("name", group));
+    }
   }
 
   private void publish(String direction, String group, EventType eventType) {

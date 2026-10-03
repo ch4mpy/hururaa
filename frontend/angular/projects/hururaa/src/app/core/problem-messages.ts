@@ -32,6 +32,8 @@ const PROBLEM_MESSAGES: Record<ProblemType, (p: Parameters) => string> = {
     $localize`:@@problem.groupWithoutApplication:Le groupe ${str(p['group'])}:group: n'appartient à aucune application de la direction ${str(p['direction'])}:direction: : il ne peut pas attribuer de rôle`,
   [ProblemType.APPLICATION_HAS_GROUPS]: (p) =>
     $localize`:@@problem.applicationHasGroups:L'application a encore des groupes (${str(p['groups'])}:groups:) : supprimez-les d'abord`,
+  [ProblemType.RESERVED_NAME]: (p) =>
+    $localize`:@@problem.reservedName:« ${str(p['name'])}:name: » est réservé à Hurura'a : désignez plutôt des administrateurs ou des gestionnaires`,
   [ProblemType.CONCURRENT_MODIFICATION]: () =>
     $localize`:@@problem.concurrentModification:Modifié entre-temps par quelqu'un d'autre : rechargez la page avant de réessayer`,
   [ProblemType.DATA_INTEGRITY_VIOLATION]: () =>

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
 import static pf.hururaa.HururaaFixtures.HURURAA_ADMIN;
 import static pf.hururaa.HururaaFixtures.user;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -25,8 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.history.domain.PermissionChange;
 import pf.hururaa.history.domain.PermissionChangeCategory;
 import pf.hururaa.history.domain.PermissionChangeType;
@@ -54,9 +51,6 @@ class PermissionHistoryServiceTest {
   PermissionJournal journal;
 
   @Autowired
-  DirectionAdminRepository directionAdminRepository;
-
-  @Autowired
   ApplicationRepository applicationRepository;
 
   @Autowired
@@ -74,35 +68,55 @@ class PermissionHistoryServiceTest {
   }
 
   @Test
-  void givenAdminDesignatedThenRevoked_whenFind_thenBothChangesNewestFirst() throws Exception {
+  void givenDelegationsGrantedThenRevoked_whenFind_thenJournaledNewestFirst() throws Exception {
     when(uaaProperties.getPlatformOrganization()).thenReturn(DSI_ALIAS);
     when(directionService.findMember(DSI_ALIAS, HURURAA_ADMIN))
         .thenReturn(Optional.of(user(HURURAA_ADMIN, "hururaa.admin")));
     when(directionService.findMember("hist-admins", "admin-1"))
         .thenReturn(Optional.of(user("admin-1", "admin.one")));
-    final var admin = commitAs(HURURAA_ADMIN, () -> directionAdminRepository
-        .save(DirectionAdmin.builder().direction("hist-admins").userId("admin-1").build()));
+    when(directionService.findMember("hist-admins", "manager-1"))
+        .thenReturn(Optional.of(user("manager-1", "manager.one")));
+    final var application = Application.builder().id(4343L).clientPrefix("hist-delegated")
+        .name("Delegated").direction("hist-admins").build();
     commitAs(HURURAA_ADMIN, () -> {
-      directionAdminRepository.deleteById(admin.getId());
+      journal.directionAdminGranted("hist-admins", "admin-1");
+      return null;
+    });
+    Thread.sleep(5);
+    commitAs("admin-1", () -> {
+      journal.applicationManagerGranted(application, "manager-1");
+      return null;
+    });
+    Thread.sleep(5);
+    commitAs(HURURAA_ADMIN, () -> {
+      journal.directionAdminRevoked("hist-admins", "admin-1");
       return null;
     });
 
     assertThat(history("hist-admins").getContent())
         .extracting(PermissionChange::type, change -> change.subject().username(),
-            change -> change.author().username())
+            change -> change.author().username(), PermissionChange::applicationName)
         .containsExactly(
-            tuple(PermissionChangeType.DIRECTION_ADMIN_REVOKED, "admin.one", "hururaa.admin"),
-            tuple(PermissionChangeType.DIRECTION_ADMIN_GRANTED, "admin.one", "hururaa.admin"));
+            tuple(PermissionChangeType.DIRECTION_ADMIN_REVOKED, "admin.one", "hururaa.admin",
+                null),
+            tuple(PermissionChangeType.APPLICATION_MANAGER_GRANTED, "manager.one", "admin.one",
+                "Delegated"),
+            tuple(PermissionChangeType.DIRECTION_ADMIN_GRANTED, "admin.one", "hururaa.admin",
+                null));
+    // a manager's designation is a change of the application
+    assertThat(find(new PermissionHistoryFilter("hist-admins", 4343L, null,
+        Set.of(PermissionChangeCategory.DELEGATION)), PageRequest.of(0, 20)).getContent())
+        .extracting(PermissionChange::type)
+        .containsExactly(PermissionChangeType.APPLICATION_MANAGER_GRANTED);
   }
 
   @Test
-  void givenApplicationRegisteredRenamedThenMoved_whenFind_thenItsLifeInEachDirection() {
+  void givenApplicationRegisteredRenamedThenUnregistered_whenFind_thenItsWholeLife() {
     final var application = commitAs("dir-admin", () -> applicationRepository.save(Application
         .builder()
         .clientPrefix("hist-app")
         .name("Hist App")
         .direction("hist-from")
-        .managers(new HashSet<>(Set.of("manager-1")))
         .build()));
     commitAs("dir-admin", () -> {
       final var current = applicationRepository.findById(application.getId()).orElseThrow();
@@ -110,39 +124,31 @@ class PermissionHistoryServiceTest {
       return applicationRepository.save(current);
     });
     commitAs("hururaa-admin", () -> {
-      final var current = applicationRepository.findById(application.getId()).orElseThrow();
-      current.setDirection("hist-to");
-      current.getManagers().clear();
-      return applicationRepository.save(current);
+      applicationRepository.deleteById(application.getId());
+      return null;
     });
 
+    // a deleted row's audit holds only its id: its name is replayed
     assertThat(history("hist-from").getContent())
         .extracting(PermissionChange::type, change -> change.author().id(),
-            PermissionChange::applicationName, PermissionChange::otherDirection,
-            PermissionChange::formerApplicationName)
+            PermissionChange::applicationName, PermissionChange::formerApplicationName)
         .containsExactly(
-            tuple(PermissionChangeType.APPLICATION_MANAGER_REVOKED, "hururaa-admin",
-                "Hist App 2", null, null),
-            tuple(PermissionChangeType.APPLICATION_MOVED_OUT, "hururaa-admin", "Hist App 2",
-                "hist-to", null),
-            tuple(PermissionChangeType.APPLICATION_RENAMED, "dir-admin", "Hist App 2", null,
-                "Hist App"),
-            tuple(PermissionChangeType.APPLICATION_REGISTERED, "dir-admin", "Hist App", null,
+            tuple(PermissionChangeType.APPLICATION_UNREGISTERED, "hururaa-admin", "Hist App 2",
                 null),
-            tuple(PermissionChangeType.APPLICATION_MANAGER_GRANTED, "dir-admin", "Hist App",
-                null, null));
-    assertThat(history("hist-to").getContent())
-        .extracting(PermissionChange::type, PermissionChange::otherDirection)
-        .containsExactly(tuple(PermissionChangeType.APPLICATION_MOVED_IN, "hist-from"));
+            tuple(PermissionChangeType.APPLICATION_RENAMED, "dir-admin", "Hist App 2",
+                "Hist App"),
+            tuple(PermissionChangeType.APPLICATION_REGISTERED, "dir-admin", "Hist App", null));
   }
 
   @Test
   void givenAuditedAndJournaledChanges_whenFind_thenMergedNewestFirstAndFiltered()
       throws Exception {
-    commitAs("dir-admin", () -> directionAdminRepository
-        .save(DirectionAdmin.builder().direction("hist-merged").userId("admin-1").build()));
+    // audited: the application's registration
+    final var registered = commitAs("dir-admin", () -> applicationRepository.save(Application
+        .builder().clientPrefix("hist-merged-app").name("Merged").direction("hist-merged")
+        .build()));
     Thread.sleep(5);
-    // journaled only: the application's own (audited) changes are not the point here
+    // journaled, under another application: the group's own changes
     final var application = Application.builder().id(4242L).clientPrefix("hist").name("Hist")
         .direction("hist-merged").build();
     commitAs("dir-admin", () -> {
@@ -158,7 +164,8 @@ class PermissionHistoryServiceTest {
     assertThat(history("hist-merged").getContent())
         .extracting(PermissionChange::type)
         .containsExactly(PermissionChangeType.GROUP_MEMBER_ADDED,
-            PermissionChangeType.GROUP_CREATED, PermissionChangeType.DIRECTION_ADMIN_GRANTED);
+            PermissionChangeType.GROUP_CREATED, PermissionChangeType.APPLICATION_REGISTERED);
+    assertThat(registered.getId()).isNotNull();
     assertThat(find(new PermissionHistoryFilter("hist-merged", null, null,
         Set.of(PermissionChangeCategory.GROUP_MEMBER)), PageRequest.of(0, 20)).getContent())
         .extracting(change -> change.subject().id())

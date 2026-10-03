@@ -3,10 +3,10 @@ import { DelegationsApi, DelegationsResponse } from '@api/hururaa-api';
 import { Observable, catchError, of, shareReplay, tap } from 'rxjs';
 import { UserService } from './user.service';
 
-/** Hurura'a's own roles, held in the DSI (see the API's `HururaaPermission`). */
+/** Hurura'a's own roles, as listed in `hururaaRoles` when held in the DSI (see the API's `HururaaPermission`). */
 export const HururaaRoles = {
-  /** Act at every level of Hurura'a. */
-  ADMIN: 'hururaa.admin',
+  /** Administrator of the DSI, hence Hurura'a administrator: act at every level of Hurura'a. */
+  ADMIN: 'hururaa.direction.admin',
 } as const;
 
 export const NO_DELEGATION: DelegationsResponse = {
@@ -19,7 +19,8 @@ export const NO_DELEGATION: DelegationsResponse = {
 /**
  * What the current user may do in Hurura'a, level by level of the delegation chain (Hurura'a
  * administrator, direction administrator, application manager), backed by `hururaa-api`'s
- * `/me/delegations`. Menus and actions adapt to it, mirroring the API's access rules, which the API
+ * `/me/delegations`, which reads them from the user's token: a delegation granted or revoked shows
+ * once the token is renewed. Menus and actions adapt to it, mirroring the API's access rules, which the API
  * enforces anyway.
  *
  * Refetched whenever the user logs in or out, and on demand (`refresh()`) after a change that may
@@ -37,7 +38,7 @@ export class DelegationsService {
 
   /**
    * Whether the user is a Hurura'a administrator: they act at every level, and alone designate
-   * direction administrators and move applications between directions.
+   * direction administrators.
    */
   readonly isAdmin = computed(() => this.delegations().hururaaRoles.includes(HururaaRoles.ADMIN));
 

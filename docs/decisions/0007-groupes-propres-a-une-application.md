@@ -38,7 +38,7 @@ le préfixe) et reste adressé par son nom complet sous sa direction
 - Un groupe créé hors de Hurura'a dont le nom ne correspond à aucune application de sa direction
   reste listé, mais seuls les administrateurs de la direction le gèrent, et Hurura'a ne lui fait
   attribuer aucun rôle (`GROUP_WITHOUT_APPLICATION`).
-- Une application ne change de direction, ni n'est désenregistrée, tant qu'elle y a des groupes
+- Une application n'est pas désenregistrée tant qu'elle a des groupes
   (`APPLICATION_HAS_GROUPS`).
 - Le journal rattache à l'application les événements de ses groupes (création, suppression,
   membres) : l'historique d'une application les montre.

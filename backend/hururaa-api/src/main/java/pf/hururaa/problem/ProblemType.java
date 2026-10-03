@@ -50,9 +50,16 @@ public enum ProblemType {
 
   /**
    * Parameters: {@code applicationId}, {@code groups} (comma-separated names). The application
-   * can't leave its direction (moved to another one, or unregistered) while it has groups there.
+   * can't be unregistered while it has groups.
    */
   APPLICATION_HAS_GROUPS(HttpStatus.CONFLICT, "application-has-groups"),
+
+  /**
+   * Parameters: {@code name}. The name (an application's client prefix, a group, a role) is
+   * reserved to Hurura'a's delegations ({@code hururaa.admins}, {@code hururaa.direction.admin}...):
+   * only Hurura'a creates, changes or deletes those, along with the directions and applications.
+   */
+  RESERVED_NAME(HttpStatus.CONFLICT, "reserved-name"),
 
   /**
    * Parameters: {@code entity} (simple class name) and {@code id} when known. Another request

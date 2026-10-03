@@ -4,7 +4,7 @@ Preuve de concept pour la DSI (direction des systèmes d'information de la Polyn
 qui exploite Hurura'a pour gérer les permissions des applications dont elle a la responsabilité.
 Ces applications sont rattachées à des directions métier (DPAM, DAF...), à qui l'on délègue une
 partie de leur gestion. La DSI est elle-même une direction comme les autres, avec ses propres
-applications, administrateurs et gestionnaires, et c'est son groupe `hururaa.admin` qui administre
+applications, administrateurs et gestionnaires, et ce sont ses administrateurs qui administrent
 Hurura'a. Hurura'a :
 
 - identifie les utilisateurs des applications des différentes directions (Keycloak, royaume
@@ -28,7 +28,7 @@ Une démonstration est en ligne sur https://hururaa.c4-soft.com, redéployée à
 | Clients Keycloak      | `<préfixe>-bff` (authorization code + PKCE, refresh token) et `<préfixe>-api` (client credentials, compte de service, porte les rôles) |
 | Rôle d'application    | Rôle client de `<préfixe>-api` (ex. `escales.stopovers.edit` sur `escales-api`)               |
 | Groupe                | Groupe d'organisation Keycloak propre à une application, nommé `<préfixe>.<nom>` (ex. `escales.agent`) : ses membres reçoivent, dans cette direction, les rôles de l'application qu'il porte |
-| Délégations           | Tables `DIRECTION_ADMINS` et `APPLICATION_MANAGERS` de Hurura'a, plus le rôle `hururaa.admin` de `hururaa-api` pour la DSI |
+| Administrateurs et gestionnaires | Rôles réservés de `hururaa-api` (`hururaa.direction.admin`, `hururaa.application.<préfixe>.manage`), attribués par les groupes réservés que Hurura'a crée dans chaque direction (`hururaa.admins`) et pour chaque application (`hururaa.<préfixe>.product-owners`) |
 
 Dans les jetons, les rôles sont rangés par direction, grâce au mapper « organization group
 membership » du scope `organization` :
@@ -49,15 +49,15 @@ avec le même `TenantPermissionsExtractor` que Hurura'a (`common-security-starte
 ## 2. Chaîne de délégation
 
 ```
-Administrateur Hurura'a (rôle hururaa.admin dans l'organisation dsi, groupe « hururaa.admin »)
+Administrateur Hurura'a = administrateur de la DSI (hururaa.direction.admin dans l'organisation dsi)
  ├─ agit à tous les niveaux ci-dessous, dans toutes les directions
- ├─ désigne les administrateurs de chaque direction
- └─ change une application de direction
-     Administrateur de direction (DIRECTION_ADMINS)
+ └─ crée les directions et désigne leurs administrateurs
+     Administrateur de direction (groupe hururaa.admins de la direction : hururaa.direction.admin)
       ├─ enregistre, renomme et désenregistre les applications de sa direction
       ├─ définit leurs rôles et désigne, parmi les membres, leurs gestionnaires
       └─ gère les groupes de ces applications : rôles attribués et membres
-          Gestionnaire d'application (APPLICATION_MANAGERS)
+          Gestionnaire d'application (groupe hururaa.<préfixe>.product-owners de la direction :
+          hururaa.application.<préfixe>.manage)
            ├─ définit les rôles de l'application (rôles client de <préfixe>-api)
            ├─ désigne les autres gestionnaires de l'application
            ├─ crée les groupes de l'application (<préfixe>.<nom>) et leur fait attribuer ses rôles
@@ -65,12 +65,24 @@ Administrateur Hurura'a (rôle hururaa.admin dans l'organisation dsi, groupe « 
 ```
 
 Règles appliquées par l'API, écrites dans les `@PreAuthorize` des endpoints. Les variables de
-chemin `{direction}`, `{group}` et `{applicationId}` y sont résolues en objets portant leurs
-délégations (404 si la direction, le groupe ou l'application n'existe pas, avant toute règle
-d'accès), par exemple `#direction.isAdministeredBy(authentication.name)` :
+chemin `{direction}`, `{group}` et `{applicationId}` y sont résolues en objets dont les méthodes lisent
+les rôles de Hurura'a dans le jeton (404 si la direction, le groupe ou l'application n'existe pas, avant
+toute règle d'accès), par exemple `#direction.isAdministeredBy(authentication)` :
 
-- le rôle `hururaa.admin` ne vaut que dans la DSI (`uaa.platform-organization`), où il devient une
-  authority de l'utilisateur : porté par un groupe d'une autre direction, il ne donne rien ;
+- administrateurs et gestionnaires se reconnaissent à des rôles de `hururaa-api`, qui ne valent que dans la direction où ils sont
+  détenus : `hururaa.direction.admin` administre la direction (dans la DSI,
+  `uaa.platform-organization`, toutes les directions : il y devient une authority de
+  l'utilisateur), `hururaa.application.<préfixe>.manage` gère l'application, détenu dans sa
+  direction (ailleurs, il ne donne rien) ;
+- comme tout rôle, ils prennent effet, donnés ou retirés, au renouvellement du jeton de
+  l'utilisateur (au plus tard à l'expiration de son jeton d'accès) ;
+- les noms commençant par `hururaa.` sont réservés, pour les groupes comme pour les rôles
+  (`RESERVED_NAME`) : Hurura'a crée le groupe `hururaa.admins` avec chaque direction, le groupe
+  `hururaa.<préfixe>.product-owners` et son rôle avec chaque application (et les supprime avec
+  elle), et leurs membres ne changent que par la désignation des administrateurs et des
+  gestionnaires ; l'API des groupes ne les liste pas et refuse de les modifier, même aux
+  administrateurs Hurura'a. Les préfixes d'application `hururaa`, `admin`, `direction`,
+  `product-owners` et `manage` sont réservés aussi ;
 - un groupe appartient à l'application dont son nom porte le préfixe (`escales.agent` à Escales),
   dans la direction de celle-ci, et n'attribue que ses rôles : c'est Hurura'a qui l'impose,
   Keycloak ne sait rattacher ni un client à une organisation, ni un groupe à un client. Il se crée
@@ -81,23 +93,22 @@ d'accès), par exemple `#direction.isAdministeredBy(authentication.name)` :
   ou de gérer son application ; un groupe créé hors de Hurura'a, dont le nom ne correspond à
   aucune application de sa direction, n'est géré que par les administrateurs de la direction et
   n'attribue aucun rôle par Hurura'a (`GROUP_WITHOUT_APPLICATION`) ;
-- une application ne peut changer de direction, ni être désenregistrée, tant qu'elle a des groupes
-  dans sa direction (`APPLICATION_HAS_GROUPS`) ; en changer retire ses gestionnaires ;
+- une application reste dans la direction où elle a été enregistrée ; elle ne peut être
+  désenregistrée tant qu'elle a des groupes (`APPLICATION_HAS_GROUPS`) ;
 - consulter une application (rôles, gestionnaires) ou une direction (administrateurs, groupes,
-  membres, historique des délégations) est ouvert à quiconque a une délégation dessus, à n'importe
-  quel niveau ;
+  membres, historique des permissions) est ouvert à ses administrateurs et gestionnaires, à
+  n'importe quel niveau ;
 - une application est modifiée, et ses rôles et gestionnaires adressés, sous sa direction
-  (`/directions/{direction}/applications/{applicationId}/...`), et seulement sous elle ; seul un
-  administrateur Hurura'a la change de direction.
+  (`/directions/{direction}/applications/{applicationId}/...`), et seulement sous elle.
 
 L'historique des permissions d'une direction (qui a changé quoi, et quand), affiché sur les pages
-de direction, d'application et de groupe et filtrable par catégorie, fusionne trois sources :
-l'audit Envers des administrateurs de direction, celui des applications (enregistrement,
-renommage, changement de direction, désenregistrement, gestionnaires), et le journal décrit
-ci-dessous.
+de direction, d'application et de groupe et filtrable par catégorie, fusionne deux sources :
+l'audit Envers des applications (enregistrement, renommage, désenregistrement) et le journal
+décrit ci-dessous.
 
-Les changements que Hurura'a fait dans Keycloak (création des directions, rôles des applications,
-groupes, rôles qu'ils attribuent, membres) sont consignés dans un journal propre à Hurura'a, la
+Les changements que Hurura'a fait dans Keycloak (création des directions, désignation et
+révocation des administrateurs et des gestionnaires, rôles des applications, groupes, rôles qu'ils
+attribuent, membres) sont consignés dans un journal propre à Hurura'a, la
 table `PERMISSION_EVENTS` : Keycloak les attribue au compte de service de l'API, pas à la personne.
 Seuls les changements effectifs y figurent (les opérations sont idempotentes), avec leur auteur et
 leur horodatage ; l'état courant se lit toujours dans Keycloak.
@@ -106,9 +117,8 @@ Les journaux applicatifs (Loki) en gardent aussi la trace.
 Les administrateurs Hurura'a créent les directions depuis Hurura'a (`POST /directions`, une
 organisation Keycloak sans domaine).
 
-Hurura'a est lui-même une application de la DSI : les administrateurs de la DSI et les
-gestionnaires de Hurura'a affectent les utilisateurs au groupe `hururaa.admin`, qui porte son rôle
-`hururaa.admin`.
+Hurura'a est lui-même une application de la DSI, dont les rôles et les groupes sont tous réservés :
+ce sont ceux des administrateurs et des gestionnaires, présents dans toutes les directions.
 
 Hypothèses de départ, susceptibles d'évoluer avec l'exploration (voir
 [docs/decisions](docs/decisions/README.md), en particulier les décisions 0005 et 0007) :
@@ -129,27 +139,28 @@ Royaume `public-facing` (`keycloak/import/public-facing-realm.json`), directions
 
 | Direction | Applications         | Groupes (rôles)                                                                       |
 | --------- | -------------------- | ------------------------------------------------------------------------------------- |
-| DSI       | Hurura'a, Te Fenua   | `hururaa.admin` (`hururaa.admin`), `te-fenua.agent` (`te-fenua.parcels.read`, `te-fenua.parcels.edit`) |
-| DPAM      | Escales              | `escales.agent` (`escales.stopovers.read`, `escales.stopovers.edit`)                  |
-| DAF       | Anahei               | `anahei.agent` (`anahei.files.read`, `anahei.files.edit`)                             |
+| DSI       | Hurura'a, Te Fenua   | `hururaa.admins`, `hururaa.hururaa.product-owners`, `hururaa.te-fenua.product-owners`, `te-fenua.agent` (`te-fenua.parcels.read`, `te-fenua.parcels.edit`) |
+| DPAM      | Escales              | `hururaa.admins`, `hururaa.escales.product-owners`, `escales.agent` (`escales.stopovers.read`, `escales.stopovers.edit`) |
+| DAF       | Anahei               | `hururaa.admins`, `hururaa.anahei.product-owners`, `anahei.agent` (`anahei.files.read`, `anahei.files.edit`) |
 
 Utilisateurs (mot de passe `secret` pour tous) :
 
-| Utilisateur    | Direction | Délégation                                                                    |
+| Utilisateur    | Direction | Rôle dans Hurura'a                                                            |
 | -------------- | --------- | ----------------------------------------------------------------------------- |
-| `dsi.admin`    | DSI       | administrateur de la DSI et administrateur Hurura'a (groupe `hururaa.admin`) |
+| `dsi.admin`    | DSI       | administrateur de la DSI, donc administrateur Hurura'a                       |
 | `dsi.manager`  | DSI       | gestionnaire de Hurura'a et de Te Fenua                                       |
-| `dsi.agent`    | DSI       | aucune (membre de `te-fenua.agent`)                                          |
+| `dsi.agent`    | DSI       | aucun (membre de `te-fenua.agent`)                                           |
 | `dpam.admin`   | DPAM      | administrateur de la DPAM                                                     |
 | `dpam.manager` | DPAM      | gestionnaire d'Escales                                                        |
-| `dpam.agent`   | DPAM      | aucune (membre de `escales.agent`)                                           |
+| `dpam.agent`   | DPAM      | aucun (membre de `escales.agent`)                                            |
 | `daf.admin`    | DAF       | administrateur de la DAF                                                      |
 | `daf.manager`  | DAF       | gestionnaire d'Anahei                                                         |
-| `daf.agent`    | DAF       | aucune (membre de `anahei.agent`)                                            |
+| `daf.agent`    | DAF       | aucun (membre de `anahei.agent`)                                             |
 
-Les délégations des niveaux direction et application sont chargées par Liquibase (contexte `dev`,
-`1790700000001-1-dev-data.xml`) avec les identifiants fixés dans l'export du royaume. Hors dev,
-positionner `LIQUIBASE_CONTEXTS` à autre chose que `dev`.
+Administrateurs et gestionnaires sont les membres des groupes `hururaa.admins` et
+`hururaa.<préfixe>.product-owners` de l'export du royaume ; les applications sont chargées par Liquibase (contexte `dev`,
+`1790700000001-1-dev-data.xml`). Hors dev, positionner `LIQUIBASE_CONTEXTS` à autre chose que
+`dev`.
 
 Les clients confidentiels ont le secret `secret` (dev uniquement). Les comptes de service :
 `hururaa-api` gère organisations, groupes, membres et rôles de tous les clients
@@ -158,8 +169,8 @@ Les clients confidentiels ont le secret `secret` (dev uniquement). Les comptes d
 
 ## 4. Organisation du dépôt
 
-- `backend/` — réacteur Maven, `groupId` `pf.hururaa` : `common-security-starter` (permissions
-  par direction extraites de la claim `organization`), `common-events-starter` (`ResourceEvent`
+- `backend/` — réacteur Maven, `groupId` `pf.hururaa` : `common-security-starter` (rôles
+  par direction extraits de la claim `organization`), `common-events-starter` (`ResourceEvent`
   sur RabbitMQ), `gateway` (BFF OAuth2), `hururaa-api` (API REST)
 - `frontend/angular/` — workspace Angular 21 : application `hururaa` (pf-ui / PrimeNG 21, Remix
   Icon) et clients générés `@api/gateway`, `@api/hururaa-api`

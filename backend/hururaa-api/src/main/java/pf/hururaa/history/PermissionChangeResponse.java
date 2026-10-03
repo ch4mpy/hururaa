@@ -14,8 +14,6 @@ import pf.hururaa.history.domain.PermissionChangeType;
  * @param subjectId the user concerned: the delegate designated or revoked, the group member added
  *        or removed
  * @param applicationName the application's name at the time of the change
- * @param otherDirection for an application moved between directions, the one it came from or went
- *        to
  * @param formerApplicationName for a renamed application, its name before
  */
 public record PermissionChangeResponse(
@@ -34,6 +32,5 @@ public record PermissionChangeResponse(
     @Nullable String applicationName,
     @Nullable String role,
     @Nullable String group,
-    @Nullable String otherDirection,
     @Nullable String formerApplicationName) {
 }

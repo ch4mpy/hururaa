@@ -18,8 +18,6 @@ import pf.hururaa.direction.domain.User;
  * @param applicationName the application's name at the time of the change
  * @param role the application role concerned
  * @param group the group concerned
- * @param otherDirection for an application moved between directions, the one it came from or went
- *        to
  * @param formerApplicationName for a renamed application, its name before
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
@@ -32,7 +30,6 @@ public record PermissionChange(
     @Nullable String applicationName,
     @Nullable String role,
     @Nullable String group,
-    @Nullable String otherDirection,
     @Nullable String formerApplicationName) {
 
   public PermissionChangeCategory category() {

@@ -85,7 +85,10 @@ public class PermissionEvent implements Serializable {
   @Column(name = "GROUP_NAME", updatable = false)
   private @Nullable String groupName;
 
-  /** For a group member event: Keycloak id of the member added or removed. */
+  /**
+   * For a group member or delegation event: Keycloak id of the member added or removed, of the
+   * delegate designated or revoked.
+   */
   @Column(name = "USER_ID", updatable = false)
   private @Nullable String userId;
 }

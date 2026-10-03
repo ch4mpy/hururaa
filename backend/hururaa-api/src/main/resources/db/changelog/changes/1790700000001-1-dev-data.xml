@@ -2,11 +2,13 @@
 <!--
   Dev environment only (Liquibase context "dev", see spring.liquibase.contexts): the applications of
   the dev realm (keycloak/import/public-facing-realm.json) and the delegations of its users, whose
-  ids are fixed in that realm export.
+  ids are fixed in that realm export. The delegations inserted here are dropped by
+  1790900000000-1-drop-delegation-tables.xml: they are now the members of the realm's hururaa.admins
+  and hururaa.<prefix>.product-owners groups (same users as in the table below).
 
   | user         | direction | delegation                                                       |
   |==============|===========|==================================================================|
-  | dsi.admin    | dsi       | administrator of dsi, and Hurura'a admin (group /hururaa.admin)  |
+  | dsi.admin    | dsi       | administrator of dsi, hence Hurura'a administrator               |
   | dsi.manager  | dsi       | manager of Hurura'a and Te Fenua                                 |
   | dpam.admin   | dpam      | administrator of dpam                                            |
   | dpam.manager | dpam      | manager of Escales                                               |

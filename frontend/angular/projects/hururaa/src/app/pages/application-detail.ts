@@ -6,7 +6,6 @@ import {
   ApplicationManagersApi,
   ApplicationRolesApi,
   ApplicationsApi,
-  DirectionsApi,
   GroupsApi,
   UserResponse,
 } from '@api/hururaa-api';
@@ -14,7 +13,6 @@ import { PfPageComponent } from 'pf-ui';
 import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { of } from 'rxjs';
 import { confirm } from '../core/confirm';
@@ -25,8 +23,8 @@ import { PermissionHistory } from './shared/permission-history';
 import { UserPicker } from './shared/user-picker';
 
 /**
- * An application: its identity (edited by its direction's administrators, its direction by
- * Hurura'a administrators only), its roles, its groups (named after its client prefix) and its
+ * An application of a direction (for good: it never changes direction): its name (edited by its
+ * direction's administrators), its roles, its groups (named after its client prefix) and its
  * managers (defined by its direction's administrators and by its managers).
  */
 @Component({
@@ -37,7 +35,6 @@ import { UserPicker } from './shared/user-picker';
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
-    SelectModule,
     TableModule,
     UserPicker,
     PermissionHistory,
@@ -54,21 +51,11 @@ import { UserPicker } from './shared/user-picker';
         </p>
 
         @if (canEdit()) {
-          <h2 i18n="@@application.settings">Rattachement</h2>
+          <h2 i18n="@@application.identity">Identité</h2>
           <form [formGroup]="form" (ngSubmit)="save()" class="flex flex-wrap align-items-end gap-3">
             <div class="flex flex-column gap-1">
               <label for="name" i18n="@@applications.name">Nom</label>
               <input pInputText id="name" formControlName="name" />
-            </div>
-            <div class="flex flex-column gap-1">
-              <label for="direction" i18n="@@applications.direction">Direction</label>
-              <p-select
-                inputId="direction"
-                formControlName="direction"
-                [options]="directions.value() ?? []"
-                optionLabel="alias"
-                optionValue="alias"
-              />
             </div>
             <p-button
               type="submit"
@@ -86,12 +73,9 @@ import { UserPicker } from './shared/user-picker';
               (onClick)="unregister()"
             />
           </form>
-          @if (delegations.isAdmin()) {
-            <small class="block mt-2" i18n="@@application.move.groupsHint"
-              >Changer de direction retire les gestionnaires de l'application. C'est refusé tant
-              qu'elle a des groupes dans sa direction actuelle.</small
-            >
-          }
+          <small class="block mt-2" i18n="@@application.unregister.groupsHint"
+            >Une application ne peut être désenregistrée tant qu'elle a des groupes.</small
+          >
         }
 
         @if (canManage()) {
@@ -233,8 +217,8 @@ import { UserPicker } from './shared/user-picker';
           <app-permission-history [direction]="app.direction" [applicationId]="app.id" />
         } @else {
           <p i18n="@@application.noSay">
-            Les rôles et les gestionnaires de cette application ne sont visibles que de ceux qui ont
-            délégation sur elle.
+            Les rôles et les gestionnaires de cette application ne sont visibles que de ses
+            gestionnaires et des administrateurs de sa direction.
           </p>
         }
       }
@@ -245,7 +229,6 @@ export class ApplicationDetail {
   private readonly applicationsApi = inject(ApplicationsApi);
   private readonly rolesApi = inject(ApplicationRolesApi);
   private readonly managersApi = inject(ApplicationManagersApi);
-  private readonly directionsApi = inject(DirectionsApi);
   private readonly groupsApi = inject(GroupsApi);
   private readonly confirmation = inject(ConfirmationService);
   private readonly router = inject(Router);
@@ -259,10 +242,6 @@ export class ApplicationDetail {
   protected readonly application = rxResource({
     params: () => this.applicationId(),
     stream: ({ params }) => this.applicationsApi.getApplication(params),
-  });
-
-  protected readonly directions = rxResource({
-    stream: () => this.directionsApi.getDirections(),
   });
 
   /** The direction managing the application: its roles and managers are addressed under it. */
@@ -309,7 +288,6 @@ export class ApplicationDetail {
 
   protected readonly form = this.formBuilder.group({
     name: ['', Validators.required],
-    direction: ['', Validators.required],
   });
 
   protected readonly roleForm = this.formBuilder.group({
@@ -326,16 +304,7 @@ export class ApplicationDetail {
     effect(() => {
       const app = this.application.value();
       if (app) {
-        this.form.reset({ name: app.name, direction: app.direction });
-      }
-    });
-    // only Hurura'a administrators move applications between directions
-    effect(() => {
-      const direction = this.form.controls.direction;
-      if (this.delegations.isAdmin()) {
-        direction.enable();
-      } else {
-        direction.disable();
+        this.form.reset({ name: app.name });
       }
     });
     const events = inject(ResourceEventsService);
@@ -367,9 +336,9 @@ export class ApplicationDetail {
   }
 
   protected save(): void {
-    const { name, direction } = this.form.getRawValue();
+    const { name } = this.form.getRawValue();
     this.applicationsApi
-      .updateApplication(this.loadedDirection(), this.applicationId(), { name, direction })
+      .updateApplication(this.loadedDirection(), this.applicationId(), { name })
       .subscribe(() => {
         this.notify($localize`:@@application.saved:Application ${name}:name: mise à jour`);
         this.application.reload();

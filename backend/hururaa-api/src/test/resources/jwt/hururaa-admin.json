@@ -5,10 +5,10 @@
     "dsi": {
       "resource_access": {
         "hururaa-api": {
-          "roles": ["hururaa.admin"]
+          "roles": ["hururaa.direction.admin"]
         }
       },
-      "groups": ["/hururaa.admin"]
+      "groups": ["/hururaa.admins"]
     }
   }
 }

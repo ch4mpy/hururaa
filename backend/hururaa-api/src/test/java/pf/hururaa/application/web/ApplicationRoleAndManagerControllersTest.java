@@ -1,12 +1,11 @@
 package pf.hururaa.application.web;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,7 +15,9 @@ import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
+import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.teFenua;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.user;
 import java.util.List;
@@ -24,7 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -39,7 +39,7 @@ import pf.hururaa.application.domain.ApplicationRole;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.journal.PermissionJournal;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
+import pf.hururaa.uaa.DelegationService;
 import pf.hururaa.direction.web.DirectoryMapperImpl;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.keycloak.DirectionService;
@@ -49,7 +49,8 @@ import pf.hururaa.problem.ProblemType;
 
 /**
  * Levels 2 and 3 of the delegation chain on an application: its direction's administrators
- * designate its managers, who define its roles.
+ * designate its managers (members of its {@code hururaa.<prefix>.product-owners} group), who define
+ * its roles.
  */
 @WebMvcTest(controllers = {ApplicationRoleController.class, ApplicationManagerController.class})
 @AutoConfigureAddonsWebmvcResourceServerSecurity
@@ -65,7 +66,7 @@ class ApplicationRoleAndManagerControllersTest {
   ApplicationRepository applicationRepository;
 
   @MockitoBean
-  DirectionAdminRepository directionAdminRepository;
+  DelegationService delegationService;
 
   @MockitoBean
   DirectionService directionService;
@@ -84,7 +85,7 @@ class ApplicationRoleAndManagerControllersTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
+    stubDevDelegations(directionService, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
   }
 
@@ -167,38 +168,56 @@ class ApplicationRoleAndManagerControllersTest {
     verify(clientRoleService).delete("escales-api", "escales.stopovers.read");
   }
 
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenCreateReservedRole_thenReservedName() throws Exception {
+    api
+        .post(new ApplicationRoleRequest("hururaa.application.escales.manage", null),
+            ApplicationRoleController.BASE_PATH, DPAM, ESCALES_ID)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    api
+        .delete(ApplicationRoleController.ROLE_PATH, DPAM, ESCALES_ID, "hururaa.direction.admin")
+        .andExpect(status().isConflict());
+    verifyNoInteractions(clientRoleService);
+  }
+
   // ---------- managers ----------
 
   @Test
   @WithJwt("jwt/dpam-manager.json")
-  void givenApplicationManager_whenGetManagers_thenOkWithFormerMembersListedById()
-      throws Exception {
-    final var application = escales();
-    application.getManagers().add("former-member");
-    when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(application));
-    when(applicationRepository.findByDirectionOrderByNameAsc(DPAM))
-        .thenReturn(List.of(application));
-    when(directionService.findMember(DPAM, DPAM_MANAGER))
-        .thenReturn(Optional.of(user(DPAM_MANAGER, "dpam.manager")));
-    when(directionService.findMember(DPAM, "former-member")).thenReturn(Optional.empty());
+  void givenApplicationManager_whenGetManagers_thenMembersOfProductOwners() throws Exception {
+    when(delegationService.findManagers(any(Application.class)))
+        .thenReturn(List.of(user(DPAM_MANAGER, "dpam.manager")));
 
     api
         .get(ApplicationManagerController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].username").value("dpam.manager"))
-        .andExpect(jsonPath("$[1].username").value("former-member"));
+        .andExpect(jsonPath("$[0].username").value("dpam.manager"));
   }
 
   @Test
   @WithJwt("jwt/dpam-manager.json")
-  void givenApplicationManager_whenAddCoManager_thenSaved() throws Exception {
-    when(directionService.requireMember(DPAM, DPAM_AGENT))
-        .thenReturn(user(DPAM_AGENT, "dpam.agent"));
+  void givenApplicationManager_whenAddCoManager_thenAddedAndJournaled() throws Exception {
+    when(delegationService.addManager(any(Application.class), eq(DPAM_AGENT))).thenReturn(true);
 
     api
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isNoContent());
-    verify(applicationRepository).save(any(Application.class));
+    verify(permissionJournal).applicationManagerGranted(any(Application.class), eq(DPAM_AGENT));
+    verify(resourceEvents).publish(any());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenManagerAlready_whenAddManager_thenNothingJournaled() throws Exception {
+    when(delegationService.addManager(any(Application.class), eq(DPAM_MANAGER)))
+        .thenReturn(false);
+
+    api
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_MANAGER)
+        .andExpect(status().isNoContent());
+    verifyNoInteractions(permissionJournal, resourceEvents);
   }
 
   @Test
@@ -207,39 +226,35 @@ class ApplicationRoleAndManagerControllersTest {
     api
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isForbidden());
-    verify(applicationRepository, never()).save(any());
+    verify(delegationService, never()).addManager(any(), any());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-hururaa-admin-lookalike.json")
+  void givenManagerRoleHeldOutsideTheApplicationDirection_whenAddManager_thenForbidden()
+      throws Exception {
+    // hururaa.application.te-fenua.manage held in dpam: Te Fenua belongs to dsi, it grants nothing
+    when(applicationRepository.findById(TE_FENUA_ID)).thenReturn(Optional.of(teFenua()));
+
+    api
+        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DSI, TE_FENUA_ID, DPAM_AGENT)
+        .andExpect(status().isForbidden());
+    verify(delegationService, never()).addManager(any(), any());
   }
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenAddManager_thenSaved() throws Exception {
-    when(directionService.requireMember(DPAM, DPAM_AGENT))
-        .thenReturn(user(DPAM_AGENT, "dpam.agent"));
-
+  void givenHururaaAdmin_whenAddManager_thenNoContent() throws Exception {
     api
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isNoContent());
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenAddMemberAsManager_thenSaved() throws Exception {
-    when(directionService.requireMember(DPAM, DPAM_AGENT))
-        .thenReturn(user(DPAM_AGENT, "dpam.agent"));
-
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
-        .andExpect(status().isNoContent());
-
-    final var saved = ArgumentCaptor.forClass(Application.class);
-    verify(applicationRepository).save(saved.capture());
-    assertThat(saved.getValue().getManagers()).containsExactlyInAnyOrder(DPAM_MANAGER, DPAM_AGENT);
+    verify(delegationService).addManager(any(Application.class), eq(DPAM_AGENT));
   }
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenAddNonMemberAsManager_thenNotFound() throws Exception {
-    when(directionService.requireMember(DPAM, "outsider"))
+    when(delegationService.addManager(any(Application.class), eq("outsider")))
         .thenThrow(new HururaaProblemException(ProblemType.NOT_A_MEMBER, "not a member",
             Map.of("userId", "outsider")));
 
@@ -247,30 +262,30 @@ class ApplicationRoleAndManagerControllersTest {
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, "outsider")
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(ProblemType.NOT_A_MEMBER.uri().toString()));
-    verify(applicationRepository, never()).save(any());
+    verifyNoInteractions(permissionJournal);
   }
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenRemoveManager_thenSaved() throws Exception {
+  void givenDirectionAdmin_whenRemoveManager_thenRemovedAndJournaled() throws Exception {
+    when(delegationService.removeManager(any(Application.class), eq(DPAM_MANAGER)))
+        .thenReturn(true);
+
     api
         .delete(ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_MANAGER)
         .andExpect(status().isNoContent());
-
-    final var saved = ArgumentCaptor.forClass(Application.class);
-    verify(applicationRepository).save(saved.capture());
-    assertThat(saved.getValue().getManagers()).isEmpty();
+    verify(permissionJournal).applicationManagerRevoked(any(Application.class), eq(DPAM_MANAGER));
   }
 
   @Test
   @WithJwt("jwt/dsi-admin.json")
-  void givenAdminOfAnotherDirection_whenAddManagerUnderTheirDirection_thenForbidden()
+  void givenApplicationAddressedUnderAnotherDirection_whenAddManager_thenForbidden()
       throws Exception {
-    // Escales is managed by dpam: addressing it under dsi grants dsi's administrator nothing
+    // Escales is managed by dpam: it is addressed under dpam, even by the Hurura'a administrators
     api
         .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DSI, ESCALES_ID, DPAM_AGENT)
         .andExpect(status().isForbidden());
-    verify(applicationRepository, never()).save(any());
+    verify(delegationService, never()).addManager(any(), any());
   }
 
   @Test

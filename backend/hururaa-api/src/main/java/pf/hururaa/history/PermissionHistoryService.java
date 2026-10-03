@@ -26,7 +26,6 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import pf.hururaa.PersistenceConfiguration.Revinfo;
 import pf.hururaa.application.domain.Application;
-import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.domain.User;
 import pf.hururaa.history.domain.PermissionChange;
 import pf.hururaa.history.domain.PermissionChangeType;
@@ -39,21 +38,20 @@ import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.uaa.UaaProperties;
 
 /**
- * Who changed what permissions in a direction, and when, newest first. Merges three sources:
+ * Who changed what permissions in a direction, and when, newest first. Merges two sources:
  *
  * <ul>
- * <li>the Envers revisions of {@link DirectionAdmin} (direction administrators designated or
- * revoked);</li>
- * <li>the Envers revisions of {@link Application} (applications registered, renamed, moved,
- * unregistered, and their managers designated or revoked);</li>
- * <li>the {@link PermissionEvent journal} of what Hurura'a changed in Keycloak.</li>
+ * <li>the Envers revisions of {@link Application} (applications registered, renamed,
+ * unregistered);</li>
+ * <li>the {@link PermissionEvent journal} of what Hurura'a changed in Keycloak, delegations
+ * included (direction administrators and application managers are members of Keycloak
+ * groups).</li>
  * </ul>
  *
  * <p>
- * A deleted row's audit record holds only its id (Envers does not store data at delete), and an
- * application may have moved between directions: each entity's revisions are therefore replayed
- * in order, a change belonging to the direction of the new state and a revocation to the
- * direction of the previous one. The audited history of the direction is read whole on each call
+ * A deleted row's audit record holds only its id (Envers does not store data at delete): each
+ * entity's revisions are therefore replayed in order, a change belonging to the direction of the
+ * new state and a revocation to the direction of the previous one. The audited history of the direction is read whole on each call
  * (it changes rarely); the journal, which grows with every group membership, is paged in SQL: for
  * the page wanted, its first {@code (page + 1) * size} events are enough to merge.
  * </p>
@@ -140,41 +138,13 @@ public class PermissionHistoryService {
     return new RecordedChange(event.getOccurredAt(), Objects.requireNonNull(event.getId()),
         event.getAuthorId(), PermissionChangeType.valueOf(event.getType().name()),
         event.getUserId(), event.getApplicationId(), event.getApplicationName(), event.getRole(),
-        event.getGroupName(), null, null);
+        event.getGroupName(), null);
   }
 
   // ---------- audit ----------
 
   private Stream<RecordedChange> audited(String direction) {
-    return Stream.concat(directionAdminChanges(direction).stream(),
-        applicationChanges(direction).stream());
-  }
-
-  private List<RecordedChange> directionAdminChanges(String direction) {
-    final var changes = new ArrayList<RecordedChange>();
-    for (final var revisions : revisionsOfEntitiesOnceIn(DirectionAdmin.class, direction)
-        .values()) {
-      @Nullable DirectionAdmin previous = null;
-      for (final var revision : revisions) {
-        final var current = revision.isDeletion() ? null : revision.entity();
-        if (previous != null && previous.getDirection().equals(direction)
-            && (current == null || !isSameAdmin(previous, current))) {
-          changes.add(revision.change(PermissionChangeType.DIRECTION_ADMIN_REVOKED)
-              .subject(previous.getUserId()));
-        }
-        if (current != null && current.getDirection().equals(direction)
-            && (previous == null || !isSameAdmin(previous, current))) {
-          changes.add(revision.change(PermissionChangeType.DIRECTION_ADMIN_GRANTED)
-              .subject(current.getUserId()));
-        }
-        previous = current;
-      }
-    }
-    return changes;
-  }
-
-  private static boolean isSameAdmin(DirectionAdmin a, DirectionAdmin b) {
-    return a.getDirection().equals(b.getDirection()) && a.getUserId().equals(b.getUserId());
+    return applicationChanges(direction).stream();
   }
 
   private List<RecordedChange> applicationChanges(String direction) {
@@ -183,48 +153,26 @@ public class PermissionHistoryService {
       final var applicationId = entry.getKey();
       @Nullable String previousDirection = null;
       @Nullable String previousName = null;
-      Set<String> previousManagers = Set.of();
       for (final var revision : entry.getValue()) {
         final var current = revision.isDeletion() ? null : revision.entity();
         final var currentDirection = current == null ? null : current.getDirection();
         final var name = current == null ? previousName : current.getName();
         final var wasHere = direction.equals(previousDirection);
         final var isHere = direction.equals(currentDirection);
-        final Set<String> currentManagers =
-            isHere ? new TreeSet<>(Objects.requireNonNull(current).getManagers()) : Set.of();
         final var about = new ApplicationRef(applicationId, name);
 
         if (!wasHere && isHere) {
-          changes.add(previousDirection == null
-              ? revision.change(PermissionChangeType.APPLICATION_REGISTERED).about(about)
-              : revision.change(PermissionChangeType.APPLICATION_MOVED_IN).about(about)
-                  .otherDirection(previousDirection));
+          changes.add(revision.change(PermissionChangeType.APPLICATION_REGISTERED).about(about));
         } else if (wasHere && isHere && !Objects.equals(previousName, name)) {
           changes.add(revision.change(PermissionChangeType.APPLICATION_RENAMED).about(about)
               .formerApplicationName(previousName));
         }
-        for (final var revoked : previousManagers) {
-          if (!currentManagers.contains(revoked)) {
-            changes.add(revision.change(PermissionChangeType.APPLICATION_MANAGER_REVOKED)
-                .about(about).subject(revoked));
-          }
-        }
-        for (final var granted : currentManagers) {
-          if (!previousManagers.contains(granted)) {
-            changes.add(revision.change(PermissionChangeType.APPLICATION_MANAGER_GRANTED)
-                .about(about).subject(granted));
-          }
-        }
         if (wasHere && !isHere) {
-          changes.add(currentDirection == null
-              ? revision.change(PermissionChangeType.APPLICATION_UNREGISTERED).about(about)
-              : revision.change(PermissionChangeType.APPLICATION_MOVED_OUT).about(about)
-                  .otherDirection(currentDirection));
+          changes.add(revision.change(PermissionChangeType.APPLICATION_UNREGISTERED).about(about));
         }
 
         previousDirection = currentDirection;
         previousName = name;
-        previousManagers = currentManagers;
       }
     }
     return changes;
@@ -281,7 +229,7 @@ public class PermissionHistoryService {
     RecordedChange change(PermissionChangeType changeType) {
       return new RecordedChange(Instant.ofEpochMilli(info.getTimestamp()),
           Objects.requireNonNull(info.getId()), info.getUsername(), changeType, null, null, null,
-          null, null, null, null);
+          null, null, null);
     }
   }
 
@@ -299,33 +247,22 @@ public class PermissionHistoryService {
       @Nullable String applicationName,
       @Nullable String role,
       @Nullable String group,
-      @Nullable String otherDirection,
       @Nullable String formerApplicationName) {
-
-    RecordedChange subject(String userId) {
-      return new RecordedChange(timestamp, order, authorId, type, userId, applicationId,
-          applicationName, role, group, otherDirection, formerApplicationName);
-    }
 
     RecordedChange about(ApplicationRef application) {
       return new RecordedChange(timestamp, order, authorId, type, subjectId, application.id(),
-          application.name(), role, group, otherDirection, formerApplicationName);
-    }
-
-    RecordedChange otherDirection(String direction) {
-      return new RecordedChange(timestamp, order, authorId, type, subjectId, applicationId,
-          applicationName, role, group, direction, formerApplicationName);
+          application.name(), role, group, formerApplicationName);
     }
 
     RecordedChange formerApplicationName(@Nullable String name) {
       return new RecordedChange(timestamp, order, authorId, type, subjectId, applicationId,
-          applicationName, role, group, otherDirection, name);
+          applicationName, role, group, name);
     }
 
     PermissionChange resolve(UserResolver users) throws HururaaProblemException {
       return new PermissionChange(timestamp, authorId == null ? null : users.resolve(authorId),
           type, subjectId == null ? null : users.resolve(subjectId), applicationId,
-          applicationName, role, group, otherDirection, formerApplicationName);
+          applicationName, role, group, formerApplicationName);
     }
   }
 

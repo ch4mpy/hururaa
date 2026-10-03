@@ -1,5 +1,6 @@
 package pf.hururaa.keycloak;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Optional;
 import org.keycloak.admin.model.GroupRepresentation;
 import org.keycloak.admin.model.RoleRepresentation;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,8 @@ import pf.hururaa.problem.ProblemType;
 @Service
 @RequiredArgsConstructor
 public class GroupService {
+
+  private static final int MEMBERS_PAGE_SIZE = 100;
 
   private final DirectionService directionService;
 
@@ -90,6 +94,22 @@ public class GroupService {
     final var orgId = directionService.requireOrgId(direction);
     final var groupId = requireGroupId(direction, orgId, groupName);
     return groupRepo.findGroupMembers(orgId, groupId, pageable).map(mapper::toUser);
+  }
+
+  /**
+   * For the small groups read whole (the delegation groups): every page of members, by username.
+   */
+  public List<User> findAllMembers(String direction, String groupName)
+      throws HururaaProblemException {
+    final var members = new ArrayList<User>();
+    var page = findMembers(direction, groupName, PageRequest.of(0, MEMBERS_PAGE_SIZE));
+    members.addAll(page.getContent());
+    while (page.hasNext()) {
+      page = findMembers(direction, groupName, page.nextPageable());
+      members.addAll(page.getContent());
+    }
+    members.sort(Comparator.comparing(User::username));
+    return members;
   }
 
   /**

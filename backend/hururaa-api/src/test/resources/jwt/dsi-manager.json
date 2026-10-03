@@ -2,6 +2,13 @@
   "sub": "c6bca76e-e2cb-45ee-bbfe-2538652279b1",
   "preferred_username": "dsi.manager",
   "organization": {
-    "dsi": {}
+    "dsi": {
+      "resource_access": {
+        "hururaa-api": {
+          "roles": ["hururaa.application.hururaa.manage", "hururaa.application.te-fenua.manage"]
+        }
+      },
+      "groups": ["/hururaa.hururaa.product-owners", "/hururaa.te-fenua.product-owners"]
+    }
   }
 }

@@ -12,6 +12,8 @@ import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.uaa.DelegationGroups;
+import pf.hururaa.uaa.DelegationService;
 
 /**
  * The rules tying an application to its direction and to its Keycloak clients.
@@ -30,19 +32,30 @@ public class ApplicationService {
 
   private final ClientProvisioningService clientProvisioningService;
 
+  private final DelegationService delegationService;
+
   /**
    * Registers an application, creating its Keycloak clients ({@code <prefix>-bff} and
-   * {@code <prefix>-api}) when they don't exist yet.
+   * {@code <prefix>-api}) when they don't exist yet, and its delegation: the
+   * {@code hururaa.<prefix>.product-owners} group of its direction, granting
+   * {@code hururaa.application.<prefix>.manage}, without members yet.
    *
    * <p>
-   * The clients are created before the application is saved, and are not removed if the save then
-   * fails: registering again reuses them.
+   * The clients and the delegation are created before the application is saved, and are not
+   * removed if the save then fails: registering again reuses them.
    * </p>
    *
-   * @throws HururaaProblemException {@code APPLICATION_ALREADY_EXISTS} if the client prefix is
-   *         taken, {@code DIRECTION_NOT_FOUND} if the direction does not exist
+   * @throws HururaaProblemException {@code RESERVED_NAME} if the client prefix is one of
+   *         {@link DelegationGroups#RESERVED_CLIENT_PREFIXES}, {@code APPLICATION_ALREADY_EXISTS}
+   *         if it is taken, {@code DIRECTION_NOT_FOUND} if the direction does not exist
    */
   public Application create(Application application) throws HururaaProblemException {
+    if (DelegationGroups.RESERVED_CLIENT_PREFIXES.contains(application.getClientPrefix())) {
+      throw new HururaaProblemException(
+          ProblemType.RESERVED_NAME,
+          "Client prefix %s is reserved".formatted(application.getClientPrefix()),
+          Map.of("name", application.getClientPrefix()));
+    }
     if (applicationRepository.existsByClientPrefix(application.getClientPrefix())) {
       throw new HururaaProblemException(
           ProblemType.APPLICATION_ALREADY_EXISTS,
@@ -53,43 +66,35 @@ public class ApplicationService {
     requireDirection(application.getDirection());
     clientProvisioningService
         .ensureApplicationClients(application.getClientPrefix(), application.getName());
+    delegationService.provisionApplication(application);
     return applicationRepository.save(application);
   }
 
   /**
-   * Renames an application and (re)assigns it to a direction. Moving it to another direction drops
-   * its managers, who are members of the former one.
-   *
-   * @throws HururaaProblemException {@code APPLICATION_HAS_GROUPS} when moving an application
-   *         which still has groups in its current direction, {@code DIRECTION_NOT_FOUND} if the new
-   *         direction does not exist
+   * Renames an application (its direction never changes).
    */
-  public Application update(Application application, String name, String direction)
-      throws HururaaProblemException {
-    if (!application.getDirection().equals(direction)) {
-      requireDirection(direction);
-      requireNoGroups(application);
-      application.setDirection(direction);
-      application.getManagers().clear();
-    }
+  public Application rename(Application application, String name) {
     application.setName(name);
     return applicationRepository.save(application);
   }
 
   /**
-   * Unregisters an application. Its Keycloak clients are left untouched.
+   * Unregisters an application, and revokes its managers (deletes its
+   * {@code hururaa.<prefix>.product-owners} group and the role it granted). Its Keycloak clients
+   * are left untouched.
    *
    * @throws HururaaProblemException {@code APPLICATION_HAS_GROUPS} when the application still has
    *         groups in its direction
    */
   public void delete(Application application) throws HururaaProblemException {
     requireNoGroups(application);
+    delegationService.deprovisionApplication(application);
     applicationRepository.delete(application);
   }
 
   /**
-   * An application leaving its direction must not leave its groups behind: they would be out of
-   * reach of its managers, and still grant its roles to their members.
+   * An unregistered application must not leave its groups behind: they would be out of reach of
+   * its managers, and still grant its roles to their members.
    */
   private void requireNoGroups(Application application) throws HururaaProblemException {
     final var groups = groupService

@@ -15,7 +15,12 @@ pairs: Keycloak generates fresh ones on import. To persist changes made in the a
 `dsi`, `dpam` and `daf`: name and alias are the same (the alias is what the `organization` claim
 is indexed by and what Hurura'a addresses a direction with), the description is the direction's
 full name. Their groups carry client roles of the `<prefix>-api` clients of their own applications
-only (a Hurura'a rule, Keycloak does not enforce it).
+only (a Hurura'a rule, Keycloak does not enforce it). Each also has Hurura'a's reserved groups,
+granting roles of `hururaa-api`: `hururaa.admins` (`hururaa.direction.admin`: the direction's
+administrators; in `dsi`, the Hurura'a administrators) and, per application of the direction,
+`hururaa.<prefix>.product-owners` (`hururaa.application.<prefix>.manage`: its managers). Hurura'a
+creates them with the directions and applications it registers, and nobody should change their
+roles.
 
 ### Clients
 
@@ -48,8 +53,8 @@ roles granted by the organization's groups under each organization:
 ```json
 "organization": {
   "dsi": {
-    "resource_access": { "hururaa-api": { "roles": ["hururaa.admin"] } },
-    "groups": ["/hururaa.admin"]
+    "resource_access": { "hururaa-api": { "roles": ["hururaa.direction.admin"] } },
+    "groups": ["/hururaa.admins"]
   }
 }
 ```
@@ -60,4 +65,5 @@ is what `@tpe.isMember` relies on.
 ### Users
 
 See the table in the root README: nine dev users (password `secret`) with fixed ids, which the
-Liquibase dev data of `hururaa-api` references.
+tests of `hururaa-api` reference (`src/test/resources/jwt/`). Administrators and managers are
+the members of Hurura'a's reserved groups.

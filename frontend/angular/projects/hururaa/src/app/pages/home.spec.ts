@@ -5,6 +5,7 @@ import { Home } from './home';
 // see PfPageStub: pf-ui can't load in jsdom, the stub mirrors pf-page's content queries
 vi.mock('pf-ui', async () => ({
   PfPageComponent: (await import('../testing/pf-page.stub')).PfPageStub,
+  PfTagComponent: (await import('../testing/pf-tag.stub')).PfTagStub,
 }));
 
 describe('Home', () => {

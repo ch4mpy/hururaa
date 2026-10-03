@@ -445,8 +445,44 @@
       "hururaa-api": [
         {
           "id": "d9cf4aa8-647e-4771-ab22-2644dfbb3224",
-          "name": "hururaa.admin",
-          "description": "Administrer Hurura'a à tous les niveaux : directions, applications, rôles, groupes et attributions (effectif dans la DSI uniquement)",
+          "name": "hururaa.direction.admin",
+          "description": "Administrer la direction (dans la DSI : toutes les directions, administrateur Hurura'a)",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
+          "attributes": {}
+        },
+        {
+          "id": "b08b2bac-d3f3-44bb-b821-91cf212ec842",
+          "name": "hururaa.application.hururaa.manage",
+          "description": "Gérer Hurura'a",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
+          "attributes": {}
+        },
+        {
+          "id": "501c4351-cace-45d4-8ba8-5de47e044e2d",
+          "name": "hururaa.application.te-fenua.manage",
+          "description": "Gérer Te Fenua",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
+          "attributes": {}
+        },
+        {
+          "id": "909aebaf-2ebd-4444-9938-6b46701b7844",
+          "name": "hururaa.application.escales.manage",
+          "description": "Gérer Escales",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
+          "attributes": {}
+        },
+        {
+          "id": "af562bf3-8a41-4b26-867d-601644155d59",
+          "name": "hururaa.application.anahei.manage",
+          "description": "Gérer Anahei",
           "composite": false,
           "clientRole": true,
           "containerId": "4442e7a2-b89b-4527-8af8-90a0d45fe7dc",
@@ -3702,13 +3738,16 @@
         {
           "username": "dsi.admin",
           "groups": [
-            "bf1d34ae-b12a-4cf4-8d8b-da276595ce6f"
+            "eab677e3-5fb9-48dc-98c6-1d8966c14f21"
           ],
           "membershipType": "UNMANAGED"
         },
         {
           "username": "dsi.manager",
-          "groups": [],
+          "groups": [
+            "f3f21de6-175c-4207-b49f-9e71df894e4c",
+            "ea13c0c9-2224-4375-b6f0-def4bcbe37c3"
+          ],
           "membershipType": "UNMANAGED"
         },
         {
@@ -3722,16 +3761,44 @@
       "identityProviders": [],
       "groups": [
         {
-          "id": "bf1d34ae-b12a-4cf4-8d8b-da276595ce6f",
-          "name": "hururaa.admin",
-          "path": "/hururaa.admin",
+          "id": "eab677e3-5fb9-48dc-98c6-1d8966c14f21",
+          "name": "hururaa.admins",
+          "path": "/hururaa.admins",
           "parentId": "e15fffb9-9a1a-439e-8073-38246ebd6cb8",
           "subGroups": [],
           "attributes": {},
           "realmRoles": [],
           "clientRoles": {
             "hururaa-api": [
-              "hururaa.admin"
+              "hururaa.direction.admin"
+            ]
+          }
+        },
+        {
+          "id": "f3f21de6-175c-4207-b49f-9e71df894e4c",
+          "name": "hururaa.hururaa.product-owners",
+          "path": "/hururaa.hururaa.product-owners",
+          "parentId": "e15fffb9-9a1a-439e-8073-38246ebd6cb8",
+          "subGroups": [],
+          "attributes": {},
+          "realmRoles": [],
+          "clientRoles": {
+            "hururaa-api": [
+              "hururaa.application.hururaa.manage"
+            ]
+          }
+        },
+        {
+          "id": "ea13c0c9-2224-4375-b6f0-def4bcbe37c3",
+          "name": "hururaa.te-fenua.product-owners",
+          "path": "/hururaa.te-fenua.product-owners",
+          "parentId": "e15fffb9-9a1a-439e-8073-38246ebd6cb8",
+          "subGroups": [],
+          "attributes": {},
+          "realmRoles": [],
+          "clientRoles": {
+            "hururaa-api": [
+              "hururaa.application.te-fenua.manage"
             ]
           }
         },
@@ -3763,12 +3830,16 @@
       "members": [
         {
           "username": "dpam.admin",
-          "groups": [],
+          "groups": [
+            "453beb10-941b-4502-a350-60b197197033"
+          ],
           "membershipType": "UNMANAGED"
         },
         {
           "username": "dpam.manager",
-          "groups": [],
+          "groups": [
+            "78914a03-88da-48da-a686-a284187deb60"
+          ],
           "membershipType": "UNMANAGED"
         },
         {
@@ -3781,6 +3852,34 @@
       ],
       "identityProviders": [],
       "groups": [
+        {
+          "id": "453beb10-941b-4502-a350-60b197197033",
+          "name": "hururaa.admins",
+          "path": "/hururaa.admins",
+          "parentId": "aa28778f-0406-473d-ad99-28777255bd38",
+          "subGroups": [],
+          "attributes": {},
+          "realmRoles": [],
+          "clientRoles": {
+            "hururaa-api": [
+              "hururaa.direction.admin"
+            ]
+          }
+        },
+        {
+          "id": "78914a03-88da-48da-a686-a284187deb60",
+          "name": "hururaa.escales.product-owners",
+          "path": "/hururaa.escales.product-owners",
+          "parentId": "aa28778f-0406-473d-ad99-28777255bd38",
+          "subGroups": [],
+          "attributes": {},
+          "realmRoles": [],
+          "clientRoles": {
+            "hururaa-api": [
+              "hururaa.application.escales.manage"
+            ]
+          }
+        },
         {
           "id": "9eee2700-0c73-45d6-969c-ad330a354806",
           "name": "escales.agent",
@@ -3809,12 +3908,16 @@
       "members": [
         {
           "username": "daf.admin",
-          "groups": [],
+          "groups": [
+            "48dafa9a-8fad-49d6-a449-a152b7d4525a"
+          ],
           "membershipType": "UNMANAGED"
         },
         {
           "username": "daf.manager",
-          "groups": [],
+          "groups": [
+            "191baef8-407c-4479-b014-53c27ca9c4c7"
+          ],
           "membershipType": "UNMANAGED"
         },
         {
@@ -3827,6 +3930,34 @@
       ],
       "identityProviders": [],
       "groups": [
+        {
+          "id": "48dafa9a-8fad-49d6-a449-a152b7d4525a",
+          "name": "hururaa.admins",
+          "path": "/hururaa.admins",
+          "parentId": "ca556865-1433-4c44-b31a-4d4c173915b0",
+          "subGroups": [],
+          "attributes": {},
+          "realmRoles": [],
+          "clientRoles": {
+            "hururaa-api": [
+              "hururaa.direction.admin"
+            ]
+          }
+        },
+        {
+          "id": "191baef8-407c-4479-b014-53c27ca9c4c7",
+          "name": "hururaa.anahei.product-owners",
+          "path": "/hururaa.anahei.product-owners",
+          "parentId": "ca556865-1433-4c44-b31a-4d4c173915b0",
+          "subGroups": [],
+          "attributes": {},
+          "realmRoles": [],
+          "clientRoles": {
+            "hururaa-api": [
+              "hururaa.application.anahei.manage"
+            ]
+          }
+        },
         {
           "id": "5d678087-ff1b-498b-9140-d89d99b35dfa",
           "name": "anahei.agent",

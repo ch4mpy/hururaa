@@ -1,8 +1,10 @@
 /**
  * The dev environment's dataset, as presented on the home page. It describes what
  * `keycloak/import/public-facing-realm.json` (organizations, groups, their client roles and
- * members) and `hururaa-api`'s Liquibase dev data (`1790700000001-1-dev-data.xml`: applications,
- * direction administrators, application managers) contain: keep the three in sync.
+ * members, Hurura'a's reserved groups included) and `hururaa-api`'s Liquibase dev data
+ * (`1790700000001-1-dev-data.xml`: applications) contain: keep the three in sync. Direction
+ * administrators are the members of the direction's `hururaa.admins` group, application managers
+ * those of its `hururaa.<prefix>.product-owners` group.
  */
 
 export interface DevApplication {
@@ -30,6 +32,17 @@ export interface DevUser {
   groups: string[];
 }
 
+function admins(name: string): DevGroup {
+  return { name, roles: [{ clientId: 'hururaa-api', roles: ['hururaa.direction.admin'] }] };
+}
+
+function productOwners(clientPrefix: string): DevGroup {
+  return {
+    name: `hururaa.${clientPrefix}.product-owners`,
+    roles: [{ clientId: 'hururaa-api', roles: [`hururaa.application.${clientPrefix}.manage`] }],
+  };
+}
+
 export const DEV_DIRECTIONS: DevDirection[] = [
   {
     alias: 'dsi',
@@ -39,10 +52,9 @@ export const DEV_DIRECTIONS: DevDirection[] = [
       { name: 'Te Fenua', clientPrefix: 'te-fenua', managers: ['dsi.manager'] },
     ],
     groups: [
-      {
-        name: 'hururaa.admin',
-        roles: [{ clientId: 'hururaa-api', roles: ['hururaa.admin'] }],
-      },
+      admins('hururaa.admins'),
+      productOwners('hururaa'),
+      productOwners('te-fenua'),
       {
         name: 'te-fenua.agent',
         roles: [
@@ -56,6 +68,8 @@ export const DEV_DIRECTIONS: DevDirection[] = [
     admins: ['dpam.admin'],
     applications: [{ name: 'Escales', clientPrefix: 'escales', managers: ['dpam.manager'] }],
     groups: [
+      admins('hururaa.admins'),
+      productOwners('escales'),
       {
         name: 'escales.agent',
         roles: [
@@ -69,6 +83,8 @@ export const DEV_DIRECTIONS: DevDirection[] = [
     admins: ['daf.admin'],
     applications: [{ name: 'Anahei', clientPrefix: 'anahei', managers: ['daf.manager'] }],
     groups: [
+      admins('hururaa.admins'),
+      productOwners('anahei'),
       {
         name: 'anahei.agent',
         roles: [{ clientId: 'anahei-api', roles: ['anahei.files.read', 'anahei.files.edit'] }],
@@ -78,31 +94,17 @@ export const DEV_DIRECTIONS: DevDirection[] = [
 ];
 
 export const DEV_USERS: DevUser[] = [
-  { username: 'dsi.admin', direction: 'dsi', groups: ['hururaa.admin'] },
-  { username: 'dsi.manager', direction: 'dsi', groups: [] },
+  { username: 'dsi.admin', direction: 'dsi', groups: ['hururaa.admins'] },
+  {
+    username: 'dsi.manager',
+    direction: 'dsi',
+    groups: ['hururaa.hururaa.product-owners', 'hururaa.te-fenua.product-owners'],
+  },
   { username: 'dsi.agent', direction: 'dsi', groups: ['te-fenua.agent'] },
-  { username: 'dpam.admin', direction: 'dpam', groups: [] },
-  { username: 'dpam.manager', direction: 'dpam', groups: [] },
+  { username: 'dpam.admin', direction: 'dpam', groups: ['hururaa.admins'] },
+  { username: 'dpam.manager', direction: 'dpam', groups: ['hururaa.escales.product-owners'] },
   { username: 'dpam.agent', direction: 'dpam', groups: ['escales.agent'] },
-  { username: 'daf.admin', direction: 'daf', groups: [] },
-  { username: 'daf.manager', direction: 'daf', groups: [] },
+  { username: 'daf.admin', direction: 'daf', groups: ['hururaa.admins'] },
+  { username: 'daf.manager', direction: 'daf', groups: ['hururaa.anahei.product-owners'] },
   { username: 'daf.agent', direction: 'daf', groups: ['anahei.agent'] },
 ];
-
-/** The delegation a dev user holds, if any (Hurura'a's own comes from the `hururaa.admin` group). */
-export function devDelegationOf(
-  username: string,
-): 'hururaa-admin' | 'admin' | 'manager' | undefined {
-  if (DEV_USERS.some((u) => u.username === username && u.groups.includes('hururaa.admin'))) {
-    return 'hururaa-admin';
-  }
-  for (const direction of DEV_DIRECTIONS) {
-    if (direction.admins.includes(username)) {
-      return 'admin';
-    }
-    if (direction.applications.some((a) => a.managers.includes(username))) {
-      return 'manager';
-    }
-  }
-  return undefined;
-}

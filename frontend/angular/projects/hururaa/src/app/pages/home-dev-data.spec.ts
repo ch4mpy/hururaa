@@ -54,6 +54,25 @@ describe('home page dev dataset', () => {
 
     expect(sortByUsername(fromPage)).toEqual(sortByUsername(fromRealm));
   });
+
+  it('lists as administrators and managers the members of the delegation groups', () => {
+    const membersOf = (direction: string, group: string) => {
+      const org = realm.organizations.find((o) => o.alias === direction);
+      const id = org?.groups.find((g) => g.name === group)?.id;
+      return (org?.members ?? [])
+        .filter((m) => id !== undefined && m.groups.includes(id))
+        .map((m) => m.username)
+        .sort();
+    };
+    for (const direction of DEV_DIRECTIONS) {
+      expect([...direction.admins].sort()).toEqual(membersOf(direction.alias, 'hururaa.admins'));
+      for (const application of direction.applications) {
+        expect([...application.managers].sort()).toEqual(
+          membersOf(direction.alias, `hururaa.${application.clientPrefix}.product-owners`),
+        );
+      }
+    }
+  });
 });
 
 /** Order-insensitive comparison of directions and role lists. */

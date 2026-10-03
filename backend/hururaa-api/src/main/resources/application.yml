@@ -21,7 +21,7 @@ keycloak-admin-api:
     - query-organizations
 
 uaa:
-  # the only organization in which the hururaa.* roles (roles-namespace) take effect
+  # the DSI: its administrators (hururaa.direction.admin) are the Hurura'a administrators
   platform-organization: dsi
 
 server:

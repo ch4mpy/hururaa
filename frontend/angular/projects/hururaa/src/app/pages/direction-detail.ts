@@ -49,8 +49,8 @@ const PAGE_SIZE = 10;
 
       @if (!canRead()) {
         <p i18n="@@direction.noSay">
-          Les administrateurs, groupes et membres d'une direction ne sont visibles que de ceux qui
-          ont délégation sur elle.
+          Les administrateurs, groupes et membres d'une direction ne sont visibles que de ses
+          administrateurs et des gestionnaires de ses applications.
         </p>
       } @else {
         <h2 i18n="@@direction.admins">Administrateurs</h2>
@@ -167,7 +167,10 @@ export class DirectionDetail {
   /** Bound from the `:direction` route parameter. */
   readonly direction = input.required<string>();
 
-  /** Mirrors the API's rule for reading a direction: Hurura'a administrator or delegate. */
+  /**
+   * Mirrors the API's rule for reading a direction: Hurura'a administrator, administrator of the
+   * direction or manager of one of its applications.
+   */
   protected readonly canRead = computed(() => this.delegations.canReadDirection(this.direction()));
 
   protected readonly applications = rxResource({

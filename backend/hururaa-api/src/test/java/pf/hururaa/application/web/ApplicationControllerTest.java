@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -14,7 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pf.hururaa.HururaaFixtures.DAF;
 import static pf.hururaa.HururaaFixtures.DPAM;
-import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
 import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.escales;
@@ -47,8 +45,7 @@ import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.history.PermissionHistoryMapperImpl;
 import pf.hururaa.history.PermissionHistoryService;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
+import pf.hururaa.uaa.DelegationService;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.keycloak.ClientProvisioningService;
 import pf.hururaa.keycloak.DirectionService;
@@ -69,7 +66,7 @@ class ApplicationControllerTest {
   ApplicationRepository applicationRepository;
 
   @MockitoBean
-  DirectionAdminRepository directionAdminRepository;
+  DelegationService delegationService;
 
   @MockitoBean
   DirectionService directionService;
@@ -88,7 +85,7 @@ class ApplicationControllerTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
+    stubDevDelegations(directionService, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
     when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
       final Application application = invocation.getArgument(0);
@@ -141,8 +138,6 @@ class ApplicationControllerTest {
   void givenDirectionAdmin_whenGetManageableApplications_thenThoseOfTheDirection()
       throws Exception {
     when(applicationRepository.findAllByOrderByNameAsc()).thenReturn(List.of(escales(), teFenua()));
-    when(directionAdminRepository.findByUserIdOrderByDirection(DPAM_ADMIN))
-        .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
 
     api
         .get(MANAGEABLE)
@@ -193,7 +188,7 @@ class ApplicationControllerTest {
   // ---------- create ----------
 
   @Test
-  @WithJwt("jwt/dsi-admin.json")
+  @WithJwt("jwt/dpam-admin.json")
   void givenAdminOfAnotherDirection_whenCreateApplication_thenForbidden() throws Exception {
     api
         .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
@@ -203,7 +198,7 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/dpam-hururaa-admin-lookalike.json")
-  void givenHururaaAdminRoleOutsideTheDsi_whenCreateApplication_thenForbidden()
+  void givenManagerRoleOutsideItsApplicationDirection_whenCreateApplication_thenForbidden()
       throws Exception {
     api
         .post(anaheiRequest(), ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
@@ -247,6 +242,21 @@ class ApplicationControllerTest {
         .andExpect(status().isCreated());
 
     verify(clientProvisioningService).ensureApplicationClients("anahei", "Anahei");
+    verify(delegationService).provisionApplication(any(Application.class));
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenReservedPrefix_whenCreateApplication_thenReservedName() throws Exception {
+    for (final var prefix : List.of("hururaa", "admin", "direction", "product-owners", "manage")) {
+      api
+          .post(new ApplicationCreationRequest(prefix, "X"),
+              ApplicationController.DIRECTION_APPLICATIONS_PATH, DAF)
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()))
+          .andExpect(jsonPath("$.parameters.name").value(prefix));
+    }
+    verifyNoInteractions(clientProvisioningService, delegationService);
   }
 
   @Test
@@ -258,7 +268,7 @@ class ApplicationControllerTest {
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(ProblemType.DIRECTION_NOT_FOUND.uri().toString()));
     // nothing is created in Keycloak for an application that can't be registered
-    verifyNoInteractions(clientProvisioningService);
+    verifyNoInteractions(clientProvisioningService, delegationService);
   }
 
   @Test
@@ -288,18 +298,26 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenRenamingApplication_thenNoContent() throws Exception {
+  void givenDirectionAdmin_whenRenamingApplication_thenRenamedInItsDirection() throws Exception {
     api
-        .put(new ApplicationUpdateRequest("Escales 2", DPAM),
+        .put(new ApplicationUpdateRequest("Escales 2"),
             ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isNoContent());
+
+    final var saved = ArgumentCaptor.forClass(Application.class);
+    verify(applicationRepository).save(saved.capture());
+    assertThat(saved.getValue().getName()).isEqualTo("Escales 2");
+    assertThat(saved.getValue().getDirection()).isEqualTo(DPAM);
+    final var events = ArgumentCaptor.forClass(ResourceEvent.class);
+    verify(resourceEvents).publish(events.capture());
+    assertThat(events.getValue().tenant()).isEqualTo(DPAM);
   }
 
   @Test
-  @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenMovingApplication_thenForbidden() throws Exception {
+  @WithJwt("jwt/dpam-manager.json")
+  void givenApplicationManager_whenRenamingApplication_thenForbidden() throws Exception {
     api
-        .put(new ApplicationUpdateRequest("Escales", DSI),
+        .put(new ApplicationUpdateRequest("Escales 2"),
             ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isForbidden());
     verify(applicationRepository, never()).save(any());
@@ -307,52 +325,18 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenMovingApplication_thenManagersDroppedAndBothDirectionsNotified()
-      throws Exception {
-    // a group of another application of the direction does not hold Escales back
-    when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "pgc.agent")));
-
-    api
-        .put(new ApplicationUpdateRequest("Escales", DSI),
-            ApplicationController.DIRECTION_APPLICATION_PATH,
-            DPAM, ESCALES_ID)
-        .andExpect(status().isNoContent());
-
-    final var saved = ArgumentCaptor.forClass(Application.class);
-    verify(applicationRepository).save(saved.capture());
-    assertThat(saved.getValue().getDirection()).isEqualTo(DSI);
-    assertThat(saved.getValue().getManagers()).isEmpty();
-    final var events = ArgumentCaptor.forClass(ResourceEvent.class);
-    verify(resourceEvents, org.mockito.Mockito.times(2)).publish(events.capture());
-    assertThat(events.getAllValues()).extracting(ResourceEvent::tenant).containsExactly(DPAM, DSI);
-  }
-
-  @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenApplicationWithGroups_whenMovingApplication_thenConflict() throws Exception {
+  void givenApplicationWithGroups_whenDeleteApplication_thenConflict() throws Exception {
     when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("g1", DPAM, "escales.agent"),
         new Group("g2", DPAM, "pgc.agent")));
 
     api
-        .put(new ApplicationUpdateRequest("Escales", DSI),
-            ApplicationController.DIRECTION_APPLICATION_PATH,
-            DPAM, ESCALES_ID)
+        .delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type")
             .value(ProblemType.APPLICATION_HAS_GROUPS.uri().toString()))
         .andExpect(jsonPath("$.parameters.groups").value("escales.agent"));
-    verify(applicationRepository, never()).save(any());
+    verify(applicationRepository, never()).delete(any());
     verifyNoInteractions(resourceEvents);
-  }
-
-  @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenSameDirection_whenRenamingApplication_thenGroupsAreNotChecked() throws Exception {
-    api
-        .put(new ApplicationUpdateRequest("Escales 2", DPAM),
-            ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
-        .andExpect(status().isNoContent());
-    verify(groupService, never()).findAll(eq(DPAM));
   }
 
   // ---------- delete ----------
@@ -363,6 +347,7 @@ class ApplicationControllerTest {
     api
         .delete(ApplicationController.DIRECTION_APPLICATION_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isNoContent());
+    verify(delegationService).deprovisionApplication(any(Application.class));
     verify(applicationRepository).delete(any(Application.class));
   }
 

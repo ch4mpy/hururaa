@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Delegations are Keycloak group memberships (hururaa.admins, hururaa.<prefix>.product-owners),
+  read from the tokens: Hurura'a no longer stores them. Their history before this change is lost
+  with their audit tables; the journal (PERMISSION_EVENTS) records them from now on.
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1790900000000-1" author="ch4mp">
+        <dropTable tableName="application_managers_aud"/>
+        <dropTable tableName="direction_admins_aud"/>
+        <dropTable tableName="application_managers"/>
+        <dropTable tableName="direction_admins"/>
+        <dropSequence sequenceName="direction_admins_seq"/>
+    </changeSet>
+
+</databaseChangeLog>

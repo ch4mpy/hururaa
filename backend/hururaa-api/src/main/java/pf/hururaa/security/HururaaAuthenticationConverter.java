@@ -15,10 +15,10 @@ import pf.hururaa.uaa.UaaProperties;
  * {@link HururaaJwtAuthentication} instances.
  *
  * <p>
- * The {@link HururaaPermission Hurura'a roles} held in the
- * {@link UaaProperties#getPlatformOrganization() DSI}, the only organization in which they
- * take effect, become the authentication's authorities: access rules check them with
- * {@code hasAuthority(...)}.
+ * The static {@link HururaaPermission Hurura'a roles} held in the
+ * {@link UaaProperties#getPlatformOrganization() DSI} become the authentication's authorities:
+ * {@code hasAuthority('hururaa.direction.admin')} is a Hurura'a administrator. The roles held in
+ * the other directions are read by the access rules from the per-direction permissions.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com

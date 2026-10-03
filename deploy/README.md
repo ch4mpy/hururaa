@@ -29,8 +29,10 @@ continuously to `https://hururaa.c4-soft.com` by
   and the clients Hurura'a provisions during the demo) survives redeploys; to apply new secrets, a
   changed realm setting or to start over, `docker compose down -v` on the host and redeploy (take
   a backup first, see below).
-- The API starts with the Liquibase `dev` context: the dev applications and delegations, whose
-  manager and administrator ids are those of the realm's users. The demo users deliberately keep
+- The API starts with the Liquibase `dev` context: the dev applications, whose administrators and
+  managers are the members of the realm's `hururaa.admins` and `hururaa.<prefix>.product-owners` groups.
+  A Keycloak volume created before administrators and managers moved to these groups lacks them: `docker compose
+  down -v` and redeploy. The demo users deliberately keep
   their public password, `secret` (in clear in the realm export, which the rendering leaves
   alone): anyone can sign in as any of them, Hurura'a administrators included. A deployment
   beyond the demo must replace them.
@@ -88,7 +90,7 @@ On the host, as `hururaa`, from `~/hururaa/deploy`:
 ```bash
 docker compose ps                   # health of every service
 docker compose logs -f gateway      # or hururaa-api, keycloak, caddy...
-docker compose down -v              # wipe everything (Keycloak users, applications, delegations, mails)
+docker compose down -v              # wipe everything (Keycloak users, applications, mails)
 ```
 
 At the end of the demo: `docker compose down -v`, then cancel the VPS.
@@ -115,14 +117,15 @@ not rolled back by this (the database schema and Keycloak keep what the newer ve
 The workflow installs [`backup.sh`](backup.sh) in the `hururaa` user's crontab, nightly at 03:15
 (host time). It writes to `~/backups/` and keeps 7 days:
 
-- `rest-api-db-<stamp>.dump`: the REST API database (applications, managers, direction
-  administrators), `pg_dump` custom format, taken hot;
+- `rest-api-db-<stamp>.dump`: the REST API database (applications, permission journal),
+  `pg_dump` custom format, taken hot;
 - `keycloak-h2-<stamp>.tgz`: Keycloak's embedded H2 files. H2 has no hot backup, so Keycloak is
   stopped for the few seconds the copy takes (the Spring apps fail their Keycloak calls meanwhile
-  and recover on their own). Users, groups, role mappings and provisioned clients are in there.
+  and recover on their own). Users, groups (Hurura'a's reserved ones included), role mappings and provisioned
+  clients are in there.
 
-The two must be restored together: the delegations of the database reference Keycloak user ids,
-the applications reference Keycloak clients. The backups stay on the host: copying them elsewhere
+The two must be restored together: the applications reference Keycloak clients and reserved
+groups, the journal Keycloak user ids. The backups stay on the host: copying them elsewhere
 is up to you.
 
 To restore, from `~/hururaa/deploy`:

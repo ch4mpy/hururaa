@@ -21,7 +21,6 @@ import static pf.hururaa.HururaaFixtures.user;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,16 +46,16 @@ import pf.hururaa.history.domain.PermissionChangeCategory;
 import pf.hururaa.history.domain.PermissionChangeType;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.direction.domain.Direction;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.ProblemType;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.uaa.DelegationService;
 
 /**
- * Level 1 of the delegation chain: Hurura'a administrators designate each direction's
- * administrators.
+ * Level 1 of the delegation chain: Hurura'a administrators (administrators of the DSI) create
+ * the directions and designate their administrators (members of their {@code hururaa.admins}
+ * group).
  */
 @WebMvcTest(controllers = DirectionController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
@@ -72,7 +71,7 @@ class DirectionControllerTest {
   ApplicationRepository applicationRepository;
 
   @MockitoBean
-  DirectionAdminRepository directionAdminRepository;
+  DelegationService delegationService;
 
   @MockitoBean
   DirectionService directionService;
@@ -85,7 +84,7 @@ class DirectionControllerTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
+    stubDevDelegations(directionService, applicationRepository);
   }
 
   @MockitoBean
@@ -137,10 +136,7 @@ class DirectionControllerTest {
   @Test
   @WithJwt("jwt/hururaa-admin.json")
   void givenHururaaAdmin_whenGetAdminsOfAnyDirection_thenOk() throws Exception {
-    when(directionAdminRepository.findByDirectionOrderByUserId(DPAM))
-        .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
-    when(directionService.findMember(DPAM, DPAM_ADMIN))
-        .thenReturn(Optional.of(user(DPAM_ADMIN, "dpam.admin")));
+    when(delegationService.findAdmins(DPAM)).thenReturn(List.of(user(DPAM_ADMIN, "dpam.admin")));
 
     api
         .get(DirectionController.ADMINS_PATH, DPAM)
@@ -150,37 +146,55 @@ class DirectionControllerTest {
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenGetAdminsOfAnotherDirection_thenForbidden() throws Exception {
+    api.get(DirectionController.ADMINS_PATH, DAF).andExpect(status().isForbidden());
+    verify(delegationService, never()).findAdmins(any());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenDesignateAnotherAdmin_thenForbidden() throws Exception {
 
     api
         .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_AGENT)
         .andExpect(status().isForbidden());
-    verify(directionAdminRepository, never()).save(any());
+    verify(delegationService, never()).addAdmin(any(), any());
   }
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenDesignateAdmin_thenSaved() throws Exception {
-    when(directionService.requireMember(DPAM, DPAM_AGENT))
-        .thenReturn(user(DPAM_AGENT, "dpam.agent"));
+  void givenHururaaAdmin_whenDesignateAdmin_thenAddedToAdminsGroupAndJournaled()
+      throws Exception {
+    when(delegationService.addAdmin(DPAM, DPAM_AGENT)).thenReturn(true);
 
     api
         .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_AGENT)
         .andExpect(status().isNoContent());
-    verify(directionAdminRepository).save(any(DirectionAdmin.class));
+    verify(permissionJournal).directionAdminGranted(DPAM, DPAM_AGENT);
+    verify(resourceEvents).publish(any());
   }
 
   @Test
   @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenRevokeAdmin_thenDeleted() throws Exception {
-    final var admin = DirectionAdmin.builder().direction(DSI).userId("someone").build();
-    when(directionAdminRepository.findByDirectionAndUserId(DSI, "someone"))
-        .thenReturn(Optional.of(admin));
+  void givenAdminAlready_whenDesignateAdmin_thenNothingJournaled() throws Exception {
+    when(delegationService.addAdmin(DPAM, DPAM_ADMIN)).thenReturn(false);
+
+    api
+        .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_ADMIN)
+        .andExpect(status().isNoContent());
+    verifyNoInteractions(permissionJournal, resourceEvents);
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenRevokeAdmin_thenRemovedFromAdminsGroupAndJournaled()
+      throws Exception {
+    when(delegationService.removeAdmin(DSI, "someone")).thenReturn(true);
 
     api
         .delete(DirectionController.ADMIN_PATH, DSI, "someone")
         .andExpect(status().isNoContent());
-    verify(directionAdminRepository).delete(admin);
+    verify(permissionJournal).directionAdminRevoked(DSI, "someone");
   }
 
   @Test
@@ -206,7 +220,7 @@ class DirectionControllerTest {
         .thenReturn(new PageImpl<>(List.of(new PermissionChange(
             Instant.parse("2026-10-01T08:00:00Z"), user(HURURAA_ADMIN, "hururaa.admin"),
             PermissionChangeType.DIRECTION_ADMIN_GRANTED, user(DPAM_ADMIN, "dpam.admin"), null,
-            null, null, null, null, null)), PageRequest.of(1, 5), 6));
+            null, null, null, null)), PageRequest.of(1, 5), 6));
 
     api
         .get(DirectionController.HISTORY_PATH
@@ -248,6 +262,7 @@ class DirectionControllerTest {
             DirectionController.BASE_PATH)
         .andExpect(status().isCreated())
         .andExpect(header().string("Location", endsWith("/directions/dsp")));
+    verify(delegationService).provisionDirection("dsp");
     verify(permissionJournal).directionCreated("dsp");
   }
 

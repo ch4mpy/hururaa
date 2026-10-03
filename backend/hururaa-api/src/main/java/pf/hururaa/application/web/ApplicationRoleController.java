@@ -1,6 +1,7 @@
 package pf.hururaa.application.web;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,7 @@ import pf.hururaa.direction.web.DirectionController;
 import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.problem.ProblemType;
 import pf.hururaa.uaa.HururaaPermission;
 
 @Tag(name = "Application Roles")
@@ -65,9 +67,9 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by {@code
+   * direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -76,9 +78,8 @@ public class ApplicationRoleController {
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public List<ApplicationRoleResponse> getApplicationRoles(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -98,9 +99,9 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by {@code
+   * direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -110,9 +111,8 @@ public class ApplicationRoleController {
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public ResponseEntity<Void> createApplicationRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -120,6 +120,7 @@ public class ApplicationRoleController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @RequestBody @Valid ApplicationRoleRequest request,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(request.name());
     if (clientRoleService.save(keycloakProperties.apiClientId(application.getClientPrefix()),
         request.name(), request.description())) {
       permissionJournal.applicationRoleCreated(application, request.name());
@@ -142,9 +143,9 @@ public class ApplicationRoleController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by {@code
+   * direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -154,9 +155,8 @@ public class ApplicationRoleController {
   @DeleteMapping(path = ROLE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public void deleteApplicationRole(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -164,6 +164,7 @@ public class ApplicationRoleController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
+    requireNotReserved(role);
     if (clientRoleService.delete(keycloakProperties.apiClientId(application.getClientPrefix()),
         role)) {
       permissionJournal.applicationRoleDeleted(application, role);
@@ -172,5 +173,16 @@ public class ApplicationRoleController {
         application.getClientPrefix());
     resourceEvents.publish(ApplicationController.eventFor(application, application.getDirection(),
         EventType.UPDATE));
+  }
+
+  /**
+   * Hurura'a's own roles ({@code hururaa.direction.admin}, {@code hururaa.application.*.manage})
+   * are created and deleted along with the directions and applications, never through this API.
+   */
+  private static void requireNotReserved(String role) throws HururaaProblemException {
+    if (HururaaPermission.isReserved(role)) {
+      throw new HururaaProblemException(ProblemType.RESERVED_NAME,
+          "Role %s is reserved to Hurura'a's delegations".formatted(role), Map.of("name", role));
+    }
   }
 }

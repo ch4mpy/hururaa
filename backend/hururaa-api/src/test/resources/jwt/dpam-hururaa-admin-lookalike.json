@@ -5,10 +5,10 @@
     "dpam": {
       "resource_access": {
         "hururaa-api": {
-          "roles": ["hururaa.admin"]
+          "roles": ["hururaa.application.te-fenua.manage"]
         }
       },
-      "groups": ["/hururaa.admin"]
+      "groups": ["/hururaa.te-fenua.product-owners"]
     }
   }
 }

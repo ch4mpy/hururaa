@@ -12,12 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pf.hururaa.HururaaFixtures.DPAM;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
+import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
 import static pf.hururaa.HururaaFixtures.escales;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,14 +44,14 @@ import pf.hururaa.history.PermissionHistoryService;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.direction.domain.Group;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.problem.ProblemType;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 
 /**
  * Groups belong to an application of their direction: the direction's administrators manage all of
- * them, an application's managers manage those of their application only.
+ * them, an application's managers manage those of their application only. The delegation groups
+ * ({@code hururaa.*}) are neither listed nor changed through this API.
  */
 @WebMvcTest(controllers = GroupController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
@@ -69,6 +69,12 @@ class GroupControllerTest {
   /** A group created outside of Hurura'a, whose name matches no application of dpam. */
   private static final String LEGACY_GROUP = "legacy-agents";
 
+  /** The delegation group of dpam's administrators. */
+  private static final String ADMINS_GROUP = "hururaa.admins";
+
+  /** The delegation group of Escales' managers. */
+  private static final String PRODUCT_OWNERS_GROUP = "hururaa.escales.product-owners";
+
   private static final long PGC_ID = 7L;
 
   /** A second application of dpam, which dpam.manager does not manage. */
@@ -79,7 +85,6 @@ class GroupControllerTest {
         .clientPrefix("pgc")
         .name("PGC")
         .direction(DPAM)
-        .managers(new HashSet<>(Set.of("someone-else")))
         .build();
   }
 
@@ -88,9 +93,6 @@ class GroupControllerTest {
 
   @MockitoBean
   ApplicationRepository applicationRepository;
-
-  @MockitoBean
-  DirectionAdminRepository directionAdminRepository;
 
   @MockitoBean
   GroupService groupService;
@@ -109,17 +111,20 @@ class GroupControllerTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    stubDevDelegations(directionService, directionAdminRepository, applicationRepository);
+    stubDevDelegations(directionService, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
     when(applicationRepository.findById(TE_FENUA_ID)).thenReturn(Optional.of(teFenua()));
     when(applicationRepository.findById(PGC_ID)).thenReturn(Optional.of(pgc()));
     when(applicationRepository.findByDirectionOrderByNameAsc(DPAM))
         .thenReturn(List.of(escales(), pgc()));
-    for (final var name : List.of(GROUP, PGC_GROUP, LEGACY_GROUP)) {
+    for (final var name : List.of(GROUP, PGC_GROUP, LEGACY_GROUP, ADMINS_GROUP,
+        PRODUCT_OWNERS_GROUP)) {
       when(groupService.findByName(DPAM, name))
           .thenReturn(Optional.of(new Group("id-" + name, DPAM, name)));
     }
     when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("id-" + GROUP, DPAM, GROUP),
+        new Group("id-" + ADMINS_GROUP, DPAM, ADMINS_GROUP),
+        new Group("id-" + PRODUCT_OWNERS_GROUP, DPAM, PRODUCT_OWNERS_GROUP),
         new Group("id-" + LEGACY_GROUP, DPAM, LEGACY_GROUP),
         new Group("id-" + PGC_GROUP, DPAM, PGC_GROUP)));
   }
@@ -394,6 +399,15 @@ class GroupControllerTest {
 
   @Test
   @WithJwt("jwt/dsi-admin.json")
+  void givenDsiAdmin_whenAddMemberToAnyGroup_thenNoContent() throws Exception {
+    // the DSI's administrators are the Hurura'a administrators
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verify(groupService).addMember(DPAM, GROUP, DPAM_AGENT);
+  }
+
+  @Test
+  @WithJwt("jwt/daf-admin.json")
   void givenAdminOfAnotherDirection_whenAddMember_thenForbidden() throws Exception {
     api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, GROUP, DPAM_AGENT)
         .andExpect(status().isForbidden());
@@ -421,6 +435,40 @@ class GroupControllerTest {
   }
 
   // ---------- history ----------
+
+  // ---------- delegation groups ----------
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDirectionAdmin_whenAddMemberToAdminsGroup_thenReservedName() throws Exception {
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, ADMINS_GROUP, DPAM_AGENT)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    verify(groupService, never()).addMember(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenChangeDelegationGroup_thenReservedName() throws Exception {
+    api.put(Map.of(), GroupController.ROLE_PATH, DPAM, PRODUCT_OWNERS_GROUP,
+        "escales.stopovers.read").andExpect(status().isConflict());
+    api.delete(GroupController.ROLE_PATH, DPAM, ADMINS_GROUP, "hururaa.direction.admin")
+        .andExpect(status().isConflict());
+    api.delete(GroupController.MEMBER_PATH, DPAM, PRODUCT_OWNERS_GROUP, DPAM_MANAGER)
+        .andExpect(status().isConflict());
+    api.delete(GroupController.GROUP_PATH, DPAM, ADMINS_GROUP).andExpect(status().isConflict());
+    verify(groupService, never()).delete(anyString(), anyString());
+    verify(groupService, never()).removeMember(anyString(), anyString(), anyString());
+    verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenManagerOfAnApplication_whenChangeItsProductOwners_thenForbidden() throws Exception {
+    // managers designate their co-managers as such, not through the groups API
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, PRODUCT_OWNERS_GROUP, DPAM_AGENT)
+        .andExpect(status().isForbidden());
+  }
 
   @Test
   @WithJwt("jwt/dpam-agent.json")

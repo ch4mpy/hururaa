@@ -13,8 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.application.web.ApplicationMapper;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.uaa.HururaaPermission;
 import pf.hururaa.uaa.UaaProperties;
 
@@ -29,16 +27,15 @@ public class DelegationController {
 
   private final UaaProperties uaaProperties;
 
-  private final DirectionAdminRepository directionAdminRepository;
-
   private final ApplicationRepository applicationRepository;
 
   private final ApplicationMapper applicationMapper;
 
   /**
-   * What the current user may do in Hurura'a, level by level of the delegation chain: Hurura'a
-   * roles held in the DSI (from the token), administered directions and managed applications (from
-   * the database). This is what the frontend adapts its menus and actions to.
+   * What the current user may do in Hurura'a, level by level of the delegation chain, as read from
+   * their token (Hurura'a roles held in each direction): this is what the frontend adapts its menus
+   * and actions to. A delegation granted or revoked since the token was issued shows once it is
+   * renewed.
    *
    * <h4>Access control</h4>
    * <p>
@@ -60,14 +57,11 @@ public class DelegationController {
             .sorted()
             .toList(),
         uaaProperties.getPlatformOrganization(),
-        directionAdminRepository
-            .findByUserIdOrderByDirection(authentication.getName())
-            .stream()
-            .map(DirectionAdmin::getDirection)
-            .toList(),
+        HururaaPermission.administeredDirections(authentication).stream().sorted().toList(),
         applicationRepository
-            .findByManager(authentication.getName())
+            .findAllByOrderByNameAsc()
             .stream()
+            .filter(application -> application.isManagedBy(authentication))
             .map(applicationMapper::toApplicationResponse)
             .toList());
   }

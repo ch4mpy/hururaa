@@ -1,7 +1,5 @@
 package pf.hururaa.direction.web;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,8 +33,6 @@ import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.direction.domain.DelegatedDirection;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
@@ -48,6 +44,8 @@ import pf.hururaa.history.domain.PermissionChangeCategory;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.uaa.DelegationGroups;
+import pf.hururaa.uaa.DelegationService;
 import pf.hururaa.uaa.HururaaPermission;
 import pf.hururaa.uaa.UaaProperties;
 
@@ -76,7 +74,7 @@ public class DirectionController {
 
   private final GroupService groupService;
 
-  private final DirectionAdminRepository directionAdminRepository;
+  private final DelegationService delegationService;
 
   private final ApplicationRepository applicationRepository;
 
@@ -110,11 +108,13 @@ public class DirectionController {
   }
 
   /**
-   * Creates a direction: a Keycloak organization, enabled, without domain.
+   * Creates a direction: a Keycloak organization, enabled, without domain, with its
+   * {@value DelegationGroups#ADMINS} group (granting {@code hururaa.direction.admin}) and no
+   * administrator yet.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}).
+   * Requires the user to be a Hurura'a administrator.
    * </p>
    *
    * @param request the direction to create
@@ -122,12 +122,13 @@ public class DirectionController {
    */
   @PostMapping(path = BASE_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMIN + "')")
   public ResponseEntity<Void> createDirection(
       @RequestBody @Valid DirectionCreationRequest request,
       Authentication authentication) throws HururaaProblemException {
     final var direction =
         directionService.create(request.alias(), request.name(), request.description());
+    delegationService.provisionDirection(direction.alias());
     permissionJournal.directionCreated(direction.alias());
     log.info("{} created direction {}", authentication.getName(), direction.alias());
     // the Hurura'a administrators, members of the DSI, are the ones listing every direction
@@ -165,44 +166,38 @@ public class DirectionController {
   }
 
   /**
-   * Lists the administrators of a direction: the members designated to decide who manages each of
-   * its applications.
+   * Lists the administrators of a direction: the members of its {@value DelegationGroups#ADMINS}
+   * group, who decide who manages each of its applications.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
-   * @return the direction's administrators, by username (one who has left the direction is listed
-   *         with their id as username)
+   * @return the direction's administrators, by username
    */
   @GetMapping(path = ADMINS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#direction.hasDelegate(authentication)")
   public List<UserResponse> getDirectionAdmins(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
       throws HururaaProblemException {
-    final var admins = new ArrayList<UserResponse>();
-    for (final var admin : directionAdminRepository
-        .findByDirectionOrderByUserId(direction.alias())) {
-      final var member = directionService.findMember(direction.alias(), admin.getUserId());
-      admins.add(member.isPresent() ? directoryMapper.toUserResponse(member.get())
-          : new UserResponse(admin.getUserId(), admin.getUserId(), null, null, null));
-    }
-    admins.sort(Comparator.comparing(UserResponse::username));
-    return admins;
+    return delegationService
+        .findAdmins(direction.alias())
+        .stream()
+        .map(directoryMapper::toUserResponse)
+        .toList();
   }
 
   /**
-   * Designates a member of a direction as one of its administrators. Idempotent.
+   * Designates a member of a direction as one of its administrators (adds them to its
+   * {@value DelegationGroups#ADMINS} group): effective when their token is renewed. Idempotent.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}).
+   * Requires the user to be a Hurura'a administrator.
    * </p>
    *
    * @param direction the direction's alias
@@ -211,15 +206,13 @@ public class DirectionController {
   @PutMapping(path = ADMIN_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMIN + "')")
   public void addDirectionAdmin(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    directionService.requireMember(direction.alias(), userId);
-    if (!directionAdminRepository.existsByDirectionAndUserId(direction.alias(), userId)) {
-      directionAdminRepository
-          .save(DirectionAdmin.builder().direction(direction.alias()).userId(userId).build());
+    if (delegationService.addAdmin(direction.alias(), userId)) {
+      permissionJournal.directionAdminGranted(direction.alias(), userId);
       log.info("{} designated {} as administrator of {}", authentication.getName(), userId,
           direction.alias());
       resourceEvents.publish(DirectionEvents.of(direction.alias(), DirectionEvents.DIRECTION,
@@ -228,27 +221,27 @@ public class DirectionController {
   }
 
   /**
-   * Revokes an administrator of a direction. Idempotent.
+   * Revokes an administrator of a direction (removes them from its
+   * {@value DelegationGroups#ADMINS} group): effective when their token is renewed. Idempotent.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}).
+   * Requires the user to be a Hurura'a administrator.
    * </p>
    *
    * @param direction the direction's alias
    * @param userId the revoked administrator's id
    */
   @DeleteMapping(path = ADMIN_PATH)
-  @Transactional
+  @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')")
+  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMIN + "')")
   public void removeDirectionAdmin(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
-      Authentication authentication) {
-    final var admin = directionAdminRepository.findByDirectionAndUserId(direction.alias(), userId);
-    if (admin.isPresent()) {
-      directionAdminRepository.delete(admin.get());
+      Authentication authentication) throws HururaaProblemException {
+    if (delegationService.removeAdmin(direction.alias(), userId)) {
+      permissionJournal.directionAdminRevoked(direction.alias(), userId);
       log.info("{} revoked {} as administrator of {}", authentication.getName(), userId,
           direction.alias());
       resourceEvents.publish(DirectionEvents.of(direction.alias(), DirectionEvents.DIRECTION,
@@ -266,9 +259,8 @@ public class DirectionController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -279,8 +271,7 @@ public class DirectionController {
    */
   @GetMapping(path = USERS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#direction.hasDelegate(authentication)")
   public PagedModel<UserResponse> getDirectionUsers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestParam(required = false, defaultValue = "") String search,
@@ -291,13 +282,13 @@ public class DirectionController {
   }
 
   /**
-   * Lists the groups of a direction a member belongs to.
+   * Lists the groups of a direction a member belongs to, but the
+   * {@link DelegationGroups delegation groups} (their delegations are listed apart).
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -306,8 +297,7 @@ public class DirectionController {
    */
   @GetMapping(path = USER_GROUPS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#direction.hasDelegate(authentication)")
   public List<GroupResponse> getDirectionUserGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId) throws HururaaProblemException {
@@ -315,6 +305,7 @@ public class DirectionController {
     return groupService
         .findByMember(direction.alias(), userId)
         .stream()
+        .filter(group -> !DelegationGroups.isReserved(group.name()))
         .map(group -> directoryMapper.toGroupResponse(group,
             Application.owningGroup(applications, group.name()).orElse(null)))
         .toList();
@@ -323,14 +314,13 @@ public class DirectionController {
   /**
    * Lists who changed what permissions in a direction, and when, newest first: directions
    * created, delegations (administrators and application managers), applications registered,
-   * renamed, moved or unregistered, application roles, groups, the roles they grant and their
+   * renamed or unregistered, application roles, groups, the roles they grant and their
    * members. Changes made outside Hurura'a (in Keycloak's console) are not known.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the direction: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of the direction, or manager of one of its
-   * applications.
+   * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
+   * direction, or manager of one of its applications.
    * </p>
    *
    * @param direction the direction's alias
@@ -342,8 +332,7 @@ public class DirectionController {
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.hasDelegate(authentication.name)")
+  @PreAuthorize("#direction.hasDelegate(authentication)")
   public PagedModel<PermissionChangeResponse> getDirectionHistory(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestParam(name = CATEGORIES_PARAM, required = false)

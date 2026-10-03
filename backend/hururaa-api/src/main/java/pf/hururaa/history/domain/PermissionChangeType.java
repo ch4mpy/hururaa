@@ -17,10 +17,6 @@ public enum PermissionChangeType {
 
   APPLICATION_REGISTERED(PermissionChangeCategory.APPLICATION),
   APPLICATION_RENAMED(PermissionChangeCategory.APPLICATION),
-  /** Moved to this direction from another one (in {@code otherDirection}). */
-  APPLICATION_MOVED_IN(PermissionChangeCategory.APPLICATION),
-  /** Moved from this direction to another one (in {@code otherDirection}). */
-  APPLICATION_MOVED_OUT(PermissionChangeCategory.APPLICATION),
   APPLICATION_UNREGISTERED(PermissionChangeCategory.APPLICATION),
 
   APPLICATION_ROLE_CREATED(PermissionChangeCategory.APPLICATION_ROLE),

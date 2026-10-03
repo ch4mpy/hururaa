@@ -4,9 +4,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pf.hururaa.HururaaFixtures.DPAM;
-import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
-import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.teFenua;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +20,6 @@ import com.c4_soft.springaddons.security.oauth2.test.webmvc.MockMvcSupport;
 import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.application.web.ApplicationMapperImpl;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.uaa.HururaaPermission;
@@ -40,9 +37,6 @@ class DelegationControllerTest {
   ApplicationRepository applicationRepository;
 
   @MockitoBean
-  DirectionAdminRepository directionAdminRepository;
-
-  @MockitoBean
   GroupService groupService;
 
   @MockitoBean
@@ -57,45 +51,54 @@ class DelegationControllerTest {
   @Test
   @WithJwt("jwt/hururaa-admin.json")
   void givenHururaaAdmin_whenGetDelegations_thenHururaaRoles() throws Exception {
+    when(applicationRepository.findAllByOrderByNameAsc()).thenReturn(List.of(escales(), teFenua()));
+
     api
         .get(DelegationController.BASE_PATH)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.platformOrganization").value("dsi"))
         .andExpect(jsonPath("$.hururaaRoles.length()").value(1))
-        .andExpect(jsonPath("$.hururaaRoles[0]").value(HururaaPermission.Names.ADMIN))
-        .andExpect(jsonPath("$.administeredDirections").isEmpty());
+        .andExpect(jsonPath("$.hururaaRoles[0]").value(HururaaPermission.Names.DIRECTION_ADMIN))
+        .andExpect(jsonPath("$.administeredDirections.length()").value(1))
+        .andExpect(jsonPath("$.administeredDirections[0]").value("dsi"))
+        .andExpect(jsonPath("$.managedApplications").isEmpty());
   }
 
   @Test
   @WithJwt("jwt/dpam-hururaa-admin-lookalike.json")
-  void givenHururaaRolesOutsideTheDsi_whenGetDelegations_thenNone()
+  void givenManagerRoleOutsideTheApplicationDirection_whenGetDelegations_thenNone()
       throws Exception {
+    when(applicationRepository.findAllByOrderByNameAsc()).thenReturn(List.of(escales(), teFenua()));
+
     api
         .get(DelegationController.BASE_PATH)
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.hururaaRoles").isEmpty());
+        .andExpect(jsonPath("$.hururaaRoles").isEmpty())
+        .andExpect(jsonPath("$.administeredDirections").isEmpty())
+        .andExpect(jsonPath("$.managedApplications").isEmpty());
   }
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
   void givenDirectionAdmin_whenGetDelegations_thenAdministeredDirections() throws Exception {
-    when(directionAdminRepository.findByUserIdOrderByDirection(DPAM_ADMIN))
-        .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
-
     api
         .get(DelegationController.BASE_PATH)
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hururaaRoles").isEmpty())
+        .andExpect(jsonPath("$.administeredDirections.length()").value(1))
         .andExpect(jsonPath("$.administeredDirections[0]").value(DPAM));
   }
 
   @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenGetDelegations_thenManagedApplications() throws Exception {
-    when(applicationRepository.findByManager(DPAM_MANAGER)).thenReturn(List.of(escales()));
+    when(applicationRepository.findAllByOrderByNameAsc()).thenReturn(List.of(escales(), teFenua()));
 
     api
         .get(DelegationController.BASE_PATH)
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.administeredDirections").isEmpty())
+        .andExpect(jsonPath("$.managedApplications.length()").value(1))
         .andExpect(jsonPath("$.managedApplications[0].clientPrefix").value("escales"));
   }
 }

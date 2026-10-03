@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
-import { PfPageComponent } from 'pf-ui';
+import { PfPageComponent, PfTagComponent } from 'pf-ui';
 import { AccordionModule } from 'primeng/accordion';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { DEV_DIRECTIONS, DEV_USERS, DevDirection, devDelegationOf } from './home-dev-data';
+import { DEV_DIRECTIONS, DEV_USERS } from './home-dev-data';
 
 /** A component of the dev environment, as listed on the home page. */
 interface DevLink {
@@ -24,7 +23,7 @@ interface DevLink {
  */
 @Component({
   selector: 'app-home',
-  imports: [PfPageComponent, AccordionModule, CardModule, TableModule, TagModule],
+  imports: [PfPageComponent, PfTagComponent, AccordionModule, CardModule, TableModule],
   styles: `
     dt {
       font-weight: 600;
@@ -49,9 +48,8 @@ interface DevLink {
           <p-accordion-content>
             <p class="mt-0" i18n="@@home.business.intro">
               Les directions de l'administration polynésienne exploitent chacune leurs applications.
-              Hurura'a est un PoC d'identification des utilisateurs de toutes ces applications et
-              permet à chaque direction de gérer elle-même qui peut y faire quoi, sans passer par
-              les administrateurs du serveur d'identité.
+              Hurura'a montre comment chaque direction pourrait gérer elle-même qui peut faire quoi
+              avec ses applications, sans passer par les administrateurs Keycloak de la DSI.
             </p>
 
             <h3 i18n="@@home.vocabulary">Vocabulaire</h3>
@@ -68,7 +66,7 @@ interface DevLink {
               </dd>
               <dt i18n="@@home.vocabulary.role.term">Rôle</dt>
               <dd i18n="@@home.vocabulary.role">
-                Une permission définie par une application (consulter les escales, instruire un
+                Un droit défini par une application (consulter les escales, instruire un
                 dossier...), que l'application vérifie à chaque action de l'utilisateur.
               </dd>
               <dt i18n="@@home.vocabulary.group.term">Groupe</dt>
@@ -87,10 +85,9 @@ interface DevLink {
                     <i class="ri-government-line mr-2" aria-hidden="true"></i>
                     <span i18n="@@home.level.hururaaAdmins.title">1. Administrateurs Hurura'a</span>
                   </ng-template>
-                  <p class="m-0" i18n="@@home.level.hururaaAdmin">
-                    Le groupe hururaa.admin de la DSI, qui exploite Hurura'a, agit à tous les
-                    niveaux. Lui seul désigne les administrateurs des directions et change une
-                    application de direction.
+                  <p class="m-0" i18n="@@home.level.hururaaAdmin.directions">
+                    Les administrateurs de la DSI, qui exploite Hurura'a, agissent à tous les
+                    niveaux. Eux seuls créent les directions et désignent leurs administrateurs.
                   </p>
                 </p-card>
               </div>
@@ -125,21 +122,19 @@ interface DevLink {
             <h3 i18n="@@home.rules">Les règles</h3>
             <ul>
               <li i18n="@@home.rules.groupApplication">
-                Un groupe appartient à une application, dont son nom porte le préfixe, et n'attribue
-                que ses rôles.
+                Un groupe est préfixé par le nom d'une application et n'attribue que ses rôles.
               </li>
               <li i18n="@@home.rules.groupManagers">
                 Les rôles et les membres d'un groupe sont gérés par les gestionnaires de son
                 application et par les administrateurs de sa direction.
               </li>
-              <li i18n="@@home.rules.moveWithoutGroups">
-                Une application ne change de direction qu'une fois ses groupes supprimés ; ses
-                gestionnaires perdent alors leur délégation.
+              <li i18n="@@home.rules.reserved">
+                Les groupes et les rôles dont le nom commence par « hururaa. » sont réservés : seul
+                Hurura'a les crée, les modifie ou les supprime.
               </li>
-              <li i18n="@@home.rules.immediate">
-                Une délégation (administrateur, gestionnaire) prend effet immédiatement. Un rôle
-                obtenu en rejoignant un groupe prend effet quand l'application renouvelle le jeton
-                de l'utilisateur.
+              <li i18n="@@home.rules.tokenRenewal">
+                Un rôle, y compris ceux de Hurura'a, prend effet quand le jeton de l'utilisateur
+                est renouvelé (au plus tard à l'expiration de son jeton d'accès).
               </li>
             </ul>
           </p-accordion-content>
@@ -154,83 +149,13 @@ interface DevLink {
               jeu de données. Tous les utilisateurs ont le mot de passe « secret ».
             </p>
 
-            <h3 i18n="@@home.data.applications">Applications par direction</h3>
-            <p-table [value]="applications">
-              <ng-template #header>
-                <tr>
-                  <th i18n="@@home.data.direction">Direction</th>
-                  <th i18n="@@home.data.application">Application</th>
-                  <th i18n="@@home.data.clients">Clients Keycloak</th>
-                  <th i18n="@@home.data.managers">Gestionnaires</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-row>
-                <tr>
-                  <td>{{ row.direction.toUpperCase() }}</td>
-                  <td>{{ row.name }}</td>
-                  <td>
-                    <code>{{ row.clientPrefix + '-bff' }}</code
-                    >, <code>{{ row.clientPrefix + '-api' }}</code>
-                  </td>
-                  <td>{{ row.managers.join(', ') }}</td>
-                </tr>
-              </ng-template>
-            </p-table>
-
-            <h3 i18n="@@home.data.groups">Groupes par direction</h3>
-            <p-table [value]="directions">
-              <ng-template #header>
-                <tr>
-                  <th i18n="@@home.data.direction">Direction</th>
-                  <th i18n="@@home.data.admins">Administrateurs</th>
-                  <th i18n="@@home.data.groupList">Groupes</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-direction>
-                <tr>
-                  <td>{{ direction.alias.toUpperCase() }}</td>
-                  <td>{{ direction.admins.join(', ') }}</td>
-                  <td>{{ groupNames(direction).join(', ') }}</td>
-                </tr>
-              </ng-template>
-            </p-table>
-
-            <h3 i18n="@@home.data.permissions">Permissions par groupe</h3>
-            <p-table [value]="groupRoles">
-              <ng-template #header>
-                <tr>
-                  <th i18n="@@home.data.direction">Direction</th>
-                  <th i18n="@@home.data.group">Groupe</th>
-                  <th i18n="@@home.data.client">Client</th>
-                  <th i18n="@@home.data.roles">Rôles</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-row>
-                <tr>
-                  <td>{{ row.direction.toUpperCase() }}</td>
-                  <td>{{ row.group }}</td>
-                  <td>
-                    <code>{{ row.clientId }}</code>
-                  </td>
-                  <td>
-                    <div class="flex flex-wrap gap-1">
-                      @for (role of row.roles; track role) {
-                        <p-tag [value]="role" severity="secondary" />
-                      }
-                    </div>
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-
-            <h3 i18n="@@home.data.users">Groupes par utilisateur</h3>
             <p-table [value]="users">
               <ng-template #header>
                 <tr>
                   <th i18n="@@home.data.user">Utilisateur</th>
                   <th i18n="@@home.data.direction">Direction</th>
                   <th i18n="@@home.data.groupList">Groupes</th>
-                  <th i18n="@@home.data.delegation">Délégation</th>
+                  <th i18n="@@home.data.userRoles">Rôles</th>
                 </tr>
               </ng-template>
               <ng-template #body let-user>
@@ -239,8 +164,20 @@ interface DevLink {
                     <code>{{ user.username }}</code>
                   </td>
                   <td>{{ user.direction.toUpperCase() }}</td>
-                  <td>{{ user.groups.join(', ') }}</td>
-                  <td>{{ delegationLabel(user.username) }}</td>
+                  <td>
+                    <div class="flex flex-wrap gap-1">
+                      @for (group of user.groups; track group) {
+                        <pf-tag [value]="group" severity="info" />
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex flex-wrap gap-1">
+                      @for (role of user.roles; track role) {
+                        <pf-tag [value]="role" severity="success" />
+                      }
+                    </div>
+                  </td>
                 </tr>
               </ng-template>
             </p-table>
@@ -332,12 +269,13 @@ interface DevLink {
                     </li>
                     <li i18n="@@home.solution.backend.api">
                       API REST Hurura'a (Spring Boot 4, Java 26) : pilote l'Admin API de Keycloak
-                      avec un client généré depuis sa spec OpenAPI, et applique les règles de
-                      délégation.
+                      avec un client généré depuis sa spec OpenAPI, et applique les règles de la
+                      chaîne de délégation.
                     </li>
                     <li i18n="@@home.solution.backend.data">
-                      PostgreSQL avec Liquibase et Hibernate Envers (historique des délégations)
-                      pour les applications et les délégations, que Keycloak ne sait pas porter.
+                      PostgreSQL avec Liquibase et Hibernate Envers pour les applications (leur
+                      direction, que Keycloak ne sait pas porter) et le journal des permissions
+                      modifiées par Hurura'a.
                     </li>
                     <li i18n="@@home.solution.backend.events">
                       Événements RabbitMQ relayés en Server-Sent Events par le BFF : les écrans se
@@ -407,23 +345,14 @@ export class Home {
    */
   protected openPanel = 'business';
 
-  protected readonly directions = DEV_DIRECTIONS;
-  protected readonly users = DEV_USERS;
-
-  protected readonly applications = DEV_DIRECTIONS.flatMap((d) =>
-    d.applications.map((a) => ({ ...a, direction: d.alias })),
-  );
-
-  protected readonly groupRoles = DEV_DIRECTIONS.flatMap((d) =>
-    d.groups.flatMap((g) =>
-      g.roles.map((r) => ({
-        direction: d.alias,
-        group: g.name,
-        clientId: r.clientId,
-        roles: r.roles,
-      })),
-    ),
-  );
+  /** The dev users, with the roles their groups grant them in their direction. */
+  protected readonly users = DEV_USERS.map((user) => {
+    const groups = DEV_DIRECTIONS.find((d) => d.alias === user.direction)?.groups ?? [];
+    const roles = groups
+      .filter((g) => user.groups.includes(g.name))
+      .flatMap((g) => g.roles.flatMap((r) => r.roles));
+    return { ...user, roles: [...new Set(roles)].sort() };
+  });
 
   /**
    * Where each component of the dev environment answers (see the README): on the same origin as
@@ -489,21 +418,4 @@ export class Home {
       note: $localize`:@@home.data.links.postgres.note:Pas d'interface web ; mot de passe dans le fichier .env`,
     },
   ];
-
-  protected groupNames(direction: DevDirection): string[] {
-    return direction.groups.map((g) => g.name);
-  }
-
-  protected delegationLabel(username: string): string {
-    switch (devDelegationOf(username)) {
-      case 'hururaa-admin':
-        return $localize`:@@home.data.delegation.hururaaAdmin:Administrateur Hurura'a`;
-      case 'admin':
-        return $localize`:@@home.data.delegation.admin:Administrateur de sa direction`;
-      case 'manager':
-        return $localize`:@@home.data.delegation.manager:Gestionnaire d'applications`;
-      default:
-        return '';
-    }
-  }
 }

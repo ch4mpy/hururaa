@@ -14,8 +14,9 @@ import lombok.Data;
 public class UaaProperties {
 
   /**
-   * Alias of the DSI, which runs Hurura'a: a direction like the others, and the only organization
-   * in which {@link HururaaPermission Hurura'a's own roles} take effect.
+   * Alias of the DSI, which runs Hurura'a: a direction like the others, whose administrators
+   * ({@link HururaaPermission#DIRECTION_ADMIN} held there) are the Hurura'a administrators, acting
+   * in every direction.
    */
   @NotBlank
   private final String platformOrganization;

@@ -1,7 +1,5 @@
 package pf.hururaa.application.web;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,17 +20,21 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.application.domain.Application;
-import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.direction.web.DirectionController;
 import pf.hururaa.direction.web.DirectoryMapper;
 import pf.hururaa.direction.web.UserResponse;
-import pf.hururaa.keycloak.DirectionService;
+import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.problem.HururaaProblemException;
-import pf.hururaa.uaa.HururaaPermission;
+import pf.hururaa.uaa.DelegationService;
 
+/**
+ * The managers of an application: the members of its {@code hururaa.<prefix>.product-owners} group,
+ * who hold {@code hururaa.application.<prefix>.manage} in the application's direction. A
+ * designation or a revocation takes effect when the delegate's token is renewed.
+ */
 @Tag(name = "Application Managers")
 @RestController
 @RequestMapping(
@@ -49,13 +51,13 @@ public class ApplicationManagerController {
       ApplicationController.DIRECTION_APPLICATION_PATH + "/managers";
   public static final String MANAGER_PATH = BASE_PATH + "/{" + USER_ID_PLACEHOLDER + "}";
 
-  private final ApplicationRepository applicationRepository;
-
-  private final DirectionService directionService;
+  private final DelegationService delegationService;
 
   private final DirectoryMapper directoryMapper;
 
   private final ResourceEventPublisher resourceEvents;
+
+  private final PermissionJournal permissionJournal;
 
   /**
    * Lists the managers of an application: the members of its direction allowed to define its
@@ -63,35 +65,30 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by
+   * {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
-   * @return the application's managers, by username (a manager who has left the direction is
-   *         listed with their id as username)
+   * @return the application's managers, by username
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public List<UserResponse> getApplicationManagers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application)
       throws HururaaProblemException {
-    final var managers = new ArrayList<UserResponse>();
-    for (final var userId : application.getManagers()) {
-      final var member = directionService.findMember(application.getDirection(), userId);
-      managers.add(member.isPresent() ? directoryMapper.toUserResponse(member.get())
-          : new UserResponse(userId, userId, null, null, null));
-    }
-    managers.sort(Comparator.comparing(UserResponse::username));
-    return managers;
+    return delegationService
+        .findManagers(application)
+        .stream()
+        .map(directoryMapper::toUserResponse)
+        .toList();
   }
 
   /**
@@ -99,9 +96,9 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by
+   * {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -111,9 +108,8 @@ public class ApplicationManagerController {
   @PutMapping(path = MANAGER_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public void addApplicationManager(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -121,9 +117,8 @@ public class ApplicationManagerController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    directionService.requireMember(application.getDirection(), userId);
-    if (application.getManagers().add(userId)) {
-      applicationRepository.save(application);
+    if (delegationService.addManager(application, userId)) {
+      permissionJournal.applicationManagerGranted(application, userId);
       log.info("{} designated {} as manager of {}", authentication.getName(), userId,
           application.getClientPrefix());
       resourceEvents.publish(ApplicationController.eventFor(application,
@@ -136,9 +131,9 @@ public class ApplicationManagerController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by
+   * {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -146,20 +141,19 @@ public class ApplicationManagerController {
    * @param userId the revoked manager's id
    */
   @DeleteMapping(path = MANAGER_PATH)
-  @Transactional
+  @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public void removeApplicationManager(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
-      Authentication authentication) {
-    if (application.getManagers().remove(userId)) {
-      applicationRepository.save(application);
+      Authentication authentication) throws HururaaProblemException {
+    if (delegationService.removeManager(application, userId)) {
+      permissionJournal.applicationManagerRevoked(application, userId);
       log.info("{} revoked {} as manager of {}", authentication.getName(), userId,
           application.getClientPrefix());
       resourceEvents.publish(ApplicationController.eventFor(application,

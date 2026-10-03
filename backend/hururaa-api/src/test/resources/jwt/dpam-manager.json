@@ -2,6 +2,13 @@
   "sub": "b70c1bf6-e94f-439a-8f5d-50df5542e19f",
   "preferred_username": "dpam.manager",
   "organization": {
-    "dpam": {}
+    "dpam": {
+      "resource_access": {
+        "hururaa-api": {
+          "roles": ["hururaa.application.escales.manage"]
+        }
+      },
+      "groups": ["/hururaa.escales.product-owners"]
+    }
   }
 }

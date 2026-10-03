@@ -33,6 +33,32 @@ public class PermissionJournal {
     save(event(direction, PermissionEventType.DIRECTION_CREATED));
   }
 
+  /**
+   * @param userId the administrator designated (made a member of the direction's
+   *        {@code hururaa.admins} group)
+   */
+  public void directionAdminGranted(String direction, String userId) {
+    save(event(direction, PermissionEventType.DIRECTION_ADMIN_GRANTED).userId(userId));
+  }
+
+  public void directionAdminRevoked(String direction, String userId) {
+    save(event(direction, PermissionEventType.DIRECTION_ADMIN_REVOKED).userId(userId));
+  }
+
+  /**
+   * @param userId the manager designated (made a member of the application's
+   *        {@code hururaa.<prefix>.product-owners} group)
+   */
+  public void applicationManagerGranted(Application application, String userId) {
+    save(applicationEvent(PermissionEventType.APPLICATION_MANAGER_GRANTED, application)
+        .userId(userId));
+  }
+
+  public void applicationManagerRevoked(Application application, String userId) {
+    save(applicationEvent(PermissionEventType.APPLICATION_MANAGER_REVOKED, application)
+        .userId(userId));
+  }
+
   public void applicationRoleCreated(Application application, String role) {
     save(roleEvent(application.getDirection(), PermissionEventType.APPLICATION_ROLE_CREATED,
         application, role));
@@ -90,6 +116,13 @@ public class PermissionJournal {
       String group, String userId) {
     save(groupEvent(direction, PermissionEventType.GROUP_MEMBER_REMOVED, application, group)
         .userId(userId));
+  }
+
+  private static PermissionEvent.PermissionEventBuilder applicationEvent(
+      PermissionEventType type, Application application) {
+    return event(application.getDirection(), type)
+        .applicationId(application.getId())
+        .applicationName(application.getName());
   }
 
   private static PermissionEvent.PermissionEventBuilder roleEvent(String direction,

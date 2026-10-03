@@ -1,8 +1,8 @@
 {
-  "sub": "e6ff96c5-0d55-4a1e-8716-8e0210551d1a",
-  "preferred_username": "dsi.admin",
+  "sub": "457e0156-d64e-4c0c-b3e2-ee2548400419",
+  "preferred_username": "daf.admin",
   "organization": {
-    "dsi": {
+    "daf": {
       "resource_access": {
         "hururaa-api": {
           "roles": ["hururaa.direction.admin"]

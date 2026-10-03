@@ -5,7 +5,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import java.util.Set;
 import java.net.URI;
 import java.util.List;
-import java.util.stream.Collectors;
+
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -46,8 +46,6 @@ import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.direction.domain.DelegatedDirection;
-import pf.hururaa.direction.domain.DirectionAdmin;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.direction.web.DirectionController;
 import pf.hururaa.uaa.HururaaPermission;
 
@@ -84,8 +82,6 @@ public class ApplicationController {
 
   private final ResourceEventPublisher resourceEvents;
 
-  private final DirectionAdminRepository directionAdminRepository;
-
   private final PermissionHistoryService permissionHistoryService;
 
   private final PermissionHistoryMapper permissionHistoryMapper;
@@ -100,7 +96,7 @@ public class ApplicationController {
    *
    * @param direction when set, only the applications managed by that direction are returned
    * @param manageable when {@code true}, only the applications the user has management rights on
-   *        are returned: all of them for a Hurura'a administrator ({@code hururaa.admin}), those of
+   *        are returned: all of them for a Hurura'a administrator, those of
    *        the directions they administer, and those they manage
    * @return the applications
    */
@@ -115,18 +111,14 @@ public class ApplicationController {
     final var applications = direction == null || direction.isBlank()
         ? applicationRepository.findAllByOrderByNameAsc()
         : applicationRepository.findByDirectionOrderByNameAsc(direction);
-    if (!manageable || hasAuthority(authentication, HururaaPermission.Names.ADMIN)) {
+    if (!manageable || hasAuthority(authentication, HururaaPermission.Names.DIRECTION_ADMIN)) {
       return applications.stream().map(applicationMapper::toApplicationResponse).toList();
     }
-    final var administeredDirections = directionAdminRepository
-        .findByUserIdOrderByDirection(authentication.getName())
-        .stream()
-        .map(DirectionAdmin::getDirection)
-        .collect(Collectors.toSet());
+    final var administeredDirections = HururaaPermission.administeredDirections(authentication);
     return applications
         .stream()
         .filter(application -> administeredDirections.contains(application.getDirection())
-            || application.isManagedBy(authentication.getName()))
+            || application.isManagedBy(authentication))
         .map(applicationMapper::toApplicationResponse)
         .toList();
   }
@@ -137,7 +129,7 @@ public class ApplicationController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), or an administrator
+   * Requires the user to be a Hurura'a administrator, or an administrator
    * of the direction.
    * </p>
    *
@@ -147,8 +139,7 @@ public class ApplicationController {
    */
   @PostMapping(path = DIRECTION_APPLICATIONS_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)")
+  @PreAuthorize("#direction.isAdministeredBy(authentication)")
   public ResponseEntity<Void> createApplication(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestBody @Valid ApplicationCreationRequest request,
@@ -182,41 +173,33 @@ public class ApplicationController {
   }
 
   /**
-   * Renames an application and sets the direction managing it. Moving it to another direction drops
-   * its managers, and is refused while it has groups in its current direction.
+   * Renames an application. Its direction never changes.
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), or an administrator
-   * of {@code direction} keeping the application in it (only Hurura'a administrators move
-   * applications). The application must be managed by {@code direction}.
+   * Requires the user to be a Hurura'a administrator, or an administrator
+   * of {@code direction}. The application must be managed by {@code direction}.
    * </p>
    *
    * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
-   * @param request the application's new name and direction
+   * @param request the application's new name
    */
   @PutMapping(path = DIRECTION_APPLICATION_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or (#direction.isAdministeredBy(authentication.name)"
-      + " and #request.direction == #direction.alias))"
+  @PreAuthorize("#direction.isAdministeredBy(authentication)"
       + " and #application.direction == #direction.alias")
   public void updateApplication(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @RequestBody @Valid ApplicationUpdateRequest request,
-      Authentication authentication) throws HururaaProblemException {
-    final var formerDirection = application.getDirection();
-    final var updated = applicationService.update(application, request.name(), request.direction());
-    log.info("{} updated application {} (direction {})", authentication.getName(),
-        updated.getClientPrefix(), updated.getDirection());
-    resourceEvents.publish(eventFor(updated, formerDirection, EventType.UPDATE));
-    if (!formerDirection.equals(updated.getDirection())) {
-      resourceEvents.publish(eventFor(updated, updated.getDirection(), EventType.UPDATE));
-    }
+      Authentication authentication) {
+    final var renamed = applicationService.rename(application, request.name());
+    log.info("{} renamed application {} to {}", authentication.getName(),
+        renamed.getClientPrefix(), renamed.getName());
+    resourceEvents.publish(eventFor(renamed, renamed.getDirection(), EventType.UPDATE));
   }
 
   /**
@@ -225,7 +208,7 @@ public class ApplicationController {
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to be a Hurura'a administrator ({@code hururaa.admin}), or an administrator
+   * Requires the user to be a Hurura'a administrator, or an administrator
    * of {@code direction}. The application must be managed by {@code direction}.
    * </p>
    *
@@ -235,8 +218,7 @@ public class ApplicationController {
   @DeleteMapping(path = DIRECTION_APPLICATION_PATH)
   @Transactional(rollbackFor = HururaaProblemException.class)
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name))"
+  @PreAuthorize("#direction.isAdministeredBy(authentication)"
       + " and #application.direction == #direction.alias")
   public void deleteApplication(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
@@ -251,14 +233,14 @@ public class ApplicationController {
 
   /**
    * Lists who changed what about an application, and when, newest first: its registration,
-   * renaming, moves and unregistration, its managers, its roles and its groups (their roles and
+   * renaming and unregistration, its managers, its roles and its groups (their roles and
    * members).
    *
    * <h4>Access control</h4>
    * <p>
-   * Requires the user to have a say on the application: Hurura'a administrator
-   * ({@code hururaa.admin}), administrator of its direction, or manager of the application. The
-   * application must be managed by {@code direction}.
+   * Requires the user to have a say on the application: Hurura'a administrator, administrator of
+   * its direction, or manager of the application. The application must be managed by {@code
+   * direction}.
    * </p>
    *
    * @param direction the direction managing the application
@@ -269,9 +251,8 @@ public class ApplicationController {
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("(hasAuthority('" + HururaaPermission.Names.ADMIN + "')"
-      + " or #direction.isAdministeredBy(authentication.name)"
-      + " or #application.isManagedBy(authentication.name))"
+  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
+      + " or #application.isManagedBy(authentication))"
       + " and #application.direction == #direction.alias")
   public PagedModel<PermissionChangeResponse> getApplicationHistory(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,

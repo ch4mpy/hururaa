@@ -8,9 +8,10 @@ import pf.hururaa.commons.events.ResourceEvent.EventType;
 
 /**
  * The {@link ResourceEvent}s Hurura'a publishes: always addressed to every member of the direction
- * concerned ({@link ResourceEvent#ALL_MEMBERS}), since who may read a direction's resources is
- * decided by delegations stored in Hurura'a's database, which the gateway knows nothing about. The
- * events carry no data: the frontend refetches with its own access rights.
+ * concerned ({@link ResourceEvent#ALL_MEMBERS}): who may read a direction's resources is decided
+ * by delegations (Hurura'a roles, the DSI's administrators reading every direction), which the
+ * gateway does not check. The events carry no data: the frontend refetches with its own access
+ * rights.
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */

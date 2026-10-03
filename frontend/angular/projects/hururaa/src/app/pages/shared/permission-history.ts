@@ -25,7 +25,7 @@ const Type = PermissionChangeResponseTypeEnum;
 
 const CATEGORY_LABELS: Record<Category, () => string> = {
   [Category.direction]: () => $localize`:@@history.category.direction:Directions`,
-  [Category.delegation]: () => $localize`:@@history.category.delegation:Délégations`,
+  [Category.delegation]: () => $localize`:@@history.category.delegation:Administrateurs et gestionnaires`,
   [Category.application]: () => $localize`:@@history.category.application:Applications`,
   [Category.applicationRole]: () =>
     $localize`:@@history.category.applicationRole:Rôles des applications`,
@@ -52,10 +52,6 @@ const DESCRIPTIONS: Record<
     $localize`:@@history.applicationRegistered:Application ${app(c)}:application: enregistrée`,
   [Type.applicationRenamed]: (c) =>
     $localize`:@@history.applicationRenamed:Application ${c.formerApplicationName ?? ''}:former: renommée ${app(c)}:application:`,
-  [Type.applicationMovedIn]: (c) =>
-    $localize`:@@history.applicationMovedIn:Application ${app(c)}:application: rattachée depuis la direction ${upper(c.otherDirection)}:direction:`,
-  [Type.applicationMovedOut]: (c) =>
-    $localize`:@@history.applicationMovedOut:Application ${app(c)}:application: rattachée à la direction ${upper(c.otherDirection)}:direction:`,
   [Type.applicationUnregistered]: (c) =>
     $localize`:@@history.applicationUnregistered:Application ${app(c)}:application: désenregistrée`,
   [Type.applicationRoleCreated]: (c) =>
@@ -78,10 +74,6 @@ const DESCRIPTIONS: Record<
 
 function app(change: PermissionChangeResponse): string {
   return change.applicationName ?? '';
-}
-
-function upper(direction?: string): string {
-  return (direction ?? '').toUpperCase();
 }
 
 /**

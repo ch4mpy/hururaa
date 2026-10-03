@@ -2,21 +2,16 @@ package pf.hururaa.application.domain;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import org.hibernate.envers.Audited;
 import org.jspecify.annotations.Nullable;
-import jakarta.persistence.CollectionTable;
+import org.springframework.security.core.Authentication;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -28,14 +23,18 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import pf.hururaa.uaa.HururaaPermission;
 
 /**
  * An application whose users are identified by Keycloak, and which is managed by a direction.
  *
  * <p>
  * Keycloak does not scope clients to an organization: which direction manages an application is
- * Hurura'a's own knowledge, and so is who, within that direction, may manage the application's
- * roles, groups and user assignments (its {@link #managers}).
+ * Hurura'a's own knowledge. Who, within that direction, may manage the application's roles, groups
+ * and user assignments is a delegation: the members of its {@code hururaa.<prefix>.product-owners}
+ * group, holding {@link HururaaPermission#applicationManager(String)
+ * hururaa.application.<prefix>.manage} in the application's direction (see
+ * {@link #isManagedBy(Authentication)}).
  * </p>
  *
  * <p>
@@ -101,27 +100,22 @@ public class Application implements Serializable {
   @ToString.Include
   private String name;
 
-  /** Alias of the Keycloak organization (direction) managing the application. */
-  @Column(name = "DIRECTION", nullable = false)
+  /**
+   * Alias of the Keycloak organization (direction) managing the application. Immutable: its
+   * groups, managers and history belong to that direction.
+   */
+  @Column(name = "DIRECTION", nullable = false, updatable = false)
   @ToString.Include
   private String direction;
 
   /**
-   * IDs (Keycloak {@code sub}) of the members of {@link #direction} allowed to manage the
-   * application's roles, the groups granting them and the members of those groups. Designated by
-   * the direction's administrators.
+   * Whether the user manages the application: holds its
+   * {@link HururaaPermission#applicationManager(String) manager role} in its direction (a
+   * delegation read from the token).
    */
-  @ElementCollection(fetch = FetchType.EAGER)
-  @CollectionTable(name = "APPLICATION_MANAGERS",
-      joinColumns = @JoinColumn(name = "APPLICATION_ID"),
-      indexes = @Index(name = "IDX_APPLICATION_MANAGERS_USER_ID", columnList = "USER_ID"))
-  @Column(name = "USER_ID", nullable = false)
-  @Builder.Default
-  private Set<String> managers = new HashSet<>();
-
-  /** Whether the user was designated manager of the application. */
-  public boolean isManagedBy(String userId) {
-    return managers.contains(userId);
+  public boolean isManagedBy(@Nullable Authentication authentication) {
+    return HururaaPermission.heldIn(authentication, direction)
+        .contains(HururaaPermission.applicationManager(clientPrefix));
   }
 
   /** The full name of the application's group named {@code name}: {@code escales.agent}. */

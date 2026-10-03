@@ -10,7 +10,7 @@ public enum PermissionChangeCategory {
   DIRECTION,
   /** Direction administrators and application managers designated or revoked. */
   DELEGATION,
-  /** Applications registered in a direction, renamed, moved between directions, unregistered. */
+  /** Applications registered in a direction, renamed, unregistered. */
   APPLICATION,
   /** Roles of an application defined or deleted. */
   APPLICATION_ROLE,

@@ -1,6 +1,6 @@
 # 0005. Délégations stockées par Hurura'a plutôt que dans les jetons
 
-Statut : proposée.
+Statut : abandonnée en exploration : administrateurs et gestionnaires sont devenus des rôles de `hururaa-api` portés par des groupes Keycloak (`hururaa.admins`, `hururaa.<préfixe>.product-owners`), lus dans les jetons (voir `pf.hururaa.uaa`).
 
 ## Contexte
 
@@ -27,7 +27,7 @@ application et par direction.
 2. Tout en base Hurura'a, y compris les administrateurs Hurura'a. Plus de rôle Hurura'a du tout :
    le premier administrateur Hurura'a doit être amorcé en base.
 3. Administrateurs Hurura'a en rôle Keycloak (`hururaa.admin`, porté par le groupe
-   `hururaa-admins` de la DSI, effectif uniquement dans la DSI, `uaa.platform-organization`),
+   `hururaa.admins` de la DSI, effectif uniquement dans la DSI, `uaa.platform-organization`),
    niveaux direction et application en base Hurura'a (tables `DIRECTION_ADMINS` et
    `APPLICATION_MANAGERS`, auditées par Envers).
 
@@ -36,7 +36,7 @@ application et par direction.
 Option 3, mise en œuvre dans le PoC. Les administrateurs Hurura'a se désignent avec Hurura'a
 lui-même : la DSI, qui exploite Hurura'a, en est aussi une direction comme les autres. Hurura'a est
 l'une de ses applications, dont les administrateurs et gestionnaires affectent les utilisateurs au
-groupe `hururaa-admins` qui porte son rôle `hururaa.admin`.
+groupe `hururaa.admins` qui porte son rôle `hururaa.admin`.
 
 ## Conséquences
 

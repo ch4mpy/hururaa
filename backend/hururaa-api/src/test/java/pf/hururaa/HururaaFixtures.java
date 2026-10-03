@@ -2,7 +2,6 @@ package pf.hururaa;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -14,9 +13,7 @@ import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.security.HururaaSecurityConfiguration;
 import pf.hururaa.direction.DelegationResolver;
 import pf.hururaa.direction.domain.Direction;
-import pf.hururaa.direction.domain.DirectionAdmin;
 import pf.hururaa.direction.domain.User;
-import pf.hururaa.direction.jpa.DirectionAdminRepository;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.security.HururaaAuthenticationConverter;
@@ -33,8 +30,7 @@ public final class HururaaFixtures {
   public static final String DAF = "daf";
 
   /**
-   * A Hurura'a administrator who administers no direction. Not a user of the dev realm, where
-   * {@code dsi.admin} is both: kept apart here so that tests tell the two delegations apart.
+   * Another administrator of the DSI, hence a Hurura'a administrator, not a user of the dev realm.
    */
   public static final String HURURAA_ADMIN = "d053cfc8-5a34-4fcb-9431-bb47617c18c6";
   public static final String DSI_ADMIN = "e6ff96c5-0d55-4a1e-8716-8e0210551d1a";
@@ -48,7 +44,7 @@ public final class HururaaFixtures {
 
   private HururaaFixtures() {}
 
-  /** Escales, managed by dpam.manager in dpam. */
+  /** Escales, in dpam (managed by dpam.manager, see {@code jwt/dpam-manager.json}). */
   public static Application escales() {
     return Application
         .builder()
@@ -56,11 +52,10 @@ public final class HururaaFixtures {
         .clientPrefix("escales")
         .name("Escales")
         .direction(DPAM)
-        .managers(new HashSet<>(Set.of(DPAM_MANAGER)))
         .build();
   }
 
-  /** Te Fenua, managed by dsi.manager in dsi. */
+  /** Te Fenua, in dsi (managed by dsi.manager, see {@code jwt/dsi-manager.json}). */
   public static Application teFenua() {
     return Application
         .builder()
@@ -68,28 +63,22 @@ public final class HururaaFixtures {
         .clientPrefix("te-fenua")
         .name("Te Fenua")
         .direction(DSI)
-        .managers(new HashSet<>(Set.of(DSI_MANAGER)))
         .build();
   }
 
   /**
    * Stubs what the path variable converters read, as in the dev data: {@value #DSI},
-   * {@value #DPAM} and {@value #DAF} exist in Keycloak (no other direction does), administered by
-   * {@link #DSI_ADMIN} and {@link #DPAM_ADMIN}, with {@link #teFenua()} in dsi and
-   * {@link #escales()} in dpam. A test stubbing one of these calls again overrides it.
+   * {@value #DPAM} and {@value #DAF} exist in Keycloak (no other direction does), with
+   * {@link #teFenua()} in dsi and {@link #escales()} in dpam. A test stubbing one of these calls
+   * again overrides it. The delegations themselves are in the tokens ({@code jwt/*.json}).
    */
   public static void stubDevDelegations(DirectionService directionService,
-      DirectionAdminRepository directionAdminRepository,
       ApplicationRepository applicationRepository) throws Exception {
     when(directionService.findByAlias(anyString())).thenAnswer(invocation -> {
       final String alias = invocation.getArgument(0);
       return Set.of(DSI, DPAM, DAF).contains(alias) ? Optional.of(new Direction(alias, alias, null))
           : Optional.empty();
     });
-    when(directionAdminRepository.findByDirectionOrderByUserId(DSI))
-        .thenReturn(List.of(DirectionAdmin.builder().direction(DSI).userId(DSI_ADMIN).build()));
-    when(directionAdminRepository.findByDirectionOrderByUserId(DPAM))
-        .thenReturn(List.of(DirectionAdmin.builder().direction(DPAM).userId(DPAM_ADMIN).build()));
     when(applicationRepository.findByDirectionOrderByNameAsc(DSI)).thenReturn(List.of(teFenua()));
     when(applicationRepository.findByDirectionOrderByNameAsc(DPAM)).thenReturn(List.of(escales()));
   }
