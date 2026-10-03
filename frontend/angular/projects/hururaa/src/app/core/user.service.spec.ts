@@ -38,13 +38,13 @@ describe('UserService', () => {
     http.expectOne('/gateway/me').flush({
       sub: 'u1',
       username: 'dpam.manager',
-      firstName: 'Heimana',
-      lastName: 'Teuira',
+      firstName: 'Ali',
+      lastName: 'Peau-Cryt',
       directions: ['dpam'],
     });
 
     expect(service.isAuthenticated()).toBe(true);
-    expect(service.displayName()).toBe('Heimana Teuira');
+    expect(service.displayName()).toBe('Ali Peau-Cryt');
     expect(service.directions()).toEqual(['dpam']);
   });
 

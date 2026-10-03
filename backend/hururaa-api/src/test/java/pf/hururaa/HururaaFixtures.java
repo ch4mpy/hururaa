@@ -84,7 +84,9 @@ public final class HururaaFixtures {
   }
 
   public static User user(String id, String username) {
-    return new User(id, username, null, null, username + "@gov.pf");
+    // a dev user's e-mail domain is that of their direction: dpam.admin@dpam.pf
+    return new User(id, username, null, null,
+        username + "@" + username.substring(0, username.indexOf(".") + 1) + "pf");
   }
 
   /**

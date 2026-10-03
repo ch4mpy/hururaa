@@ -36,7 +36,7 @@ final class HururaaJwtFixture {
     claims.put("preferred_username", "hururaa.admin");
     claims.put("given_name", "Hina");
     claims.put("family_name", "Teriierooiterai");
-    claims.put("email", "hururaa.admin@gov.pf");
+    claims.put("email", "hururaa.admin@dsi.pf");
     return claims;
   }
 

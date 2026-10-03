@@ -49,8 +49,8 @@ describe('PermissionHistory', () => {
           category: 'GROUP_ROLE',
           authorId: 'a',
           authorUsername: 'dpam.admin',
-          authorFirstName: 'Teva',
-          authorLastName: 'Tetuanui',
+          authorFirstName: 'Kelly',
+          authorLastName: "d'Yau",
           group: 'escales.agent',
           role: 'escales.stopovers.read',
           applicationName: 'Escales',
@@ -64,7 +64,7 @@ describe('PermissionHistory', () => {
     expect(text).toContain(
       'Le groupe escales.agent attribue le rôle escales.stopovers.read de Escales',
     );
-    expect(text).toContain('Teva Tetuanui');
+    expect(text).toContain("Kelly d'Yau");
   });
 
   it("asks an application's history, filtered by the chosen categories", async () => {
