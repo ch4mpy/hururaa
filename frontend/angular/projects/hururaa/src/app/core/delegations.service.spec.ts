@@ -56,11 +56,10 @@ describe('DelegationsService', () => {
     });
 
     expect(service.isAdmin()).toBe(true);
-    expect(service.registrationDirections()).toBeUndefined();
+    expect(service.directions()).toBeUndefined();
     expect(service.canReadDirection('dpam')).toBe(true);
     expect(service.canEditApplicationsOf('dpam')).toBe(true);
     expect(service.canManageApplication(escales)).toBe(true);
-    expect(service.canManageGroup({ direction: 'dpam', applicationId: 9 })).toBe(true);
     expect(service.hasAny()).toBe(true);
   });
 
@@ -75,13 +74,13 @@ describe('DelegationsService', () => {
     expect(service.isDirectionAdmin('daf')).toBe(true);
     expect(service.isDirectionAdmin('dpam')).toBe(false);
     expect(service.isApplicationManager(3)).toBe(true);
-    expect(service.isManagerInDirection('dpam')).toBe(true);
-    expect(service.isManagerInDirection('daf')).toBe(false);
+    expect(service.managedApplicationsIn('dpam')).toEqual([escales]);
+    expect(service.managedApplicationsIn('daf')).toEqual([]);
     expect(service.canReadDirection('daf')).toBe(true);
     expect(service.canReadDirection('dpam')).toBe(true);
     expect(service.canReadDirection('dsi')).toBe(false);
     expect(service.isAdmin()).toBe(false);
-    expect(service.registrationDirections()).toEqual(['daf']);
+    expect(service.directions()).toEqual(['daf', 'dpam']);
   });
 
   it("lets direction administrators manage their direction's applications only", () => {
@@ -95,9 +94,26 @@ describe('DelegationsService', () => {
     expect(service.canEditApplicationsOf('dpam')).toBe(true);
     expect(service.canManageApplication(escales)).toBe(true);
     expect(service.canEditApplicationsOf('daf')).toBe(false);
-    expect(service.canManageGroup({ direction: 'dpam', applicationId: 9 })).toBe(true);
-    expect(service.canManageGroup({ direction: 'dpam' })).toBe(true);
-    expect(service.canManageGroup({ direction: 'daf', applicationId: 9 })).toBe(false);
+  });
+
+  it("waits for the current user's delegations before answering the guards", () => {
+    let loaded: DelegationsResponse | undefined;
+    service.whenLoaded().subscribe((delegations) => (loaded = delegations));
+
+    http.expectOne('/gateway/me').flush({ sub: 'u1', directions: ['dpam'] });
+    TestBed.tick();
+    // the anonymous state the service starts with is not the user's
+    expect(loaded).toBeUndefined();
+
+    const mine = {
+      hururaaRoles: [],
+      platformOrganization: 'dsi',
+      administeredDirections: ['dpam'],
+      managedApplications: [],
+    };
+    http.expectOne('/api/me/delegations').flush(mine);
+    TestBed.tick();
+    expect(loaded).toEqual(mine);
   });
 
   it('lets managers manage the applications they manage, not edit them', () => {
@@ -110,9 +126,5 @@ describe('DelegationsService', () => {
 
     expect(service.canManageApplication(escales)).toBe(true);
     expect(service.canEditApplicationsOf('dpam')).toBe(false);
-    expect(service.canManageGroup({ direction: 'dpam', applicationId: 3 })).toBe(true);
-    // another application of the direction, or a group belonging to none
-    expect(service.canManageGroup({ direction: 'dpam', applicationId: 9 })).toBe(false);
-    expect(service.canManageGroup({ direction: 'dpam' })).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { DelegationsApi, DelegationsResponse } from '@api/hururaa-api';
-import { Observable, catchError, of, shareReplay, tap } from 'rxjs';
+import { Observable, catchError, filter, map, of, shareReplay, switchMap, take, tap } from 'rxjs';
 import { UserService } from './user.service';
 
 /** Hurura'a's own roles, as listed in `hururaaRoles` when held in the DSI (see the API's `HururaaPermission`). */
@@ -32,7 +33,10 @@ export class DelegationsService {
   private readonly user = inject(UserService);
 
   private readonly delegations = signal<DelegationsResponse>(NO_DELEGATION);
-  private loading$: Observable<DelegationsResponse> = of(NO_DELEGATION);
+
+  /** The user (`sub`, `''` when anonymous) the current delegations were fetched for. */
+  private readonly loadedFor = signal<string | undefined>(undefined);
+  private readonly loadedFor$ = toObservable(this.loadedFor);
 
   readonly current = this.delegations.asReadonly();
 
@@ -42,10 +46,19 @@ export class DelegationsService {
    */
   readonly isAdmin = computed(() => this.delegations().hururaaRoles.includes(HururaaRoles.ADMIN));
 
-  /** The directions the user may register applications in (`undefined`: all of them). */
-  readonly registrationDirections = computed(() =>
-    this.isAdmin() ? undefined : this.delegations().administeredDirections,
-  );
+  /**
+   * The aliases of the directions the user has a say on, which they administer or manage
+   * applications of (`undefined`: all of them, for a Hurura'a administrator).
+   */
+  readonly directions = computed(() => {
+    if (this.isAdmin()) {
+      return undefined;
+    }
+    const { administeredDirections, managedApplications } = this.delegations();
+    return [
+      ...new Set([...administeredDirections, ...managedApplications.map((a) => a.direction)]),
+    ];
+  });
 
   /** Whether the user holds any delegation at all (otherwise Hurura'a has nothing to offer). */
   readonly hasAny = computed(() => {
@@ -63,19 +76,45 @@ export class DelegationsService {
         this.refresh();
       } else {
         this.delegations.set(NO_DELEGATION);
-        this.loading$ = of(NO_DELEGATION);
+        this.loadedFor.set('');
       }
     });
   }
 
   refresh(): Observable<DelegationsResponse> {
-    this.loading$ = this.api.getMyDelegations().pipe(
+    const sub = this.user.current().sub ?? '';
+    const loading$ = this.api.getMyDelegations().pipe(
       catchError(() => of(NO_DELEGATION)),
-      tap((delegations) => this.delegations.set(delegations)),
+      tap((delegations) => {
+        this.delegations.set(delegations);
+        this.loadedFor.set(sub);
+      }),
       shareReplay(1),
     );
-    this.loading$.subscribe();
-    return this.loading$;
+    loading$.subscribe();
+    return loading$;
+  }
+
+  /**
+   * Emits the delegations once those of the current user (as known once `/me` answered) are
+   * loaded: for route guards.
+   */
+  whenLoaded(): Observable<DelegationsResponse> {
+    return this.user.whenLoaded().pipe(
+      switchMap((user) =>
+        this.loadedFor$.pipe(
+          filter((sub) => sub === (user.sub ?? '')),
+          take(1),
+        ),
+      ),
+      map(() => this.delegations()),
+    );
+  }
+
+  /** Those of the directions the user has a say on. */
+  withSay<T extends { alias: string }>(directions: T[]): T[] {
+    const mine = this.directions();
+    return mine ? directions.filter((d) => mine.includes(d.alias)) : directions;
   }
 
   isDirectionAdmin(direction: string): boolean {
@@ -86,37 +125,32 @@ export class DelegationsService {
     return this.delegations().managedApplications.some((a) => a.id === applicationId);
   }
 
-  /** Whether the user manages at least one of the direction's applications. */
-  isManagerInDirection(direction: string): boolean {
-    return this.delegations().managedApplications.some((a) => a.direction === direction);
+  /** The applications of the direction the user manages (as a manager, not as an administrator). */
+  managedApplicationsIn(direction: string) {
+    return this.delegations().managedApplications.filter((a) => a.direction === direction);
   }
 
   /** Whether the user has a say on the direction (what the API requires to read its groups & co). */
   canReadDirection(direction: string): boolean {
     return (
-      this.isAdmin() || this.isDirectionAdmin(direction) || this.isManagerInDirection(direction)
-    );
-  }
-
-  /** Whether the user may rename or unregister the direction's applications. */
-  canEditApplicationsOf(direction: string): boolean {
-    return this.isAdmin() || this.isDirectionAdmin(direction);
-  }
-
-  /** Whether the user may read and define an application's roles and managers. */
-  canManageApplication(application: { id: number; direction: string }): boolean {
-    return (
-      this.canEditApplicationsOf(application.direction) || this.isApplicationManager(application.id)
+      this.isAdmin() ||
+      this.isDirectionAdmin(direction) ||
+      this.managedApplicationsIn(direction).length > 0
     );
   }
 
   /**
-   * Whether the user may change a group's roles and members, or delete it: managing its
-   * application, or its direction when it belongs to none.
+   * Whether the user administers the direction: registers, renames or unregisters its
+   * applications, and manages all of them.
    */
-  canManageGroup(group: { direction: string; applicationId?: number | null }): boolean {
-    return group.applicationId
-      ? this.canManageApplication({ id: group.applicationId, direction: group.direction })
-      : this.canEditApplicationsOf(group.direction);
+  canEditApplicationsOf(direction: string): boolean {
+    return this.isAdmin() || this.isDirectionAdmin(direction);
+  }
+
+  /** Whether the user may read and define an application's roles, groups and managers. */
+  canManageApplication(application: { id: number; direction: string }): boolean {
+    return (
+      this.canEditApplicationsOf(application.direction) || this.isApplicationManager(application.id)
+    );
   }
 }

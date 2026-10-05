@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import io.micrometer.observation.annotation.Observed;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,8 @@ import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
+import pf.hururaa.direction.MemberFilter;
+import pf.hururaa.direction.MemberSearchService;
 import pf.hururaa.direction.domain.DelegatedDirection;
 import pf.hururaa.events.DirectionEvents;
 import pf.hururaa.keycloak.DirectionService;
@@ -69,8 +73,16 @@ public class DirectionController {
   public static final String HISTORY_PATH = DIRECTION_PATH + "/history";
   /** The categories a permission history is filtered by (a repeatable query parameter). */
   public static final String CATEGORIES_PARAM = "categories";
+  /** The group whose members are searched. */
+  public static final String GROUP_PARAM = "group";
+  /** The application whose groups' members are searched. */
+  public static final String APPLICATION_ID_PARAM = "applicationId";
+  /** The role granted by the groups whose members are searched. */
+  public static final String ROLE_PARAM = "role";
 
   private final DirectionService directionService;
+
+  private final MemberSearchService memberSearchService;
 
   private final GroupService groupService;
 
@@ -250,35 +262,53 @@ public class DirectionController {
   }
 
   /**
-   * Searches a direction's members by username, first name, last name, or e-mail.
+   * Searches a direction's members by username, first name, last name, or e-mail, optionally
+   * narrowed to the members of one of its groups, of the groups of one of its applications, or of
+   * those granting a role.
    *
    * <p>
-   * Results follow Keycloak's own ordering and are not client-controllable: the Keycloak Admin
-   * REST API exposes no sort parameter for organization members.
+   * Without narrowing, results follow Keycloak's own ordering (the Keycloak Admin REST API exposes
+   * no sort parameter for organization members); narrowed, they are sorted by username.
    * </p>
    *
    * <h4>Access control</h4>
    * <p>
    * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
-   * direction, or manager of one of its applications.
+   * direction, or manager of one of its applications. The application, if any, must be managed by
+   * {@code direction}.
    * </p>
    *
    * @param direction the direction's alias
    * @param search a string contained in username, first or last name, or e-mail; empty matches
    *        all members
+   * @param group only the members of this group of the direction
+   * @param application only the members of this application's groups
+   * @param role only the members of a group granting a role with this name (of the group's
+   *        application)
    * @param pageParams the requested page index and size
    * @return a page of the direction's members matching the search criteria
    */
   @GetMapping(path = USERS_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("#direction.hasDelegate(authentication)")
+  @PreAuthorize("#direction.hasDelegate(authentication)"
+      + " and (#application == null or #application.direction == #direction.alias)")
   public PagedModel<UserResponse> getDirectionUsers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestParam(required = false, defaultValue = "") String search,
+      @RequestParam(name = GROUP_PARAM, required = false) @Nullable String group,
+      @Parameter(schema = @Schema(type = "integer"),
+          description = "The ID of the application whose groups' members are searched")
+      @RequestParam(name = APPLICATION_ID_PARAM, required = false) @Nullable Application application,
+      @RequestParam(name = ROLE_PARAM, required = false) @Nullable String role,
       @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
-    return new PagedModel<>(directionService
-        .searchMembers(direction.alias(), search, pageParams.toPageable())
+    return new PagedModel<>(memberSearchService
+        .search(direction.alias(), new MemberFilter(search, blankToNull(group), application,
+            blankToNull(role)), pageParams.toPageable())
         .map(directoryMapper::toUserResponse));
+  }
+
+  private static @Nullable String blankToNull(@Nullable String value) {
+    return value == null || value.isBlank() ? null : value;
   }
 
   /**

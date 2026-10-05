@@ -15,12 +15,19 @@ import static pf.hururaa.HururaaFixtures.DPAM_ADMIN;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.DSI;
+import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.HURURAA_ADMIN;
+import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
+import static pf.hururaa.HururaaFixtures.escales;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
+import static pf.hururaa.HururaaFixtures.teFenua;
 import static pf.hururaa.HururaaFixtures.user;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +52,8 @@ import pf.hururaa.history.domain.PermissionChange;
 import pf.hururaa.history.domain.PermissionChangeCategory;
 import pf.hururaa.history.domain.PermissionChangeType;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
+import pf.hururaa.direction.MemberFilter;
+import pf.hururaa.direction.MemberSearchService;
 import pf.hururaa.direction.domain.Direction;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
@@ -75,6 +84,9 @@ class DirectionControllerTest {
 
   @MockitoBean
   DirectionService directionService;
+
+  @MockitoBean
+  MemberSearchService memberSearchService;
 
   @MockitoBean
   GroupService groupService;
@@ -122,7 +134,8 @@ class DirectionControllerTest {
   @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenApplicationManager_whenSearchUsers_thenOk() throws Exception {
-    when(directionService.searchMembers(DPAM, "agent", PageRequest.of(0, 20)))
+    when(memberSearchService.search(DPAM, new MemberFilter("agent", null, null, null),
+        PageRequest.of(0, 20)))
         .thenReturn(new PageImpl<>(List.of(user(DPAM_AGENT, "dpam.agent")),
             PageRequest.of(0, 20), 1));
 
@@ -131,6 +144,45 @@ class DirectionControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].username").value("dpam.agent"))
         .andExpect(jsonPath("$.page.totalElements").value(1));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenApplicationManager_whenSearchUsersByGroupAndRole_thenFilterIsPassedOn()
+      throws Exception {
+    when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
+    when(memberSearchService.search(any(), any(), any()))
+        .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+    api
+        .get(DirectionController.USERS_PATH
+            + "?group=escales.agent&applicationId=" + ESCALES_ID + "&role=escales.read", DPAM)
+        .andExpect(status().isOk());
+
+    verify(memberSearchService).search(eq(DPAM), argThat(filter -> "".equals(filter.search())
+        && "escales.agent".equals(filter.group())
+        && filter.application() != null && ESCALES_ID == filter.application().getId()
+        && "escales.read".equals(filter.role())), eq(PageRequest.of(0, 20)));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenApplicationOfAnotherDirection_whenSearchUsers_thenForbidden() throws Exception {
+    when(applicationRepository.findById(TE_FENUA_ID)).thenReturn(Optional.of(teFenua()));
+
+    api
+        .get(DirectionController.USERS_PATH + "?applicationId=" + TE_FENUA_ID, DPAM)
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(memberSearchService);
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenUnknownApplication_whenSearchUsers_thenNotFound() throws Exception {
+    api
+        .get(DirectionController.USERS_PATH + "?applicationId=404", DPAM)
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(ProblemType.APPLICATION_NOT_FOUND.uri().toString()));
   }
 
   @Test

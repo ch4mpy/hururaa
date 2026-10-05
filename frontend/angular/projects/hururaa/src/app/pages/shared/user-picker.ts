@@ -69,7 +69,7 @@ export class UserPicker {
 
   protected search(event: AutoCompleteCompleteEvent): void {
     this.directions
-      .getDirectionUsers(this.direction(), event.query, 0, 20)
+      .getDirectionUsers(this.direction(), event.query, undefined, undefined, undefined, 0, 20)
       .subscribe((page) => this.suggestions.set(page.content ?? []));
   }
 

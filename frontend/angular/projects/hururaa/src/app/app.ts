@@ -5,6 +5,7 @@ import { MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { languageOf } from './app.config';
+import { DelegationsService } from './core/delegations.service';
 import { LOCATION } from './core/location';
 import { UserService } from './core/user.service';
 import { ErrorBanner } from './layout/error-banner';
@@ -43,6 +44,7 @@ const LOCALE_SUB_PATHS: Record<string, string> = { fr: 'fr', en: 'en' };
 })
 export class App {
   private readonly user = inject(UserService);
+  private readonly delegations = inject(DelegationsService);
   private readonly location = inject(LOCATION);
 
   protected readonly language = languageOf(inject(LOCALE_ID));
@@ -59,7 +61,8 @@ export class App {
         visible: true,
       },
     ];
-    if (this.user.isAuthenticated()) {
+    // the two areas, of no use to a user without any delegation
+    if (this.delegations.hasAny()) {
       items.push(
         {
           label: $localize`:@@menu.applications:Applications`,
@@ -68,9 +71,9 @@ export class App {
           visible: true,
         },
         {
-          label: $localize`:@@menu.directions:Directions`,
-          icon: 'ri-building-2-line',
-          routerLink: '/directions',
+          label: $localize`:@@menu.users:Utilisateurs`,
+          icon: 'ri-team-line',
+          routerLink: '/users',
           visible: true,
         },
       );

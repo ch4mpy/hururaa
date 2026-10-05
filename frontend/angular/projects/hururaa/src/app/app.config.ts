@@ -6,7 +6,12 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { TitleStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
+import {
+  TitleStrategy,
+  provideRouter,
+  withComponentInputBinding,
+  withRouterConfig,
+} from '@angular/router';
 import { provideApi as provideGatewayApi } from '@api/gateway';
 import { provideApi as provideHururaaApi } from '@api/hururaa-api';
 import { TranslateLoader, TranslateService, provideTranslateService } from '@ngx-translate/core';
@@ -44,8 +49,13 @@ const PRIMENG_TRANSLATIONS: Record<string, Translation> = { fr, en };
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    // route parameters are bound to same-named component inputs (see ApplicationDetail's `applicationId`)
-    provideRouter(routes, withComponentInputBinding()),
+    // route parameters are bound to same-named component inputs, those of the parent routes
+    // included (an application's tabs are bound its `direction` and `applicationId`)
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+    ),
     { provide: TitleStrategy, useExisting: PageTitleStrategy },
     provideHttpClient(
       // CSRF cookie / header names expected by the gateway

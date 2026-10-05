@@ -1,41 +1,53 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { DirectionsApi } from '@api/hururaa-api';
 import { PfPageComponent } from 'pf-ui';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
-import { DelegationsService } from '../core/delegations.service';
-import { ResourceEventsService, ResourceTypes } from '../core/resource-events.service';
-import { UserService } from '../core/user.service';
-import { injectNotifier } from './shared/labels';
+import { DelegationsService } from '../../core/delegations.service';
+import { Area } from '../../core/landing.guards';
+import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
+import { injectNotifier } from './labels';
 
 /**
- * The directions (Keycloak organizations), with the current user's role in each of them. Hurura'a
- * administrators create new ones here.
+ * The first step of both areas for a user having a say on several directions: picking one of
+ * them (users with a single one skip it, see `skipDirectionChoice`). Hurura'a administrators,
+ * who see every direction, create new ones here.
  */
 @Component({
-  selector: 'app-directions',
+  selector: 'app-direction-chooser',
   imports: [
     PfPageComponent,
     RouterLink,
     ReactiveFormsModule,
     ButtonModule,
-    CardModule,
     DialogModule,
     InputTextModule,
     TagModule,
   ],
+  styles: `
+    .direction {
+      transition: background-color 0.2s;
+    }
+    .direction:hover,
+    .direction:focus-visible {
+      background: var(--p-content-hover-background);
+    }
+  `,
   template: `
     <pf-page [withPadding]="true">
       <ng-template #title>
-        <span i18n="@@directions.title">Directions</span>
+        @if (area() === 'users') {
+          <span i18n="@@chooser.users.title">Utilisateurs</span>
+        } @else {
+          <span i18n="@@chooser.applications.title">Applications</span>
+        }
       </ng-template>
-      @if (delegations.isAdmin()) {
+      @if (area() === 'applications' && delegations.isAdmin()) {
         <ng-template #toolbar>
           <p-button
             icon="ri-add-line"
@@ -45,24 +57,27 @@ import { injectNotifier } from './shared/labels';
           />
         </ng-template>
       }
+
+      <p class="mt-0 text-color-secondary" i18n="@@chooser.intro">Choisissez une direction.</p>
       <div class="grid">
-        @for (direction of directions.value() ?? []; track direction.alias) {
-          <div class="col-12 md:col-6 lg:col-4">
-            <p-card>
-              <ng-template #title>
-                <a [routerLink]="['/directions', direction.alias]">{{
-                  direction.alias.toUpperCase()
-                }}</a>
-              </ng-template>
-              <p class="mt-0">{{ direction.description }}</p>
-              <div class="flex flex-wrap gap-2">
-                @if (user.directions().includes(direction.alias)) {
-                  <p-tag severity="info" i18n-value="@@directions.member" value="Membre" />
-                }
+        @for (direction of directions(); track direction.alias) {
+          <div class="col-12 md:col-6 xl:col-4">
+            <a
+              class="direction flex flex-column gap-2 h-full p-3 border-1 surface-border border-round no-underline text-color"
+              [routerLink]="['/', area(), direction.alias]"
+            >
+              <span class="flex align-items-center justify-content-between gap-2">
+                <span class="text-xl font-semibold">{{ direction.name }}</span>
+                <i class="ri-arrow-right-s-line text-xl" aria-hidden="true"></i>
+              </span>
+              @if (direction.description) {
+                <span class="text-color-secondary">{{ direction.description }}</span>
+              }
+              <span class="flex flex-wrap gap-2 mt-auto">
                 @if (delegations.isDirectionAdmin(direction.alias)) {
                   <p-tag severity="warn" i18n-value="@@directions.admin" value="Administrateur" />
                 }
-                @if (delegations.isManagerInDirection(direction.alias)) {
+                @if (delegations.managedApplicationsIn(direction.alias).length) {
                   <p-tag
                     severity="success"
                     i18n-value="@@directions.manager"
@@ -76,9 +91,15 @@ import { injectNotifier } from './shared/labels';
                     value="Exploite Hurura'a"
                   />
                 }
-              </div>
-            </p-card>
+              </span>
+            </a>
           </div>
+        } @empty {
+          @if (!all.isLoading()) {
+            <p class="col-12" i18n="@@chooser.empty">
+              Vous n'administrez aucune direction et ne gérez aucune application.
+            </p>
+          }
         }
       </div>
     </pf-page>
@@ -127,15 +148,19 @@ import { injectNotifier } from './shared/labels';
     </p-dialog>
   `,
 })
-export class Directions {
+export class DirectionChooser {
   private readonly api = inject(DirectionsApi);
-  protected readonly user = inject(UserService);
-  protected readonly delegations = inject(DelegationsService);
-
-  protected readonly directions = rxResource({ stream: () => this.api.getDirections() });
-
   private readonly router = inject(Router);
   private readonly notify = injectNotifier();
+  protected readonly delegations = inject(DelegationsService);
+
+  /** Bound from the route's data: the area the chosen direction is opened in. */
+  readonly area = input.required<Area>();
+
+  protected readonly all = rxResource({ stream: () => this.api.getDirections() });
+
+  /** The directions the user has a say on. */
+  protected readonly directions = computed(() => this.delegations.withSay(this.all.value() ?? []));
 
   protected readonly creating = signal(false);
 
@@ -149,7 +174,7 @@ export class Directions {
     inject(ResourceEventsService)
       .of(ResourceTypes.DIRECTION)
       .pipe(takeUntilDestroyed())
-      .subscribe(() => this.directions.reload());
+      .subscribe(() => this.all.reload());
   }
 
   protected create(): void {
@@ -160,7 +185,7 @@ export class Directions {
         this.creating.set(false);
         this.form.reset();
         this.notify($localize`:@@directions.created:Direction ${alias}:alias: créée`);
-        void this.router.navigate(['/directions', alias]);
+        void this.router.navigate(['/applications', alias]);
       });
   }
 }

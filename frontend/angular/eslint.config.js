@@ -76,6 +76,12 @@ module.exports = defineConfig([
             'rel',
             // PrimeNG overlay placement ('body'), not text
             'appendTo',
+            // PrimeNG styling and table keys, not text
+            'styleClass',
+            'size',
+            'dataKey',
+            // this app's area of a route ('applications', 'users'), not text
+            'area',
           ],
         },
       ],
