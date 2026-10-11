@@ -1,0 +1,59 @@
+name: Nouvelle intention
+description: Signaler un bug ou demander une évolution. Décrivez le problème, pas la solution.
+title: "[Intention] "
+labels: ["intent-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cette demande deviendra une **intention**, que le PO acceptera ou refusera
+        (voir [CONTRIBUTING.md](https://github.com/ch4mpy/hururaa/blob/master/CONTRIBUTING.md)).
+        Décrivez ce qui manque ou ne fonctionne pas, et pour qui ; la solution se décide aux étapes suivantes.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Nature
+      options:
+        - Évolution (nouveau besoin, amélioration)
+        - Bug (quelque chose ne fonctionne pas comme prévu)
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème
+      description: Qui est gêné, comment cela se manifeste, à quelle fréquence, ce que cela coûte.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Pour un bug — étapes pour reproduire, comportement attendu et observé
+      placeholder: |
+        1. …
+        Attendu : …
+        Observé : …
+        Environnement : …
+    validations:
+      required: false
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Résultat attendu
+      description: Qu'observera-t-on une fois le changement livré ? Comment saura-t-on que c'est réussi ?
+    validations:
+      required: true
+  - type: textarea
+    id: affected
+    attributes:
+      label: Personnes et parties concernées
+      description: Administrateurs Hurura'a, administrateurs de direction, gestionnaires d'application, membres… et les parties de l'application concernées, si vous les connaissez.
+    validations:
+      required: false
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Contraintes connues
+      description: Échéances, exigences de sécurité ou de conformité, ce qui ne doit pas changer.
+    validations:
+      required: false
