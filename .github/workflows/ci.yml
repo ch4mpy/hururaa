@@ -1,12 +1,12 @@
-# Validation of pull requests and of every branch but master (which deploy-demo.yml builds and
-# deploys). Same build and test steps as the deploy workflow, plus coverage reports, a dependency
-# vulnerability scan and a secret scan. The images are scanned in deploy-demo.yml, once built.
+# Validation of pull requests (master itself is built and deployed by deploy-demo.yml). Every change
+# goes through a PR (CONTRIBUTING.md), so pushes are not built a second time: run it by hand
+# (workflow_dispatch) for a branch without a PR. Same build and test steps as the deploy workflow,
+# plus coverage reports, a dependency vulnerability scan and a secret scan. The images are scanned
+# in deploy-demo.yml, once built.
 name: CI
 
 on:
   pull_request:
-  push:
-    branches-ignore: [master]
   workflow_dispatch:
 
 concurrency:
