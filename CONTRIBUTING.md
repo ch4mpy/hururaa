@@ -38,7 +38,8 @@ d'architecture dans [docs/decisions/](docs/decisions/).
 ## Prérequis
 
 - [Claude Code](https://claude.com/claude-code) avec un abonnement claude.ai (aucune clé d'API n'est nécessaire).
-- Git, avec un accès SSH à `github.com:ch4mpy/hururaa`.
+- Git, avec un accès SSH à `github.com:ch4mpy/hururaa` (clé chargée dans un agent SSH), ou en
+  HTTPS via `gh auth setup-git`.
 - [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`), connecté : `gh auth login` (portée `repo`).
 - [jq](https://jqlang.org/) (`winget install jqlang.jq`), utilisé par les hooks Claude Code.
 - Sous Windows, `gh` et `jq` doivent répondre dans Git Bash comme dans PowerShell (`gh --version`, `jq --version`).
@@ -126,6 +127,79 @@ Remplissez directement le formulaire
    La PR est fermée avec ce motif ; l'intention n'arrive jamais sur `master`.
 3. Pour suivre les délais et le taux d'acceptation : `/sdlc-intent stats`.
 
+## Étape 2 — Concevoir
+
+### Comment une intention devient une spec ?
+
+Une intention acceptée devient une spec (`spec.md`, à côté de `intent.md`) : ce qui change et les
+contrats observables (comportement par rôle, API, erreurs, écrans, données, critères
+d'acceptation), jamais la façon de le coder. Pour un bug, le PO peut s'en passer à l'acceptation.
+
+Dans Claude Code, sur le dépôt cloné :
+
+```text
+/sdlc-spec draft 0001
+```
+
+Claude lit l'intention, les décisions, toutes les politiques et le code concerné, répond aux
+questions de l'intention que le code tranche (preuves à l'appui), vous pose au plus deux séries de
+questions sur les choix produit, puis montre le brouillon. Après votre confirmation, il ouvre une
+PR étiquetée `spec`.
+
+### Comprendre une spec sans Claude Code (PO)
+
+Ouvrez la PR `spec` sur GitHub ([liste](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+label%3Aspec)),
+copiez le contenu de `spec.md`, puis dans Claude Desktop ou claude.ai :
+
+```text
+Je suis le PO de Hurura'a, une application qui gère les permissions des applications (Keycloak)
+en déléguant cette gestion direction par direction. Explique-moi la spec ci-dessous sans jargon
+technique :
+- ce qui change pour chaque rôle (administrateurs Hurura'a, administrateurs de direction,
+  gestionnaires d'application, membres d'une direction) ;
+- pour chaque point d'attention (PA-n) : ce que je dois décider, les conséquences de chaque
+  option, et ce que tu me poserais comme question avant de trancher ;
+- les critères d'acceptation que je pourrai vérifier moi-même une fois le changement livré.
+
+<collez ici le contenu de spec.md>
+```
+
+### Que faire d'un point d'attention ?
+
+Un point d'attention (`PA-n`) signale un conflit entre règles, une règle impossible à respecter,
+un choix produit ou un risque. Claude ne le tranche jamais. Chacun indique qui décide :
+
+- le **PO** pour un choix produit ;
+- le **responsable de la politique** pour une règle à adapter (l'exception passe par une décision
+  dans `docs/decisions/`) ;
+- le **tech lead** pour un risque technique. Une spec à risque élevé (authentification, règles
+  d'accès, noms réservés, modèle de données, Keycloak, déploiement) exige sa revue.
+
+Répondez dans la PR, puis approuvez :
+
+```text
+/sdlc-spec approve 0001
+```
+
+Claude reprend chaque point encore ouvert, consigne les décisions et refuse d'approuver tant
+qu'il en reste un. Une fois la PR fusionnée, l'intention passe à *spécifiée*. Délais et
+retouches : `/sdlc-spec stats`.
+
+### Où sont les règles ?
+
+Dans les skills du dépôt `.claude/skills/policy-*`, chaque règle avec son identifiant, cité dans
+les specs, les plans et les revues :
+
+| Politique | Préfixe | Porte sur |
+| --- | --- | --- |
+| [Sécurité de l'API](.claude/skills/policy-securite-api/SKILL.md) | `SEC` | règles d'accès, 404, noms réservés, erreurs, tests d'accès |
+| [Traçabilité](.claude/skills/policy-tracabilite/SKILL.md) | `TRA` | journal des permissions, logs, historique, événements |
+| [Délégation](.claude/skills/policy-delegation/SKILL.md) | `DEL` | les trois niveaux, groupes, effet des droits |
+| [Interface et i18n](.claude/skills/policy-ux-i18n/SKILL.md) | `UX` | traductions, messages, charte, navigation |
+
+Claude les applique de lui-même quand un travail les concerne. Pour changer une règle : une PR sur
+le fichier de la politique, revue par son responsable.
+
 ## Aide-mémoire
 
 | Commande                                 | Étape     | Qui                     |
@@ -135,3 +209,6 @@ Remplissez directement le formulaire
 | `/sdlc-intent accept <NNNN>`             | Planifier | PO                      |
 | `/sdlc-intent reject <NNNN> <motif>`     | Planifier | PO                      |
 | `/sdlc-intent stats`                     | Planifier | PO                      |
+| `/sdlc-spec draft <NNNN>`                | Concevoir | développeur ou PO       |
+| `/sdlc-spec approve <NNNN>`              | Concevoir | PO (tech lead si risque élevé) |
+| `/sdlc-spec stats`                       | Concevoir | PO                      |
