@@ -3,10 +3,10 @@
 - Auteur : ch4mpy (PO et développeur)
 - Nature : bug
 - Source : conversation
-- Spec nécessaire : oui
-- Statut : proposée
+- Spec nécessaire : non
+- Statut : acceptée
 - Ouverte le : 2026-10-11
-- Décidée le : —
+- Décidée le : 2026-10-11
 - Remplace : —
 
 ## Problème
@@ -49,7 +49,7 @@ Critères de réussite :
 
 - Tous les personas : administrateurs Hurura'a, administrateurs de direction, gestionnaires
   d'application, membres d'une direction.
-- Visiteur non connecté (*non déclaré dans le contexte du projet*).
+- Visiteur non connecté (cas d'usage, pas un persona du projet : décision du PO).
 - Frontend Angular (affichage des erreurs). La requête en cause, non identifiée, vise la gateway
   ou hururaa-api.
 
@@ -63,6 +63,5 @@ Critères de réussite :
   requête reçoit finalement une réponse en erreur ? — développeur, à l'étape suivante
 - Quelles sont les conditions exactes : session ouverte avant la fermeture du navigateur ?
   onglets restaurés ? première ouverture du jour seulement ? — ch4mpy
-- Faut-il déclarer le visiteur non connecté comme persona du projet ? — PO
 - Solution évoquée : identifier la requête en erreur, puis soit l'empêcher de partir, soit faire
-  en sorte qu'elle aboutisse. — étape 2 (spec)
+  en sorte qu'elle aboutisse. — développeur, au plan (pas de spec pour ce bug)
