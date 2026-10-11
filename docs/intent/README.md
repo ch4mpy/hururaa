@@ -18,10 +18,18 @@ change donne une nouvelle intention qui la remplace.
   d'application, membres d'une direction — décrits dans le [README §2](../../README.md#2-chaîne-de-délégation)
 - Modules / systèmes : gateway (BFF OAuth2), hururaa-api, frontend Angular, Keycloak (royaume
   `public-facing`), RabbitMQ, PostgreSQL, starters communs (security, events), démo (`deploy/`)
-- Contraintes permanentes : [docs/decisions/](../decisions/) (registre des décisions)
+- Contraintes permanentes : [docs/decisions/](../decisions/) (registre des décisions) et les
+  politiques
+- Politiques : skills du dépôt [.claude/skills/policy-*](../../.claude/skills/) — `SEC` sécurité de
+  l'API, `TRA` traçabilité, `DEL` délégation, `UX` interface et i18n
 - Branche de base : `master`
 - PO : ch4mpy
+- Tech lead : ch4mpy
 - Modèle d'intention : [_modele-intention.md](_modele-intention.md)
+- Modèle de spec : [_modele-spec.md](_modele-spec.md)
+- Risque élevé (revue du tech lead requise) : le changement touche l'authentification, les règles
+  d'accès, les noms réservés, le modèle de données (Liquibase), la configuration Keycloak ou le
+  déploiement (`deploy/`)
 - Formulaire d'issue : [.github/ISSUE_TEMPLATE/intention.yml](../../.github/ISSUE_TEMPLATE/intention.yml)
 - Statuts :
 
