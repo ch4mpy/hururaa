@@ -26,7 +26,8 @@ boot_version=$(awk '/<parent>/,/<\/parent>/' "$POM" | sed -n 's:.*<version>\(.*\
 bom_url="https://repo.maven.apache.org/maven2/org/springframework/boot/spring-boot-dependencies/${boot_version}/spring-boot-dependencies-${boot_version}.pom"
 bom=$(mktemp)
 trap 'rm -f "$bom"' EXIT
-curl -fsSL --max-time 60 "$bom_url" -o "$bom" || {
+# retried: Maven Central's CDN occasionally answers 404 or 5xx for a published artifact
+curl -fsSL --max-time 60 --retry 3 --retry-all-errors --retry-delay 5 "$bom_url" -o "$bom" || {
   echo "could not download $bom_url" >&2
   exit 1
 }

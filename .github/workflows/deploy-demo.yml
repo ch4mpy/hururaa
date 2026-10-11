@@ -5,6 +5,12 @@ name: Deploy demo
 on:
   push:
     branches: [master]
+    # nothing to redeploy when only documentation, issue forms or Claude skills change
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.claude/**'
   workflow_dispatch:
 
 concurrency:
