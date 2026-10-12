@@ -1,3 +1,4 @@
 # Formatage après chaque modification par Claude (hook format-on-edit).
 # <glob> <commande, {file} = chemin absolu du fichier modifié>, lancée depuis la racine du dépôt
-frontend/angular/projects/hururaa/**/*.@(ts|html|scss|json)   cd frontend/angular && npx --no-install prettier --write {file}
+# Sans node_modules (worktree d'eval, clone neuf), on ne formate pas plutôt que d'échouer.
+frontend/angular/projects/hururaa/**/*.@(ts|html|scss|json)   [ ! -d frontend/angular/node_modules ] || (cd frontend/angular && npx --no-install prettier --write {file})
