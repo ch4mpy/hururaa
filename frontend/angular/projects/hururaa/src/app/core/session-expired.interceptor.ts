@@ -23,10 +23,7 @@ export const sessionExpiredInterceptor: HttpInterceptorFn = (req, next) => {
         error.status === 401 &&
         !req.context.get(SESSION_PROBE)
       ) {
-        const user = injector.get(UserService);
-        if (user.isAuthenticated()) {
-          user.refresh();
-        }
+        injector.get(UserService).sessionExpired();
       }
       return throwError(() => error);
     }),

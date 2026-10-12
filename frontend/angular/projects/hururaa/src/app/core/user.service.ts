@@ -30,6 +30,7 @@ export class UserService {
 
   private readonly user = signal<UserResponse>(ANONYMOUS);
   private loading$: Observable<UserResponse>;
+  private sessionExpiring = false;
 
   /** The current user: `ANONYMOUS` until `/me` answers, or when there is no session. */
   readonly current = this.user.asReadonly();
@@ -63,6 +64,18 @@ export class UserService {
     // shareReplay is lazy: fire the request right away rather than on the first whenLoaded() call
     this.loading$.subscribe();
     return this.loading$;
+  }
+
+  /**
+   * Re-fetches `/me` after a call answered `401` (the gateway session is gone), once for a burst of
+   * such calls: a page often fires several requests together, and they all fail at once.
+   */
+  sessionExpired(): void {
+    if (this.sessionExpiring || !this.isAuthenticated()) {
+      return;
+    }
+    this.sessionExpiring = true;
+    this.refresh().subscribe({ complete: () => (this.sessionExpiring = false) });
   }
 
   /** Emits the current user once the latest `/me` request has completed (for route guards). */

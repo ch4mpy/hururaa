@@ -54,6 +54,20 @@ describe('sessionExpiredInterceptor', () => {
     expect(user.isAuthenticated()).toBe(false);
   });
 
+  it('re-fetches the user once for a burst of 401', async () => {
+    const urls = ['/gateway/bff/api/v1/directions', '/gateway/bff/api/v1/applications/3'];
+    const responses = urls.map((url) => firstValueFrom(http.get(url)));
+    for (const url of urls) {
+      backend.expectOne(url).flush(null, { status: 401, statusText: 'Unauthorized' });
+    }
+    for (const response of responses) {
+      await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
+    }
+
+    backend.expectOne('/gateway/me').flush({ directions: [] });
+    expect(user.isAuthenticated()).toBe(false);
+  });
+
   it('does not re-fetch the user for the session probe, whose 401 already means anonymous', async () => {
     const context = new HttpContext().set(SESSION_PROBE, true);
     const response = firstValueFrom(http.get('/gateway/me', { context }));
