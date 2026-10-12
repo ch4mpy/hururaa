@@ -22,8 +22,11 @@ bash ~/.claude/scripts/run-evals.sh            # toutes, sur HEAD
 bash ~/.claude/scripts/run-evals.sh E1-politiques-api --base master
 ```
 
-Chaque eval tourne dans un worktree jetable (les hooks et permissions du dépôt s'appliquent), puis
-sa commande `check` décide (code 0 = réussie). Le rapport est écrit dans `evals/reports/` (ignoré par
+Chaque eval tourne dans un worktree jetable (les hooks et permissions du dépôt s'appliquent), d'où
+le dossier `evals/` est retiré : Claude ne peut pas lire la tâche ni sa vérification. Puis sa
+commande `check` décide (code 0 = réussie), avec la trace de la session (`$EVAL_TRANSCRIPT`) pour
+vérifier ce que Claude a fait, pas seulement ce qu'il a dit ; les scripts de vérification sont dans
+`checks/`, appelés par `$EVAL_HOME/checks/…`. Le rapport est écrit dans `evals/reports/` (ignoré par
 git) ; la dernière ligne est `EVALS n/m OK` ou `EVALS n/m KO`. Le format d'une eval est décrit en
 tête de `run-evals.sh`.
 
