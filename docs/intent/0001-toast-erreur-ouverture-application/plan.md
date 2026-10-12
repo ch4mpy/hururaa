@@ -79,3 +79,9 @@ suivront par une nouvelle intention.
 ## Écarts
 
 <!-- rempli pendant l'implémentation : date — quoi — pourquoi — effet sur les fichiers ou la preuve -->
+
+- 2026-10-12 — Étape 3 : `/me` ne porte pas `SKIP_ERROR_BANNER` mais un jeton `SESSION_PROBE`,
+  déclaré dans `http-error.interceptor.ts` ; l'intercepteur ne tait que la `401` d'une sonde. —
+  `SKIP_ERROR_BANNER` aurait aussi tu « Erreur du serveur… » gateway arrêtée (CA-3). — Fichiers :
+  `http-error.interceptor.ts` et sa spec sont aussi modifiés à l'étape 3 (déjà listés) ; preuve
+  inchangée, avec un cas de plus dans `http-error.interceptor.spec.ts` (`502` sur la sonde → message).
