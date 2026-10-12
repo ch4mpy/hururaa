@@ -10,7 +10,6 @@
       "projectName": "hururaa-api",
       "args": "",
       "envFile": "${workspaceFolder}/.env",
-      "shortenCommandLine": "jarmanifest",
       "console": "internalConsole"
     },
     {

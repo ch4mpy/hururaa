@@ -3,8 +3,8 @@
 - Auteur : ch4mpy (PO et développeur)
 - Nature : bug
 - Source : conversation
-- Spec nécessaire : non
-- Statut : acceptée
+- Spec nécessaire : oui (décision du PO du 2026-10-12, à la place du « non » de l'acceptation)
+- Statut : spécifiée
 - Ouverte le : 2026-10-11
 - Décidée le : 2026-10-11
 - Remplace : —
