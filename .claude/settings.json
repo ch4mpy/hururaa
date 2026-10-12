@@ -16,6 +16,12 @@
           { "type": "command", "command": "bash \"$HOME/.claude/hooks/protect-paths.sh\"" },
           { "type": "command", "command": "bash \"$HOME/.claude/hooks/freeze-tests.sh\"" }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash \"$HOME/.claude/hooks/release-gate.sh\"" }
+        ]
       }
     ],
     "PostToolUse": [

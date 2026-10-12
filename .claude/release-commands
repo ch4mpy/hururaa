@@ -1,0 +1,11 @@
+# Commandes de livraison soumises à une décision humaine (hook release-gate, voir CONTRIBUTING.md,
+# étape 5). <ask|deny> <regex étendue sur la commande entière>  # <raison>
+# La première règle qui correspond l'emporte : les refus d'abord. « git( [^;&|]*)? push » couvre les
+# options placées avant push (git -c credential.helper=… push …).
+deny  git( [^;&|]*)? push[^;&|]*(--force|--force-with-lease| -f( |$))[^;&|]*master  # forcer la poussée sur master
+deny  gh pr review.*(--approve| -a( |$))  # Claude n'approuve jamais une PR
+deny  gh api .*pulls/[0-9]+/reviews.*APPROVE  # Claude n'approuve jamais une PR
+ask   gh pr merge  # fusionner une PR dans master (et donc déployer la démo pour du code)
+ask   gh api .*pulls/[0-9]+/merge  # fusionner une PR dans master
+ask   git( [^;&|]*)? push( [^;&|]*)? [^ ]*(HEAD:|:)?master( |$)  # pousser sur master
+ask   gh workflow run deploy-demo  # déployer la démo

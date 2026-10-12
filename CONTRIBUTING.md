@@ -44,7 +44,8 @@ d'architecture dans [docs/decisions/](docs/decisions/).
 - [jq](https://jqlang.org/) (`winget install jqlang.jq`), utilisé par les hooks Claude Code.
 - Sous Windows, `gh` et `jq` doivent répondre dans Git Bash comme dans PowerShell (`gh --version`, `jq --version`).
 - Les skills Claude Code `sdlc-*` dans `~/.claude/skills/`, l'agent `~/.claude/agents/verifier.md`,
-  les hooks `~/.claude/hooks/protect-paths.sh`, `freeze-tests.sh` et `format-on-edit.sh`, et le
+  les hooks `~/.claude/hooks/protect-paths.sh`, `freeze-tests.sh`, `format-on-edit.sh` et
+  `release-gate.sh`, et le
   lanceur d'evals `~/.claude/scripts/run-evals.sh` (mode de distribution en cours de définition).
 - Pour les evals : la commande `claude` (Claude Code en ligne de commande, connecté à votre
   abonnement) ; le lanceur la trouve aussi dans `~/.local/bin`.
@@ -320,6 +321,79 @@ Collez la dernière ligne (`EVALS 4/4 OK`) et le tableau du rapport dans la PR. 
 Claude constatée en session ou en revue devient une nouvelle eval : `/sdlc-evals add <ce qu'il
 faut garder>`. Détails : [evals/README.md](evals/README.md).
 
+## Étape 5 — Livrer
+
+La revue se fait dans les deux sens : Claude relit chaque PR de la même façon et corrige ce qu'on
+lui signale ; un humain juge l'intention et le risque, et lui seul approuve. Claude n'approuve
+jamais une PR.
+
+### Revoir une PR
+
+Dans Claude Code, sur le dépôt cloné :
+
+```text
+/sdlc-review review 18
+```
+
+Claude applique les passes de [REVIEW.md](REVIEW.md) (bugs, sécurité, conformité à la spec, au plan
+et aux politiques) et dépose **un** commentaire : les constats classés, « Important » d'abord, chacun
+avec sa règle (`SEC-4`, `EX-2`…). Pour faire corriger les constats et les commentaires ouverts :
+
+```text
+/sdlc-review address 18
+```
+
+**Votre part de relecteur** : l'intention (la PR résout-elle le problème de l'intention ?), le
+risque, et les vérifications manuelles que le plan renvoie à la revue. Hors de Claude Code, pour un
+regard sur l'intention, dans Claude Desktop ou claude.ai, avec le contenu de `intent.md` et la sortie
+de `gh pr diff 18` :
+
+```text
+Voici une intention (le besoin) et le diff de la PR censée y répondre, pour Hurura'a (Spring Boot,
+Angular, Keycloak). Sans relire le style : la PR résout-elle le problème décrit ? Que pourrait-elle
+casser pour les utilisateurs (administrateurs Hurura'a, administrateurs de direction, gestionnaires
+d'application, membres) ? Que faudrait-il vérifier à la main avant de livrer ?
+
+<intent.md>
+
+<diff>
+```
+
+### Mettre en production (démo)
+
+```text
+/sdlc-ship 0001
+```
+
+Claude vérifie les préalables (PR prête, CI verte, `VERIFY OK`, rapport du `verifier`, evals si la
+configuration de Claude change, aucun constat Important ouvert), vous demande les vérifications
+manuelles et votre approbation, les consigne dans la PR, passe l'intention à *livrée*, puis fusionne.
+Deux confirmations humaines, toujours :
+
+1. **la fusion**, demandée par un hook (`.claude/release-commands`) : en mode automatique, la commande
+   est refusée, passez en mode par défaut (`Shift+Tab`) ou lancez-la vous-même ;
+2. **le déploiement**, dans GitHub : le workflow *Deploy demo* attend votre approbation de
+   l'environnement `demo` (bouton *Review deployments* du run).
+
+Après le déploiement, Claude lance le test de fumée et les vérifications « après déploiement » du
+plan :
+
+```bash
+deploy/smoke.sh                                   # la démo
+deploy/smoke.sh https://host.docker.internal -k   # l'environnement de dev
+```
+
+Dernière ligne : `SMOKE OK` ou `SMOKE KO: <n> vérification(s)`.
+
+### Revenir en arrière
+
+Une livraison qui casse quelque chose se défait par une **PR de revert** du commit de fusion
+(`git revert -m 1 <commit de fusion>`), revue et fusionnée comme les autres : la démo est redéployée
+dans sa version précédente. Puis une intention `bug` (source : la PR fautive) reprend le cycle.
+
+`master` est protégée : PR obligatoire, CI verte exigée, pas de poussée forcée. Approbation exigée
+dès qu'il y aura un second contributeur ([CODEOWNERS](.github/CODEOWNERS)).
+
 ## Aide-mémoire
 
 | Commande                                 | Étape     | Qui                     |
@@ -338,3 +412,7 @@ faut garder>`. Détails : [evals/README.md](evals/README.md).
 | `./verify.sh` (`--quick`)                | Tester     | tout contributeur, et Claude |
 | `/sdlc-evals run`                        | Tester     | qui modifie la configuration de Claude |
 | `/sdlc-evals add <comportement>`         | Tester     | développeur                |
+| `/sdlc-review review <PR>`               | Livrer     | tout relecteur, et Claude  |
+| `/sdlc-review address <PR>`              | Livrer     | auteur de la PR            |
+| `/sdlc-ship <NNNN>`                      | Livrer     | relecteur (humain) qui approuve |
+| `deploy/smoke.sh`                        | Livrer     | après chaque déploiement   |
