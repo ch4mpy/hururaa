@@ -43,7 +43,9 @@ d'architecture dans [docs/decisions/](docs/decisions/).
 - [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`), connecté : `gh auth login` (portée `repo`).
 - [jq](https://jqlang.org/) (`winget install jqlang.jq`), utilisé par les hooks Claude Code.
 - Sous Windows, `gh` et `jq` doivent répondre dans Git Bash comme dans PowerShell (`gh --version`, `jq --version`).
-- Les skills Claude Code `sdlc-*` dans `~/.claude/skills/` (mode de distribution en cours de définition).
+- Les skills Claude Code `sdlc-*` dans `~/.claude/skills/`, l'agent `~/.claude/agents/verifier.md`
+  et les hooks `~/.claude/hooks/protect-paths.sh` et `format-on-edit.sh` (mode de distribution en
+  cours de définition).
 - Pour développer : l'environnement décrit dans le [README §5](README.md#5-déploiement-en-local).
 
 ## Étape 1 — Planifier
@@ -200,6 +202,70 @@ les specs, les plans et les revues :
 Claude les applique de lui-même quand un travail les concerne. Pour changer une règle : une PR sur
 le fichier de la politique, revue par son responsable.
 
+## Étape 3 — Construire
+
+Rien ne se code sans plan approuvé. Le plan (`plan.md`, à côté de la spec) dit comment : fichiers,
+ordre de travail, risques, et la preuve de chaque critère d'acceptation. Un changement = une branche
+(`fix/NNNN-…` ou `feat/NNNN-…`) = une PR : le plan en premier commit, puis un commit par étape.
+
+### Comment démarrer un développement ?
+
+Dans Claude Code, sur le dépôt cloné, passez en *plan mode* (`Shift+Tab` jusqu'à « plan mode »),
+puis :
+
+```text
+/sdlc-plan draft 0001
+```
+
+Claude lit la spec, les politiques qu'elle cite, le code et la documentation des bibliothèques en
+jeu, vous pose au plus deux séries de questions techniques, puis vous présente le plan. Approuvez-le
+ou demandez des corrections : c'est votre validation. Claude crée alors la branche, y commite
+`plan.md` et, après confirmation, ouvre une PR brouillon étiquetée `plan`.
+
+Passez ensuite en mode automatique (`Shift+Tab`) et lancez :
+
+```text
+/sdlc-plan implement 0001
+```
+
+Claude suit le plan étape par étape (vérification, puis commit), consigne tout écart dans
+`plan.md` et s'arrête pour vous demander quand un écart change la portée, un risque ou une preuve.
+À la fin, l'agent `verifier` contrôle chaque critère d'acceptation dans un contexte neuf et son
+rapport est déposé dans la PR, qui reste en brouillon jusqu'à la revue (étape 5).
+
+### Valider un plan (développeur ; tech lead si le risque de la spec est élevé)
+
+Vérifiez que chaque exigence de la spec a ses fichiers, que chaque critère d'acceptation a sa
+preuve, que l'ordre permet de vérifier chaque étape, et que les risques ont une parade. Pour un
+regard extérieur, dans Claude Desktop ou claude.ai, avec le contenu de `spec.md` et de `plan.md` :
+
+```text
+Voici la spec et le plan d'implémentation d'un changement de Hurura'a (Spring Boot, Angular,
+Keycloak). Critique le plan sans le réécrire :
+- exigences (EX-n) de la spec sans fichier ni étape dans le plan ;
+- critères d'acceptation (CA-n) sans preuve, ou avec une preuve qui ne prouve pas vraiment ;
+- étapes trop grosses pour être vérifiées seules, ou dans un ordre qui casse le build ;
+- risques oubliés ou sous-estimés, en particulier sur la sécurité.
+
+<spec.md>
+
+<plan.md>
+```
+
+### Fichiers protégés
+
+Un hook refuse à Claude les modifications de ces chemins (`.claude/protected-paths`) :
+
+| Chemin | Règle | Pourquoi |
+| --- | --- | --- |
+| `frontend/angular/projects/api/**` | jamais | code généré : `npm run api` |
+| `backend/openapi/out/**` | jamais | specs générées : `./build-openapi.sh` |
+| `backend/hururaa-api/src/main/resources/db/changelog/changes/**` | pas de modification d'un fichier existant | changeset déjà appliqué : en ajouter un nouveau |
+| `.env`, `secrets/**`, `certs/**` | jamais | secrets et certificats générés (Claude ne peut pas non plus lire `.env` ni `secrets/`) |
+
+Un second hook formate avec Prettier les fichiers du front que Claude modifie
+(`.claude/formatters`). Pour changer ces listes : une PR sur le fichier concerné.
+
 ## Aide-mémoire
 
 | Commande                                 | Étape     | Qui                     |
@@ -212,3 +278,6 @@ le fichier de la politique, revue par son responsable.
 | `/sdlc-spec draft <NNNN>`                | Concevoir | développeur ou PO       |
 | `/sdlc-spec approve <NNNN>`              | Concevoir | PO (tech lead si risque élevé) |
 | `/sdlc-spec stats`                       | Concevoir | PO                      |
+| `/sdlc-plan draft <NNNN>` (plan mode)    | Construire | développeur            |
+| `/sdlc-plan implement <NNNN>` (mode auto) | Construire | développeur           |
+| `/sdlc-plan stats`                       | Construire | développeur ou tech lead |
