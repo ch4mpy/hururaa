@@ -1,13 +1,13 @@
 # Spec : toast d'erreur à l'ouverture de l'application
 
 - Intention : [0001](intent.md)
-- Statut : approuvée
-- Version : 1
+- Statut : approuvée (v2)
+- Version : 2
 - Risque : élevé — le changement touche l'authentification (gestion des sessions de la gateway)
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
   policy-delegation @229653c, policy-tracabilite @229653c (non concernée)
-- Approuvée : 2026-10-12, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-12 (PO et tech lead sont la
-  même personne : pas de revue GitHub possible sur sa propre PR)
+- Approuvée : v1 et v2 le 2026-10-12, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-12 (PO et tech
+  lead sont la même personne : pas de revue GitHub possible sur sa propre PR)
 
 ## Résumé
 
@@ -19,9 +19,10 @@ justement une réponse inattendue.
 
 ## Exigences
 
-- EX-1 Avec un cookie de session inconnu de la gateway, `GET /gateway/me` répond `200` avec
-  l'utilisateur anonyme, sans redirection, comme sans cookie. (intention : critère « le scénario
-  n'affiche plus de toast »)
+- EX-1 Avec un cookie de session inconnu de la gateway, l'ouverture n'affiche aucun message :
+  `GET /gateway/me` répond `401` sans redirection, la gateway ouvre une nouvelle session, et la SPA
+  traite cette réponse comme un utilisateur anonyme. (intention : critère « le scénario n'affiche
+  plus de toast » ; v2, voir l'historique)
 - EX-2 Avec un cookie de session inconnu, les routes `/gateway/bff/**` répondent `401` sans
   redirection, comme sans cookie (portée : PA-1). (intention : résultat attendu, « aucun toast
   quand rien n'est en panne »)
@@ -77,8 +78,10 @@ droits).
 
 ### API et contrats
 
-- `GET /gateway/me` : contrat inchangé (`200`, utilisateur courant ou anonyme), désormais aussi
-  avec un cookie de session inconnu.
+- `GET /gateway/me` : `200` (utilisateur courant ou anonyme) avec une session valide ou sans
+  cookie ; `401` sans redirection avec un cookie de session inconnu, une nouvelle session étant
+  ouverte (stratégie « session invalide » de spring-addons-starter-oidc 9.5.0, qui s'applique à
+  toutes les routes). La SPA traite cette `401` comme l'anonyme, sans message.
 - `/gateway/bff/**` : `401` pour toute requête sans session valide, cookie inconnu compris.
 - Aucune route de la gateway appelée par la SPA ne répond par une redirection vers une page de
   l'application.
@@ -160,8 +163,8 @@ Aucune.
 ## Critères d'acceptation
 
 - CA-1 Étant donné un navigateur dont le cookie `JSESSIONID` est inconnu de la gateway, quand on
-  ouvre `/fr/`, alors `GET /gateway/me` répond `200` anonyme sans redirection, et aucun toast
-  n'apparaît. (EX-1)
+  ouvre `/fr/`, alors `GET /gateway/me` répond `401` sans redirection, aucune autre requête n'est
+  en erreur, aucun toast n'apparaît et l'accueil s'affiche en anonyme. (EX-1)
 - CA-2 Étant donné le même cookie, quand la SPA appelle `/gateway/bff/api/v1/me/delegations`,
   alors la réponse est `401` sans redirection. (EX-2, si PA-1 = A)
 - CA-3 Étant donné la gateway arrêtée, quand on ouvre `/fr/`, alors « Erreur du serveur, veuillez
@@ -196,3 +199,9 @@ Aucune.
 
 - v1 — 2026-10-12 — première version ; à l'approbation : décisions PA-1 à PA-4, ajout de EX-6,
   EX-7, CA-7 et CA-8 (conditions du tech lead).
+- v2 — 2026-10-12 — EX-1, CA-1 et le contrat de `/me` : `401` (et non `200`) avec un cookie de
+  session inconnu. Constaté au plan : la stratégie « session invalide » de
+  spring-addons-starter-oidc 9.5.0 (`invalid-session.status`, `FOUND` par défaut) s'applique à
+  toutes les routes, `/me` compris ; la tenir par configuration seule (EX-7) donne une `401` sur
+  `/me`. Le retour au `200` attend une évolution de spring-addons (nouvelle intention), décidée par
+  le développeur et tech lead.
