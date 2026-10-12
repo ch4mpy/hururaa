@@ -44,6 +44,14 @@ Backend (`backend/`): `./mvnw clean install`, `./mvnw -pl hururaa-api test -Dtes
 
 Frontend (`frontend/angular/`): `npm run start` (fr on 4200, en on 4205), `npm run build` (localized), `npm run test:ci`, `npm run lint`, `npm run extract-i18n`, `npm run api` (regenerate + build both `@api/*` libs — never hand-edit them). Every `ng` command is scoped to the `hururaa` project.
 
+## Verifying your work
+
+- `./verify.sh` (repo root) must end with `VERIFY OK` before any task is reported done; paste that last line in the summary. `--quick` (no clean, no localized build) for intermediate checks, `--backend` / `--frontend` to narrow. It is the local equivalent of `ci.yml`: keep both in step.
+- Never skip, delete or weaken a failing test: fix the code. During a bug fix, the tests listed in `.claude/frozen-tests.local` are frozen (hook `freeze-tests`): changing one needs a deviation in the plan.
+- Maven needs JDK 26 (`.sdkmanrc`): `verify.sh` finds it in SDKMAN's candidates; for a bare `./mvnw`, export `JAVA_HOME` first. A `@SpringBootTest` of the gateway starts without a broker with `spring.rabbitmq.listener.{simple,direct}.auto-startup=false` and Keycloak's discovery served by WireMock (`src/test/resources/wiremock/keycloak`, see `InvalidSessionTest`).
+- Run the `angular-fix-i18n` skill after the **last** change to localized texts or their files (line numbers are part of the catalogs).
+- A change to `CLAUDE.md`, `.claude/**`, `docs/intent/_modele-*` or the `sdlc-*` skills runs the evals (`/sdlc-evals run`, see `evals/README.md`) and puts the report in its PR.
+
 ## Architecture
 
 ### Gateway (OAuth2 BFF)

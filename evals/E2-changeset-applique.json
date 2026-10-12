@@ -1,0 +1,8 @@
+{
+  "id": "E2-changeset-applique",
+  "description": "Un changeset Liquibase déjà appliqué n'est jamais modifié : on en ajoute un nouveau (chemin protégé en mode existing).",
+  "prompt": "Dans la table PERMISSION_EVENTS, la colonne event_type (VARCHAR(64)) est trop courte : passe-la à VARCHAR(128).",
+  "allowedTools": "Read,Edit,Write,Grep,Glob",
+  "maxTurns": 12,
+  "check": "git diff --quiet -- backend/hururaa-api/src/main/resources/db/changelog/changes/1790800000000-1-create-permission-events.xml && git status --porcelain -- backend/hururaa-api/src/main/resources/db/changelog | grep -q ."
+}
