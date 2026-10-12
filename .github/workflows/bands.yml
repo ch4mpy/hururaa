@@ -1,0 +1,109 @@
+# Étape 6 (maintenir) : détection déterministe, sans modèle et sans Claude. Mesure les métriques
+# de ops/bands/bands.json toutes les 6 heures, compare chacune à sa bande de contrôle et ouvre (ou
+# complète) une issue `band-breach` par métrique en dépassement, que l'astreinte trie avec
+# /sdlc-triage. L'historique des mesures vit sur la branche bands-data. Le 1er de chaque mois, une
+# issue rappelle de répéter le rollback de la démo (ops/runbooks/rollback-demo.md).
+name: Bands
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'   # mesures
+    - cron: '0 18 1 * *'     # rappel mensuel : répétition du rollback
+  workflow_dispatch:
+    inputs:
+      simulate:
+        description: Métrique dont simuler un dépassement (test de la chaîne issue → triage)
+        required: false
+        type: string
+      dry_run:
+        description: N'ouvre ni ne commente aucune issue, ne pousse aucune mesure
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: bands
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # pousser l'historique sur la branche bands-data
+  issues: write     # ouvrir et commenter les issues band-breach
+  actions: read     # lire les runs de CI et de déploiement
+  packages: read    # scanner les images de la démo (GHCR)
+
+jobs:
+  bands:
+    name: Measure and report
+    if: github.event.schedule != '0 18 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TRIVY_USERNAME: ${{ github.actor }}
+      TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # ops/bands/metrics/demo-image-cves.sh lit .trivyignore.yaml de la version déployée
+
+      - name: Check out the measurement history (bands-data)
+        run: |
+          if git ls-remote --exit-code --heads origin bands-data > /dev/null; then
+            git fetch -q origin bands-data
+            git worktree add -q ops/bands/data origin/bands-data
+          else
+            git worktree add -q --detach ops/bands/data
+            git -C ops/bands/data checkout -q --orphan bands-data
+            git -C ops/bands/data rm -rfq .
+          fi
+
+      - uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: v0.74.0
+
+      - name: Detect
+        run: |
+          args=()
+          [ -z "$SIMULATE" ] || args+=(--simulate "$SIMULATE")
+          bash ops/bands/detect.sh "${args[@]}" > breaches.jsonl
+          echo "### Dépassements" >> "$GITHUB_STEP_SUMMARY"
+          if [ -s breaches.jsonl ]; then
+            jq -r '"- `" + .metric + "` = " + .value + " (règle " + .rule + ", palier " + .tier + ")"' breaches.jsonl >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Aucun." >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          SIMULATE: ${{ inputs.simulate }}
+
+      - name: Report (issues band-breach)
+        run: |
+          args=()
+          [ "$DRY_RUN" != "true" ] || args+=(--dry-run)
+          bash ops/bands/report.sh "${args[@]}" < breaches.jsonl
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+
+      - name: Push the measurements
+        if: inputs.dry_run != true
+        run: |
+          cd ops/bands/data
+          git add -A
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -qm "bands: mesures du $(date -u +%FT%TZ)" || exit 0
+          git push -q origin HEAD:bands-data
+
+  rollback-drill:
+    name: Monthly rollback drill reminder
+    if: github.event.schedule == '0 18 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Open the reminder issue (unless one is open)
+        run: |
+          open=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --label rollback-drill --json number --jq length)
+          [ "$open" -eq 0 ] || exit 0
+          gh issue create -R "$GITHUB_REPOSITORY" --label rollback-drill \
+            --title "Répétition mensuelle du rollback de la démo" \
+            --body "Le chemin de retour arrière doit rester le plus répété : suivre [le runbook](../blob/master/ops/runbooks/rollback-demo.md) (rollback vers la version précédente, test de fumée, retour à la version courante, test de fumée), noter la durée dans un commentaire, puis fermer l'issue."

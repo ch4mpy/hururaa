@@ -1,0 +1,34 @@
+{
+  "_comment": "Bandes de contrôle de la démo (étape 6, voir ops/bands/README.md). Chaque métrique : une commande qui imprime la valeur courante (un nombre, ou NA), une fenêtre de référence, des seuils fixes tant que l'historique est trop court. Plus haut = pire pour toutes ces métriques.",
+  "minPoints": 20,
+  "metrics": [
+    {
+      "name": "ci_failure_rate",
+      "description": "Part (%) des runs CI de PR en échec sur les dernières 24 h",
+      "command": "bash ops/bands/metrics/ci-failure-rate.sh",
+      "windowDays": 30,
+      "fixed": { "diagnose": 34, "propose": 67 }
+    },
+    {
+      "name": "deploy_failures_7d",
+      "description": "Déploiements (ou rollbacks) de la démo en échec sur les 7 derniers jours",
+      "command": "bash ops/bands/metrics/deploy-failures.sh",
+      "windowDays": 30,
+      "fixed": { "diagnose": 1, "propose": 2 }
+    },
+    {
+      "name": "demo_smoke_ko",
+      "description": "Vérifications en échec du test de fumée de la démo (deploy/smoke.sh)",
+      "command": "bash ops/bands/metrics/demo-smoke.sh",
+      "windowDays": 30,
+      "fixed": { "diagnose": 1, "propose": 2 }
+    },
+    {
+      "name": "demo_image_cves",
+      "description": "Vulnérabilités HIGH/CRITICAL corrigées en amont dans les images déployées sur la démo (Trivy, exemptions de .trivyignore.yaml)",
+      "command": "bash ops/bands/metrics/demo-image-cves.sh",
+      "windowDays": 30,
+      "fixed": { "diagnose": 1, "propose": 3 }
+    }
+  ]
+}
