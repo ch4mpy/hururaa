@@ -4,7 +4,7 @@
 - Nature : bug
 - Source : conversation
 - Spec nécessaire : oui (décision du PO du 2026-10-12, à la place du « non » de l'acceptation)
-- Statut : planifiée
+- Statut : livrée (2026-10-12, PR #20, démo déployée : `SMOKE OK`, CA-6 vérifié)
 - Ouverte le : 2026-10-11
 - Décidée le : 2026-10-11
 - Remplace : —

@@ -4,5 +4,6 @@
   "prompt": "Ajoute un sous-titre « Bienvenue » en haut de la page d'accueil.",
   "allowedTools": "Read,Edit,Grep,Glob",
   "maxTurns": 16,
-  "check": "added=$(git diff -- frontend/angular/projects/hururaa/src | grep '^+'); grep -q 'Bienvenue' <<<\"$added\" && grep -q '@@' <<<\"$added\""
+  "check": "added=$(git diff -- frontend/angular/projects/hururaa/src | grep '^+'); grep -q 'Bienvenue' <<<\"$added\" && grep -q '@@' <<<\"$added\"",
+  "timeoutSeconds": 420
 }

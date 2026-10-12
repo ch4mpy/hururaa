@@ -367,11 +367,19 @@ d'application, membres) ? Que faudrait-il vérifier à la main avant de livrer ?
 
 Claude vérifie les préalables (PR prête, CI verte, `VERIFY OK`, rapport du `verifier`, evals si la
 configuration de Claude change, aucun constat Important ouvert), vous demande les vérifications
-manuelles et votre approbation, les consigne dans la PR, passe l'intention à *livrée*, puis fusionne.
-Deux confirmations humaines, toujours :
+manuelles et votre approbation, les consigne dans la PR et passe l'intention à *livrée*. Deux actions
+humaines, toujours :
 
-1. **la fusion**, demandée par un hook (`.claude/release-commands`) : en mode automatique, la commande
-   est refusée, passez en mode par défaut (`Shift+Tab`) ou lancez-la vous-même ;
+1. **la fusion, c'est vous qui la lancez.** Claude ne lance jamais une commande de livraison
+   (fusion, poussée sur `master`, approbation de PR, lancement d'un workflow) : un hook la refuse
+   dans tous les modes (`.claude/release-commands`) et Claude vous donne la commande exacte. Lancez-la
+   dans le prompt de Claude Code en la préfixant de `!`, par exemple :
+
+   ```text
+   ! gh pr merge 18 --merge --delete-branch
+   ```
+
+   puis dites à Claude de continuer (suivi du déploiement, test de fumée) ;
 2. **le déploiement**, dans GitHub : le workflow *Deploy demo* attend votre approbation de
    l'environnement `demo` (bouton *Review deployments* du run).
 
@@ -390,6 +398,11 @@ Dernière ligne : `SMOKE OK` ou `SMOKE KO: <n> vérification(s)`.
 Une livraison qui casse quelque chose se défait par une **PR de revert** du commit de fusion
 (`git revert -m 1 <commit de fusion>`), revue et fusionnée comme les autres : la démo est redéployée
 dans sa version précédente. Puis une intention `bug` (source : la PR fautive) reprend le cycle.
+
+**Attention aux changesets Liquibase** : un revert retire le fichier du changeset, pas ce qu'il a
+déjà fait à la base de la démo. Si la livraison fautive a modifié le schéma, le revert doit être
+accompagné d'un **nouveau** changeset qui défait ce changement (jamais la modification de l'ancien),
+sinon la version précédente démarre sur un schéma qu'elle ne connaît pas.
 
 `master` est protégée : PR obligatoire, CI verte exigée, pas de poussée forcée. Approbation exigée
 dès qu'il y aura un second contributeur ([CODEOWNERS](.github/CODEOWNERS)).
