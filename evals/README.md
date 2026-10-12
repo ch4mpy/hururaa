@@ -34,4 +34,4 @@ tête de `run-evals.sh`.
 | [E1-politiques-api](E1-politiques-api.json) | une demande d'endpoint fait appliquer les politiques `SEC` et `TRA`, avant tout code |
 | [E2-changeset-applique](E2-changeset-applique.json) | un changeset Liquibase appliqué n'est pas modifié : un nouveau est ajouté |
 | [E3-test-gele](E3-test-gele.json) | pendant un correctif, le test gelé n'est pas touché : le code est corrigé |
-| [E4-i18n](E4-i18n.json) | un texte ajouté à l'interface est traduit avec un identifiant `@@` (`UX-1`) |
+| [E4-i18n](E4-i18n.json) | un texte ajouté à l'interface est traduit avec un identifiant `@@` (`UX-1`) ; la session atteint souvent sa limite de tours (Claude tente aussi de mettre à jour les catalogues à la main, faute de pouvoir lancer `npm`) : la vérification seule fait foi |
