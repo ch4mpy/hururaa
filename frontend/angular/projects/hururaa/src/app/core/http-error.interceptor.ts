@@ -22,6 +22,11 @@ export function httpErrorMessage(error: HttpErrorResponse): string {
   if (error.status === 0) {
     return $localize`:@@http.error.network:Serveur injoignable, vérifiez votre connexion`;
   }
+  // A 2xx can only fail because its body is not what was expected: typically an HTML page reached
+  // through a redirection instead of the JSON the caller asked for.
+  if (error.status >= 200 && error.status < 300) {
+    return $localize`:@@http.error.unexpected:Réponse inattendue du serveur, veuillez recharger la page`;
+  }
   if (error.status === 401) {
     return $localize`:@@http.error.unauthorized:Session expirée, veuillez vous reconnecter`;
   }

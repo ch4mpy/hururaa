@@ -97,6 +97,19 @@ describe('httpErrorInterceptor', () => {
       expect(messageFor(503)).toBe('Erreur du serveur, veuillez réessayer plus tard');
     });
 
+    it('names an unreadable success response, such as HTML reached through a redirection', () => {
+      const unreadable = new HttpErrorResponse({
+        status: 200,
+        statusText: 'OK',
+        url: 'https://host.docker.internal/fr/',
+        error: { error: new SyntaxError('Unexpected token <'), text: '<!doctype html>' },
+      });
+
+      expect(httpErrorMessage(unreadable)).toBe(
+        'Réponse inattendue du serveur, veuillez recharger la page',
+      );
+    });
+
     it('prefers the typed problem message over the status one', () => {
       expect(
         httpErrorMessage(new HttpErrorResponse({ status: 404, error: applicationNotFound })),
