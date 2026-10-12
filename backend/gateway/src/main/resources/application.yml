@@ -116,6 +116,12 @@ com:
           # the CSRF cookie must be accessible to both the BFF and the SPA code
           # while not colliding with other apps CSRF cookies
           csrf-cookie-path: /
+          # A session cookie the gateway no longer knows (browser reopened, session expired, gateway
+          # restarted): 401 rather than the default 302, whose Location drops the /gateway context
+          # path and lands the SPA's XHR on an HTML page. A new session is opened, so /me then
+          # answers anonymous (docs/intent/0001).
+          invalid-session:
+            status: UNAUTHORIZED
           oauth2-redirections:
             authentication-entry-point: UNAUTHORIZED
             pre-authorization-code: OK
