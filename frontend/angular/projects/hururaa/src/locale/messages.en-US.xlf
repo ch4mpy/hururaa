@@ -130,6 +130,14 @@
           <context context-type="linenumber">23</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="http.error.unexpected" datatype="html">
+        <source>Réponse inattendue du serveur, veuillez recharger la page</source>
+        <target>Unexpected server response, please reload the page</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
+          <context context-type="linenumber">28</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="http.error.unauthorized" datatype="html">
         <source>Session expirée, veuillez vous reconnecter</source>
         <target>Session expired, please log in again</target>

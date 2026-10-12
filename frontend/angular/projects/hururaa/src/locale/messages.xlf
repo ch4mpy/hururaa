@@ -117,39 +117,46 @@
           <context context-type="linenumber">23</context>
         </context-group>
       </trans-unit>
+      <trans-unit id="http.error.unexpected" datatype="html">
+        <source>Réponse inattendue du serveur, veuillez recharger la page</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
+          <context context-type="linenumber">28</context>
+        </context-group>
+      </trans-unit>
       <trans-unit id="http.error.unauthorized" datatype="html">
         <source>Session expirée, veuillez vous reconnecter</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
-          <context context-type="linenumber">26</context>
+          <context context-type="linenumber">31</context>
         </context-group>
       </trans-unit>
       <trans-unit id="http.error.forbidden" datatype="html">
         <source>Accès refusé</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
-          <context context-type="linenumber">29</context>
+          <context context-type="linenumber">34</context>
         </context-group>
       </trans-unit>
       <trans-unit id="http.error.notFound" datatype="html">
         <source>Ressource introuvable</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
-          <context context-type="linenumber">32</context>
+          <context context-type="linenumber">37</context>
         </context-group>
       </trans-unit>
       <trans-unit id="http.error.server" datatype="html">
         <source>Erreur du serveur, veuillez réessayer plus tard</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
-          <context context-type="linenumber">35</context>
+          <context context-type="linenumber">40</context>
         </context-group>
       </trans-unit>
       <trans-unit id="http.error.client" datatype="html">
         <source>Requête refusée par le serveur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
-          <context context-type="linenumber">37</context>
+          <context context-type="linenumber">42</context>
         </context-group>
       </trans-unit>
       <trans-unit id="problem.validation" datatype="html">
@@ -349,7 +356,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">65,66</context>
+          <context context-type="linenumber">63,64</context>
         </context-group>
       </trans-unit>
       <trans-unit id="actions" datatype="html">
@@ -372,7 +379,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">155,156</context>
+          <context context-type="linenumber">153,154</context>
         </context-group>
       </trans-unit>
       <trans-unit id="application.group.open" datatype="html">
@@ -422,7 +429,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">154</context>
+          <context context-type="linenumber">152</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/users/users.ts</context>
@@ -441,7 +448,7 @@
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">154,155</context>
+          <context context-type="linenumber">152,153</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/users/users.ts</context>
@@ -759,148 +766,148 @@
         <source>Tous les groupes</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">43,46</context>
+          <context context-type="linenumber">41,44</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.otherApplication" datatype="html">
         <source>Ce groupe n&apos;appartient pas à cette application.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">48,50</context>
+          <context context-type="linenumber">46,48</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete" datatype="html">
         <source>Supprimer le groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">59,60</context>
+          <context context-type="linenumber">57,58</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">287</context>
+          <context context-type="linenumber">296</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.remove" datatype="html">
         <source>Ne plus attribuer ce rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">78,79</context>
+          <context context-type="linenumber">76,77</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.roles.empty" datatype="html">
         <source>Ce groupe n&apos;attribue aucun rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">85,87</context>
+          <context context-type="linenumber">83,85</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.pick" datatype="html">
         <source>Rôle à attribuer</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">98,99</context>
+          <context context-type="linenumber">96,97</context>
         </context-group>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">100,102</context>
+          <context context-type="linenumber">98,100</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.add" datatype="html">
         <source>Attribuer le rôle</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">115,116</context>
+          <context context-type="linenumber">113,114</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.roles.noneDefined" datatype="html">
         <source>L&apos;application n&apos;a aucun rôle :</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">121,123</context>
+          <context context-type="linenumber">119,121</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.roles.define" datatype="html">
         <source>définir ses rôles</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">125,127</context>
+          <context context-type="linenumber">123,125</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.members" datatype="html">
         <source>Membres</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">133,134</context>
+          <context context-type="linenumber">131,132</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.add" datatype="html">
         <source>Ajouter au groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">138,139</context>
+          <context context-type="linenumber">136,137</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.remove" datatype="html">
         <source>Retirer du groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">168,169</context>
+          <context context-type="linenumber">166,167</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.members.empty" datatype="html">
         <source>Aucun membre</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">176,178</context>
+          <context context-type="linenumber">174,176</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.history" datatype="html">
-        <source>Historique des permissions</source>
+        <source> Historique des permissions </source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">184,185</context>
+          <context context-type="linenumber">183,184</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.added" datatype="html">
         <source>Le groupe attribue désormais <x id="role" equiv-text="role"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">258</context>
+          <context context-type="linenumber">267</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.role.removed" datatype="html">
         <source>Le groupe n&apos;attribue plus <x id="role" equiv-text="role"/></source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">265</context>
+          <context context-type="linenumber">274</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.added" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> ajouté au groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">272</context>
+          <context context-type="linenumber">281</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.member.removed" datatype="html">
         <source><x id="user" equiv-text="userLabel(user)"/> retiré du groupe</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">279</context>
+          <context context-type="linenumber">288</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.delete.confirm" datatype="html">
         <source>Supprimer le groupe <x id="group" equiv-text="group"/> ? Ses membres perdront les rôles qu&apos;il leur attribue.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">288</context>
+          <context context-type="linenumber">297</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.deleted" datatype="html">
         <source>Groupe <x id="group" equiv-text="group"/> supprimé</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/pages/applications/group-detail.ts</context>
-          <context context-type="linenumber">291</context>
+          <context context-type="linenumber">300</context>
         </context-group>
       </trans-unit>
       <trans-unit id="group.roles.none" datatype="html">
