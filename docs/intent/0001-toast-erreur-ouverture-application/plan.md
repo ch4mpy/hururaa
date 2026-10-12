@@ -85,3 +85,8 @@ suivront par une nouvelle intention.
   `SKIP_ERROR_BANNER` aurait aussi tu « Erreur du serveur… » gateway arrêtée (CA-3). — Fichiers :
   `http-error.interceptor.ts` et sa spec sont aussi modifiés à l'étape 3 (déjà listés) ; preuve
   inchangée, avec un cas de plus dans `http-error.interceptor.spec.ts` (`502` sur la sonde → message).
+- 2026-10-12 — Étape 6 (preuve CA-7 en dev) : six appels en `401` simultanés ont relu `/me` cinq
+  fois (l'utilisateur ne devient anonyme qu'à la première réponse). — `UserService.sessionExpired()`
+  relit `/me` une seule fois par rafale ; l'intercepteur l'appelle. — Fichiers déjà listés
+  (`user.service.ts`, `session-expired.interceptor.ts` et sa spec) ; preuve CA-7 complétée d'un cas
+  « rafale de 401 → un seul `/me` ».
