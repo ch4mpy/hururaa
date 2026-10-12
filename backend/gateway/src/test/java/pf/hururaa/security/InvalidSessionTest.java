@@ -18,20 +18,24 @@ import org.wiremock.spring.EnableWireMock;
  * How the whole security chain treats a session cookie the gateway no longer knows (browser
  * reopened, session expired, gateway restarted): a {@code 401}, never a redirection, on the session
  * probe ({@code /me}) as on the BFF routes (docs/intent/0001). Keycloak's discovery documents are
- * served by WireMock, as for the {@code openapi} Maven profile; the RabbitMQ listeners (resource
- * events) don't start, so no broker is needed.
+ * served by WireMock, as for the {@code openapi} Maven profile, and so is {@code hururaa-api}, which
+ * answers {@code 401} to what the gateway relays without a token (no session); the RabbitMQ
+ * listeners (resource events) don't start, so no broker is needed.
  */
 @SpringBootTest(
     properties = {
       "issuer=http://localhost:8089/auth/realms/public-facing",
+      "rest-api-v1=http://localhost:8090",
       "server.ssl.enabled=false",
       "spring.rabbitmq.listener.simple.auto-startup=false",
       "spring.rabbitmq.listener.direct.auto-startup=false"
     })
 @ActiveProfiles("no-observability")
 @AutoConfigureMockMvc
-@EnableWireMock(
-    @ConfigureWireMock(name = "keycloak", port = 8089, filesUnderClasspath = "wiremock/keycloak"))
+@EnableWireMock({
+  @ConfigureWireMock(name = "keycloak", port = 8089, filesUnderClasspath = "wiremock/keycloak"),
+  @ConfigureWireMock(name = "hururaa-api", port = 8090, filesUnderClasspath = "wiremock/hururaa-api")
+})
 class InvalidSessionTest {
   private static final String CONTEXT_PATH = "/gateway";
 

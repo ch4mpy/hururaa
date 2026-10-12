@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "ANY",
+    "urlPattern": "/.*",
+    "headers": {
+      "Authorization": {
+        "absent": true
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "WWW-Authenticate": "Bearer"
+    }
+  }
+}
