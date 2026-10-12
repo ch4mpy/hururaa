@@ -16,7 +16,8 @@ expect() { # label expected-status url [curl options...]
   local label=$1 want=$2 url=$3
   shift 3
   local got
-  got=$(curl -s -o /dev/null -m 20 -w '%{http_code}' "${curl_opts[@]}" "$@" "$url")
+  # ${a[@]+...}: an empty array under set -u breaks bash < 4.4 (macOS)
+  got=$(curl -s -o /dev/null -m 20 -w '%{http_code}' ${curl_opts[@]+"${curl_opts[@]}"} "$@" "$url")
   if [ "$got" = "$want" ]; then
     printf 'OK  %-55s %s\n' "$label" "$got"
   else
@@ -28,7 +29,8 @@ expect() { # label expected-status url [curl options...]
 expect "front (fr)" 200 "$base/fr/"
 expect "front (en)" 200 "$base/en/"
 expect "gateway /me, no session: anonymous" 200 "$base/gateway/me" -H 'Accept: application/json'
-# docs/intent/0001: an unknown session answers 401, never a redirection
+# docs/intent/0001 (spec v2): an unknown session answers 401, never a redirection. Intent 0002
+# (spring-addons#312) brings /me back to 200 here: update this check with it.
 expect "gateway /me, unknown session: 401, no redirection" 401 "$base/gateway/me" \
   -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
 expect "API through the BFF, no session: 401" 401 "$base/gateway/bff/api/v1/me/delegations" \

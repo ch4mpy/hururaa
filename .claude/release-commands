@@ -1,13 +1,15 @@
-# Commandes de livraison soumises à une décision humaine (hook release-gate, voir CONTRIBUTING.md,
-# étape 5). <ask|deny> <regex étendue sur la commande entière>  # <raison>
-# La première règle qui correspond l'emporte : les refus d'abord. Chaque règle est ancrée en début de
-# commande (début de ligne, ou après ; & | ou une parenthèse) pour ne pas viser un texte qui contient
-# la commande (un fichier écrit par heredoc, un message de commit…). « git( [^;&|]*)? push » couvre
-# les options placées avant push (git -c credential.helper=… push …).
-deny  (^|[;&|(] *)git( [^;&|]*)? push[^;&|]*(--force|--force-with-lease| -f( |$))[^;&|]*master  # forcer la poussée sur master
-deny  (^|[;&|(] *)gh pr review[^;&|]*(--approve| -a( |$))  # Claude n'approuve jamais une PR
-deny  (^|[;&|(] *)gh api [^;&|]*pulls/[0-9]+/reviews[^;&|]*APPROVE  # Claude n'approuve jamais une PR
-ask   (^|[;&|(] *)gh pr merge  # fusionner une PR dans master (et donc déployer la démo pour du code)
-ask   (^|[;&|(] *)gh api [^;&|]*pulls/[0-9]+/merge  # fusionner une PR dans master
-ask   (^|[;&|(] *)git( [^;&|]*)? push( [^;&|]*)? [^ ]*(HEAD:|:)?master( |$)  # pousser sur master
-ask   (^|[;&|(] *)gh workflow run deploy-demo  # déployer la démo
+# Commandes de livraison que Claude ne lance jamais : le hook release-gate les refuse dans tous les
+# modes et donne la commande à lancer soi-même (dans Claude Code : « ! <commande> »). Voir
+# CONTRIBUTING.md, étape 5. <deny> <regex étendue, testée ligne par ligne>  # <raison>
+# Motifs volontairement larges (préfixes d'environnement, wrappers, gh.exe entre guillemets…) :
+# bloquer un texte qui cite une de ces commandes (message de commit, heredoc) coûte une
+# reformulation ; laisser passer une vraie livraison coûte une livraison. La protection de master et
+# l'environnement « demo » de GitHub restent les vrais verrous.
+base  master  # branche protégée : tout « git push » lancé depuis master est refusé
+deny  (^|[^[:alnum:]_.-])gh(\.exe)?"?( [^;&|]*)? pr merge  # fusionner une PR
+deny  (^|[^[:alnum:]_.-])gh(\.exe)?"?( [^;&|]*)? pr review[^;&|]*(--approve| -a( |$))  # approuver une PR (jamais Claude)
+deny  (^|[^[:alnum:]_.-])gh(\.exe)?"?( [^;&|]*)? api [^;&|]*pulls/[0-9]+/(merge|reviews)  # fusionner ou approuver par l'API REST
+deny  (mergePullRequest|enablePullRequestAutoMerge|addPullRequestReview|submitPullRequestReview)  # fusionner ou approuver par l'API GraphQL
+deny  (^|[^[:alnum:]_.-])git(\.exe)?"?( [^;&|]*)? push[^;&|]*(master|--mirror|--all)  # pousser sur master
+deny  (^|[^[:alnum:]_.-])gh(\.exe)?"?( [^;&|]*)? workflow (run|enable)  # lancer un workflow (déploiement de la démo…)
+deny  (^|[^[:alnum:]_.-])gh(\.exe)?"?( [^;&|]*)? run rerun  # relancer un workflow (déploiement de la démo…)
