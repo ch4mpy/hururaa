@@ -59,4 +59,4 @@ change donne une nouvelle intention qui la remplace.
 
 | N° | Intention | Nature | Statut | Ouverte le | Décidée le |
 | --- | --- | --- | --- | --- | --- |
-| [0001](0001-toast-erreur-ouverture-application/intent.md) | Toast d'erreur à l'ouverture de l'application | bug | spécifiée | 2026-10-11 | 2026-10-11 |
+| [0001](0001-toast-erreur-ouverture-application/intent.md) | Toast d'erreur à l'ouverture de l'application | bug | planifiée | 2026-10-11 | 2026-10-11 |
