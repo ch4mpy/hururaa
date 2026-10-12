@@ -1,0 +1,10 @@
+# Chemins que Claude ne modifie pas (hook protect-paths, voir CONTRIBUTING.md, « Fichiers protégés »).
+# <mode> <glob>  # <raison>
+#   never     ni création ni modification
+#   existing  pas de modification d'un fichier existant, création permise
+never     frontend/angular/projects/api/**                                 # code généré : npm run api
+never     backend/openapi/out/**                                           # specs générées : ./build-openapi.sh
+existing  backend/hururaa-api/src/main/resources/db/changelog/changes/**   # changeset déjà appliqué : en ajouter un nouveau
+never     .env                                                             # secrets générés par build-0-env.sh
+never     secrets/**                                                       # secrets générés par build-0-env.sh
+never     certs/**                                                         # certificats générés par reset-dev-env.sh

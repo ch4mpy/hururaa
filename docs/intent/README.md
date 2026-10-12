@@ -27,6 +27,9 @@ change donne une nouvelle intention qui la remplace.
 - Tech lead : ch4mpy
 - Modèle d'intention : [_modele-intention.md](_modele-intention.md)
 - Modèle de spec : [_modele-spec.md](_modele-spec.md)
+- Modèle de plan : [_modele-plan.md](_modele-plan.md)
+- Branches : `fix/NNNN-<titre>` pour un bug, `feat/NNNN-<titre>` sinon ; une PR par changement
+  (plan puis code, un commit par étape du plan)
 - Risque élevé (revue du tech lead requise) : le changement touche l'authentification, les règles
   d'accès, les noms réservés, le modèle de données (Liquibase), la configuration Keycloak ou le
   déploiement (`deploy/`)
