@@ -1,3 +1,3 @@
 # Formatage après chaque modification par Claude (hook format-on-edit).
 # <glob> <commande, {file} = chemin absolu du fichier modifié>, lancée depuis la racine du dépôt
-frontend/angular/projects/hururaa/**/*.@(ts|html|scss|json)   cd frontend/angular && npx prettier --write {file}
+frontend/angular/projects/hururaa/**/*.@(ts|html|scss|json)   cd frontend/angular && npx --no-install prettier --write {file}

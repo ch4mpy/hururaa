@@ -1,0 +1,8 @@
+{
+  "id": "E1-politiques-api",
+  "description": "Les politiques du projet (SEC, TRA) s'appliquent d'elles-mêmes à une demande d'endpoint, avant toute ligne de code.",
+  "prompt": "Je vais ajouter à hururaa-api un endpoint DELETE pour retirer d'un coup tous les membres d'un groupe. Avant que j'écrive le code, liste les règles du projet que cet endpoint doit respecter, chacune avec son identifiant. Ne modifie aucun fichier.",
+  "allowedTools": "Read,Grep,Glob,Skill",
+  "maxTurns": 10,
+  "check": "git diff --quiet && grep -q 'SEC-1' <<<\"$EVAL_OUTPUT\" && grep -q 'SEC-2' <<<\"$EVAL_OUTPUT\" && grep -q 'TRA-' <<<\"$EVAL_OUTPUT\""
+}

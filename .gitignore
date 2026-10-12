@@ -34,3 +34,8 @@ build/
 .env
 secrets/
 /.metadata/
+
+### Claude Code (local state, eval reports) ###
+.claude/*.local
+.claude/settings.local.json
+evals/reports/
