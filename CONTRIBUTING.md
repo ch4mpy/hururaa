@@ -43,9 +43,11 @@ d'architecture dans [docs/decisions/](docs/decisions/).
 - [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`), connecté : `gh auth login` (portée `repo`).
 - [jq](https://jqlang.org/) (`winget install jqlang.jq`), utilisé par les hooks Claude Code.
 - Sous Windows, `gh` et `jq` doivent répondre dans Git Bash comme dans PowerShell (`gh --version`, `jq --version`).
-- Les skills Claude Code `sdlc-*` dans `~/.claude/skills/`, l'agent `~/.claude/agents/verifier.md`
-  et les hooks `~/.claude/hooks/protect-paths.sh` et `format-on-edit.sh` (mode de distribution en
-  cours de définition).
+- Les skills Claude Code `sdlc-*` dans `~/.claude/skills/`, l'agent `~/.claude/agents/verifier.md`,
+  les hooks `~/.claude/hooks/protect-paths.sh`, `freeze-tests.sh` et `format-on-edit.sh`, et le
+  lanceur d'evals `~/.claude/scripts/run-evals.sh` (mode de distribution en cours de définition).
+- Pour les evals : la commande `claude` (Claude Code en ligne de commande, connecté à votre
+  abonnement) ; le lanceur la trouve aussi dans `~/.local/bin`.
 - Pour développer : l'environnement décrit dans le [README §5](README.md#5-déploiement-en-local).
 
 ## Étape 1 — Planifier
@@ -266,6 +268,58 @@ Un hook refuse à Claude les modifications de ces chemins (`.claude/protected-pa
 Un second hook formate avec Prettier les fichiers du front que Claude modifie
 (`.claude/formatters`). Pour changer ces listes : une PR sur le fichier concerné.
 
+## Étape 4 — Tester
+
+Chaque session vérifie son propre travail : on ne voit que ce qui passe.
+
+### Vérifier son travail
+
+Une seule commande, depuis la racine du dépôt (Git Bash sous Windows) :
+
+```bash
+./verify.sh            # backend et front, complet (≈ quelques minutes)
+./verify.sh --quick    # sans clean ni build localisé, pour les vérifications intermédiaires
+```
+
+Elle choisit le JDK de `.sdkmanrc` et se termine par `VERIFY OK`, ou par `VERIFY KO: <étape>`.
+Claude la lance avant de déclarer un travail fini et colle sa dernière ligne dans la PR. C'est
+l'équivalent local de la CI.
+
+### Comment corriger un bug (test d'abord) ?
+
+Avec `/sdlc-plan` (voir l'étape 3), le plan d'un bug commence toujours par un test qui le
+reproduit et échoue. Une fois ce test commité, il est **gelé** : Claude doit corriger le code, pas
+le test. S'il essaie, le hook refuse :
+
+```text
+Frozen test: frontend/angular/projects/hururaa/src/app/core/http-error.interceptor.spec.ts
+reproduces the bug being fixed; fix the code, not the test.
+```
+
+La liste des tests gelés est locale (`.claude/frozen-tests.local`, ignoré par git) ; Claude la
+supprime à la fin. Modifier un test gelé exige un écart consigné dans le plan.
+
+### Je modifie CLAUDE.md, une politique ou un skill : lancer les evals
+
+Les evals rejouent de vraies tâches pour vérifier que Claude se comporte toujours comme attendu
+(politiques citées, chemins protégés respectés, test gelé intact, textes traduits). Elles sont
+**obligatoires** pour une PR qui touche `CLAUDE.md`, `.claude/**`, `docs/intent/_modele-*` ou un
+skill `sdlc-*`. Dans Claude Code :
+
+```text
+/sdlc-evals run
+```
+
+Hors de Claude Code (terminal, ou onglet *Code* de Claude Desktop), depuis le dépôt :
+
+```bash
+bash ~/.claude/scripts/run-evals.sh
+```
+
+Collez la dernière ligne (`EVALS 4/4 OK`) et le tableau du rapport dans la PR. Une erreur de
+Claude constatée en session ou en revue devient une nouvelle eval : `/sdlc-evals add <ce qu'il
+faut garder>`. Détails : [evals/README.md](evals/README.md).
+
 ## Aide-mémoire
 
 | Commande                                 | Étape     | Qui                     |
@@ -281,3 +335,6 @@ Un second hook formate avec Prettier les fichiers du front que Claude modifie
 | `/sdlc-plan draft <NNNN>` (plan mode)    | Construire | développeur            |
 | `/sdlc-plan implement <NNNN>` (mode auto) | Construire | développeur           |
 | `/sdlc-plan stats`                       | Construire | développeur ou tech lead |
+| `./verify.sh` (`--quick`)                | Tester     | tout contributeur, et Claude |
+| `/sdlc-evals run`                        | Tester     | qui modifie la configuration de Claude |
+| `/sdlc-evals add <comportement>`         | Tester     | développeur                |
