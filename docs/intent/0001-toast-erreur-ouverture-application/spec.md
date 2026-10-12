@@ -1,12 +1,13 @@
 # Spec : toast d'erreur à l'ouverture de l'application
 
 - Intention : [0001](intent.md)
-- Statut : brouillon
+- Statut : approuvée
 - Version : 1
 - Risque : élevé — le changement touche l'authentification (gestion des sessions de la gateway)
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
   policy-delegation @229653c, policy-tracabilite @229653c (non concernée)
-- Approuvée : —
+- Approuvée : 2026-10-12, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-12 (PO et tech lead sont la
+  même personne : pas de revue GitHub possible sur sa propre PR)
 
 ## Résumé
 
@@ -22,15 +23,21 @@ justement une réponse inattendue.
   l'utilisateur anonyme, sans redirection, comme sans cookie. (intention : critère « le scénario
   n'affiche plus de toast »)
 - EX-2 Avec un cookie de session inconnu, les routes `/gateway/bff/**` répondent `401` sans
-  redirection, comme sans cookie (portée : → PA-1). (intention : résultat attendu, « aucun toast
+  redirection, comme sans cookie (portée : PA-1). (intention : résultat attendu, « aucun toast
   quand rien n'est en panne »)
 - EX-3 Gateway arrêtée, l'ouverture de l'application affiche toujours un message d'erreur explicite.
   (intention : critère « gateway arrêtée »)
 - EX-4 Une réponse de la gateway qui n'est pas le contenu attendu (page HTML au lieu de JSON) est
-  signalée par un message qui la décrit, pas par « Requête refusée par le serveur » (→ PA-2).
-  (intention : contrainte « les vraies erreurs restent signalées »)
+  signalée par « Réponse inattendue du serveur, veuillez recharger la page » (fr et en), pas par
+  « Requête refusée par le serveur » (PA-2). (intention : contrainte « les vraies erreurs restent
+  signalées »)
 - EX-5 Connexion, déconnexion (y compris back-channel) et flux d'événements fonctionnent comme
-  avant. (non-régression, → PA-3)
+  avant. (non-régression, PA-3)
+- EX-6 Sur une `401` de la gateway, la SPA passe à l'état déconnecté (utilisateur anonyme,
+  bouton *Connexion*, menus d'administration masqués) en plus du message « Session expirée,
+  veuillez vous reconnecter ». (PA-3, condition du tech lead)
+- EX-7 La `401` d'une session inconnue est obtenue par une option de spring-addons-starter-oidc,
+  pas par du code propre à la gateway (PA-3, condition du tech lead).
 
 ## Hors périmètre
 
@@ -97,6 +104,7 @@ Aucune.
 | UX-1 | Tout nouveau message passe par `@angular/localize`, en français et en anglais (PA-2). |
 | UX-2 | Une réponse non typée garde un message générique, mais exact (PA-2). |
 | UX-3 | Les échecs réels restent affichés dans la bannière d'erreur. |
+| UX-6 | Sur une `401`, l'état déconnecté masque les actions d'administration (EX-6). |
 | DEL-3 | Une session perdue ne retire ni ne donne aucun droit ; l'utilisateur se reconnecte. |
 
 ## Points d'attention
@@ -109,7 +117,7 @@ Aucune.
   vous reconnecter ») / B, `/me` seulement, comme l'intention le décrit.
 - Recommandation : A. Même cause, même correction, et le message qui en résulte est juste.
 - Décide : PO
-- Décision : à décider
+- Décision : A, toutes les routes (PO, 2026-10-12).
 
 ### PA-2 Message pour une réponse inattendue
 
@@ -119,7 +127,7 @@ Aucune.
 - Recommandation : B. Le message décrit la situation, et la contrainte « les vraies erreurs restent
   signalées » est tenue.
 - Décide : PO
-- Décision : à décider
+- Décision : B, message dédié (PO, 2026-10-12).
 
 ### PA-3 Risque sur la chaîne d'authentification
 
@@ -129,7 +137,13 @@ Aucune.
   B, différer.
 - Recommandation : A.
 - Décide : tech lead
-- Décision : à décider
+- Décision : acceptée sous conditions (tech lead, 2026-10-12) :
+  - la `401` pour une session inconnue vient d'une option de spring-addons-starter-oidc
+    (vraisemblablement déjà offerte) ; à défaut, ouvrir un ticket chez spring-addons et y ajouter
+    l'option (le tech lead la maintient), puis monter de version dans Hurura'a — pas de
+    contournement local (EX-7) ;
+  - le front traite correctement une `401` : il passe à l'état déconnecté s'il n'y est pas déjà
+    (EX-6).
 
 ### PA-4 SEC-6 et les erreurs de la gateway
 
@@ -140,7 +154,8 @@ Aucune.
   erreurs de la gateway / C, accepter l'écart en l'état.
 - Recommandation : A ou B, hors de cette spec.
 - Décide : responsable de la politique
-- Décision : à décider
+- Décision : B, une nouvelle intention pour typer les erreurs de la gateway (responsable de la
+  politique, 2026-10-12) ; l'écart reste en l'état dans cette spec.
 
 ## Critères d'acceptation
 
@@ -156,6 +171,12 @@ Aucune.
 - CA-5 Étant donné un utilisateur de dev (`dpam.manager`), connexion, affichage de ses directions,
   réception d'un événement et déconnexion fonctionnent ; une déconnexion faite dans Keycloak ferme
   la session de la gateway (back-channel). (EX-5)
+- CA-7 Étant donné un utilisateur connecté dont la session de la gateway disparaît (gateway
+  redémarrée), quand la SPA reçoit une `401` de `/gateway/bff/**`, alors « Session expirée,
+  veuillez vous reconnecter » s'affiche et l'en-tête montre *Connexion*, sans menus
+  d'administration. (EX-6)
+- CA-8 La configuration de la gateway n'active la `401` des sessions inconnues que par une
+  propriété de spring-addons-starter-oidc. (EX-7)
 - CA-6 Sur la démo, après redéploiement : se connecter, fermer et rouvrir le navigateur, ouvrir
   l'application → aucun toast. (EX-1)
 
@@ -173,4 +194,5 @@ Aucune.
 
 ## Historique
 
-- v1 — 2026-10-12 — première version
+- v1 — 2026-10-12 — première version ; à l'approbation : décisions PA-1 à PA-4, ajout de EX-6,
+  EX-7, CA-7 et CA-8 (conditions du tech lead).

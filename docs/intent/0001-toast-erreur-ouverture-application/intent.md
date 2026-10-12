@@ -4,7 +4,7 @@
 - Nature : bug
 - Source : conversation
 - Spec nécessaire : oui (décision du PO du 2026-10-12, à la place du « non » de l'acceptation)
-- Statut : acceptée
+- Statut : spécifiée
 - Ouverte le : 2026-10-11
 - Décidée le : 2026-10-11
 - Remplace : —
