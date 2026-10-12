@@ -11,6 +11,13 @@ import { problemMessage } from './problem-messages';
 export const SKIP_ERROR_BANNER = new HttpContextToken<boolean>(() => false);
 
 /**
+ * Set on the request that probes the session (the gateway's `/me`): its `401` means "no session"
+ * (the gateway answers so to a session cookie it no longer knows, then opens a new session), which
+ * is not an error to show. Its other failures (gateway unreachable...) still are.
+ */
+export const SESSION_PROBE = new HttpContextToken<boolean>(() => false);
+
+/**
  * The localized message for a failed HTTP call: the one matching the API's typed problem when the
  * body is one (see `problemMessage`), otherwise a generic message for the status class.
  */
@@ -54,7 +61,11 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const banner = inject(ErrorBannerService);
   return next(req).pipe(
     catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse && !req.context.get(SKIP_ERROR_BANNER)) {
+      if (
+        error instanceof HttpErrorResponse &&
+        !req.context.get(SKIP_ERROR_BANNER) &&
+        !(error.status === 401 && req.context.get(SESSION_PROBE))
+      ) {
         banner.show(httpErrorMessage(error));
       }
       return throwError(() => error);

@@ -3,15 +3,21 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { GatewayApi, UserResponse } from '@api/gateway';
 import { Observable, catchError, of, shareReplay, tap } from 'rxjs';
 import { POST_LOGIN_SUCCESS_URI, POST_LOGOUT_SUCCESS_URI } from './bff.interceptor';
+import { SESSION_PROBE } from './http-error.interceptor';
 import { LOCATION } from './location';
 
 /** What the gateway's `/me` returns when there is no session. */
 export const ANONYMOUS: UserResponse = { directions: [] };
 
 /**
- * Current user state, backed by the gateway's `/me` endpoint (which always answers `200 OK`, with
- * empty values when unauthenticated): identity and the directions the user is a member of. What
- * the user may do in Hurura'a comes from `hururaa-api` instead (see `DelegationsService`).
+ * Current user state, backed by the gateway's `/me` endpoint: identity and the directions the user
+ * is a member of. What the user may do in Hurura'a comes from `hururaa-api` instead (see
+ * `DelegationsService`).
+ *
+ * `/me` answers `200 OK`, with empty values when unauthenticated, except with a session cookie the
+ * gateway no longer knows (browser reopened, session expired, gateway restarted): then it answers
+ * `401` and opens a new session. The request is a `SESSION_PROBE`: that `401` means anonymous, not
+ * an error to show.
  *
  * Login and logout are real navigations: the gateway answers with the URI to follow in a
  * `Location` header and the browser is sent there (an XHR could not follow the redirect chain
@@ -48,7 +54,8 @@ export class UserService {
 
   /** Re-fetches `/me`. The returned observable replays the result to late subscribers. */
   refresh(): Observable<UserResponse> {
-    this.loading$ = this.gateway.getMe().pipe(
+    const context = new HttpContext().set(SESSION_PROBE, true);
+    this.loading$ = this.gateway.getMe('body', false, { context }).pipe(
       catchError(() => of(ANONYMOUS)),
       tap((user) => this.user.set(user)),
       shareReplay(1),
