@@ -3,15 +3,21 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { GatewayApi, UserResponse } from '@api/gateway';
 import { Observable, catchError, of, shareReplay, tap } from 'rxjs';
 import { POST_LOGIN_SUCCESS_URI, POST_LOGOUT_SUCCESS_URI } from './bff.interceptor';
+import { SESSION_PROBE } from './http-error.interceptor';
 import { LOCATION } from './location';
 
 /** What the gateway's `/me` returns when there is no session. */
 export const ANONYMOUS: UserResponse = { directions: [] };
 
 /**
- * Current user state, backed by the gateway's `/me` endpoint (which always answers `200 OK`, with
- * empty values when unauthenticated): identity and the directions the user is a member of. What
- * the user may do in Hurura'a comes from `hururaa-api` instead (see `DelegationsService`).
+ * Current user state, backed by the gateway's `/me` endpoint: identity and the directions the user
+ * is a member of. What the user may do in Hurura'a comes from `hururaa-api` instead (see
+ * `DelegationsService`).
+ *
+ * `/me` answers `200 OK`, with empty values when unauthenticated, except with a session cookie the
+ * gateway no longer knows (browser reopened, session expired, gateway restarted): then it answers
+ * `401` and opens a new session. The request is a `SESSION_PROBE`: that `401` means anonymous, not
+ * an error to show.
  *
  * Login and logout are real navigations: the gateway answers with the URI to follow in a
  * `Location` header and the browser is sent there (an XHR could not follow the redirect chain
@@ -24,6 +30,7 @@ export class UserService {
 
   private readonly user = signal<UserResponse>(ANONYMOUS);
   private loading$: Observable<UserResponse>;
+  private sessionExpiring = false;
 
   /** The current user: `ANONYMOUS` until `/me` answers, or when there is no session. */
   readonly current = this.user.asReadonly();
@@ -48,7 +55,8 @@ export class UserService {
 
   /** Re-fetches `/me`. The returned observable replays the result to late subscribers. */
   refresh(): Observable<UserResponse> {
-    this.loading$ = this.gateway.getMe().pipe(
+    const context = new HttpContext().set(SESSION_PROBE, true);
+    this.loading$ = this.gateway.getMe('body', false, { context }).pipe(
       catchError(() => of(ANONYMOUS)),
       tap((user) => this.user.set(user)),
       shareReplay(1),
@@ -56,6 +64,18 @@ export class UserService {
     // shareReplay is lazy: fire the request right away rather than on the first whenLoaded() call
     this.loading$.subscribe();
     return this.loading$;
+  }
+
+  /**
+   * Re-fetches `/me` after a call answered `401` (the gateway session is gone), once for a burst of
+   * such calls: a page often fires several requests together, and they all fail at once.
+   */
+  sessionExpired(): void {
+    if (this.sessionExpiring || !this.isAuthenticated()) {
+      return;
+    }
+    this.sessionExpiring = true;
+    this.refresh().subscribe({ complete: () => (this.sessionExpiring = false) });
   }
 
   /** Emits the current user once the latest `/me` request has completed (for route guards). */

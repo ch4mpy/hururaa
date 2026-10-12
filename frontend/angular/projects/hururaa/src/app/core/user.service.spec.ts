@@ -3,8 +3,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideApi } from '@api/gateway';
 import { bffInterceptor } from './bff.interceptor';
+import { SESSION_PROBE } from './http-error.interceptor';
 import { LOCATION } from './location';
-import { UserService } from './user.service';
+import { ANONYMOUS, UserService } from './user.service';
 
 describe('UserService', () => {
   let http: HttpTestingController;
@@ -46,6 +47,18 @@ describe('UserService', () => {
     expect(service.isAuthenticated()).toBe(true);
     expect(service.displayName()).toBe('Ali Peau-Cryt');
     expect(service.directions()).toEqual(['dpam']);
+  });
+
+  it('probes the session: a 401 from /me (unknown session cookie) means anonymous', () => {
+    const request = http.expectOne('/gateway/me');
+    expect(request.request.context.get(SESSION_PROBE)).toBe(true);
+    request.flush('Invalid session. Please authenticate.', {
+      status: 401,
+      statusText: 'Unauthorized',
+    });
+
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.current()).toEqual(ANONYMOUS);
   });
 
   it('is anonymous when /me fails', () => {

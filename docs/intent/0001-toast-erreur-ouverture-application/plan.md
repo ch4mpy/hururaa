@@ -79,3 +79,18 @@ suivront par une nouvelle intention.
 ## Écarts
 
 <!-- rempli pendant l'implémentation : date — quoi — pourquoi — effet sur les fichiers ou la preuve -->
+
+- 2026-10-12 — Étape 3 : `/me` ne porte pas `SKIP_ERROR_BANNER` mais un jeton `SESSION_PROBE`,
+  déclaré dans `http-error.interceptor.ts` ; l'intercepteur ne tait que la `401` d'une sonde. —
+  `SKIP_ERROR_BANNER` aurait aussi tu « Erreur du serveur… » gateway arrêtée (CA-3). — Fichiers :
+  `http-error.interceptor.ts` et sa spec sont aussi modifiés à l'étape 3 (déjà listés) ; preuve
+  inchangée, avec un cas de plus dans `http-error.interceptor.spec.ts` (`502` sur la sonde → message).
+- 2026-10-12 — Étape 6 (preuve CA-7 en dev) : six appels en `401` simultanés ont relu `/me` cinq
+  fois (l'utilisateur ne devient anonyme qu'à la première réponse). — `UserService.sessionExpired()`
+  relit `/me` une seule fois par rafale ; l'intercepteur l'appelle. — Fichiers déjà listés
+  (`user.service.ts`, `session-expired.interceptor.ts` et sa spec) ; preuve CA-7 complétée d'un cas
+  « rafale de 401 → un seul `/me` ».
+- 2026-10-12 — Relevé par le `verifier` : `intent.md` et `docs/intent/README.md` (statut
+  « planifiée ») sont modifiés dans le commit du plan sans être listés dans *Fichiers*. — Tenue des
+  statuts par l'étape `approve` du skill. — Aucun effet sur la preuve ; le skill devra les lister
+  d'office.

@@ -12,6 +12,7 @@ import { HururaaProblemDetail, ProblemType } from '@api/hururaa-api';
 import { firstValueFrom } from 'rxjs';
 import { ErrorBannerService } from './error-banner.service';
 import {
+  SESSION_PROBE,
   SKIP_ERROR_BANNER,
   httpErrorInterceptor,
   httpErrorMessage,
@@ -85,6 +86,26 @@ describe('httpErrorInterceptor', () => {
     expect(banner.message()).toBeUndefined();
   });
 
+  it('keeps quiet about a session probe answered 401, which only means "no session"', async () => {
+    const context = new HttpContext().set(SESSION_PROBE, true);
+    const response = firstValueFrom(http.get('/gateway/me', { context }));
+    backend
+      .expectOne('/gateway/me')
+      .flush('Invalid session. Please authenticate.', { status: 401, statusText: 'Unauthorized' });
+
+    await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
+    expect(banner.message()).toBeUndefined();
+  });
+
+  it('still reports a session probe that fails otherwise (gateway unreachable)', async () => {
+    const context = new HttpContext().set(SESSION_PROBE, true);
+    const response = firstValueFrom(http.get('/gateway/me', { context }));
+    backend.expectOne('/gateway/me').flush('', { status: 502, statusText: 'Bad Gateway' });
+
+    await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
+    expect(banner.message()).toBe('Erreur du serveur, veuillez réessayer plus tard');
+  });
+
   describe('httpErrorMessage', () => {
     const messageFor = (status: number) => httpErrorMessage(new HttpErrorResponse({ status }));
 
@@ -95,6 +116,19 @@ describe('httpErrorInterceptor', () => {
       expect(messageFor(404)).toBe('Ressource introuvable');
       expect(messageFor(409)).toBe('Requête refusée par le serveur');
       expect(messageFor(503)).toBe('Erreur du serveur, veuillez réessayer plus tard');
+    });
+
+    it('names an unreadable success response, such as HTML reached through a redirection', () => {
+      const unreadable = new HttpErrorResponse({
+        status: 200,
+        statusText: 'OK',
+        url: 'https://host.docker.internal/fr/',
+        error: { error: new SyntaxError('Unexpected token <'), text: '<!doctype html>' },
+      });
+
+      expect(httpErrorMessage(unreadable)).toBe(
+        'Réponse inattendue du serveur, veuillez recharger la page',
+      );
     });
 
     it('prefers the typed problem message over the status one', () => {

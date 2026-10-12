@@ -25,6 +25,7 @@ import { bffInterceptor } from './core/bff.interceptor';
 import { httpErrorInterceptor } from './core/http-error.interceptor';
 import { PageTitleStrategy } from './core/page-title.strategy';
 import { SessionEndService } from './core/session-end.service';
+import { sessionExpiredInterceptor } from './core/session-expired.interceptor';
 
 /**
  * The gateway (OAuth2 BFF) is reached through the reverse proxy, on the same origin as this app.
@@ -61,7 +62,7 @@ export const appConfig: ApplicationConfig = {
       // CSRF cookie / header names expected by the gateway
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
       // failed calls (network, 4xx, 5xx) are announced in the shell's error banner
-      withInterceptors([bffInterceptor, httpErrorInterceptor]),
+      withInterceptors([bffInterceptor, httpErrorInterceptor, sessionExpiredInterceptor]),
     ),
     provideGatewayApi(GATEWAY_BASE_PATH),
     provideHururaaApi(HURURAA_API_BASE_PATH),
