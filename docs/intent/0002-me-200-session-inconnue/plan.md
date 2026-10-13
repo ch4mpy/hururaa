@@ -85,3 +85,9 @@ le front.
   plus la stratégie « session invalide ». `status: UNAUTHORIZED` est gardé en garde-fou (si le
   pass-through était désactivé) ; le cas `/logout` du test documente le `202`. Décision du
   développeur et tech lead.
+- 2026-10-13 — Relevé par le `verifier`, correction du *Contexte* (aucun critère touché) :
+  `/bff/events/{tenant}` répond `401` par le point d'entrée d'authentification (avant la règle
+  `@tpe.isMember`), avec un `Location: https://<hôte>/login` qui perd le context path `/gateway` ;
+  comportement antérieur à 0002, identique avec ou sans cookie, et sans effet (une `401` n'est pas
+  suivie). La `401` du garde-fou `status: UNAUTHORIZED` porte aussi un `Location`. Défaut de
+  spring-addons distinct de #312 (point d'entrée), à suivre hors de cette intention.
