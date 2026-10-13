@@ -407,6 +407,51 @@ sinon la version précédente démarre sur un schéma qu'elle ne connaît pas.
 `master` est protégée : PR obligatoire, CI verte exigée, pas de poussée forcée. Approbation exigée
 dès qu'il y aura un second contributeur ([CODEOWNERS](.github/CODEOWNERS)).
 
+## Étape 6 — Maintenir
+
+La démo est surveillée sans modèle : toutes les 6 heures, le workflow *Bands* mesure quelques
+métriques (échecs de CI et de déploiement, test de fumée, CVE des images déployées) et compare
+chacune à sa bande de contrôle ([ops/bands](ops/bands/README.md)). Un dépassement ouvre une issue
+`band-breach`, avec un palier : `tier:diagnose` (expliquer) ou `tier:propose` (expliquer et proposer).
+GitHub vous en notifie.
+
+### Que faire d'une alerte (astreinte) ?
+
+1. Ouvrez l'issue, puis dans Claude Code, sur le dépôt cloné :
+
+   ```text
+   /sdlc-triage
+   ```
+
+   Claude diagnostique en lecture seule (runs en échec, test de fumée, livraisons récentes) et
+   commente l'issue ; en palier `propose`, il prépare la suite : une intention `bug`, une petite PR,
+   ou la commande de rollback, **que vous lancez vous-même**.
+2. Décidez, en posant un libellé : `triage:fix-now` (on corrige maintenant), `triage:later` (on
+   planifie), `triage:dismissed` (fausse alerte, avec la raison en commentaire, puis fermez l'issue).
+
+Hors de Claude Code, pour comprendre une alerte : collez le contenu de l'issue dans Claude Desktop ou
+claude.ai avec « Explique-moi cette alerte de surveillance de la démo Hurura'a : que mesure-t-elle,
+est-ce grave, que vérifier en premier ? ».
+
+### Revenir à une version précédente (démo)
+
+Suivez le [runbook](ops/runbooks/rollback-demo.md) : il redéploie les images d'une version
+précédente, sans reconstruction, derrière l'approbation de l'environnement `demo` :
+
+```text
+! gh workflow run rollback-demo.yml -f image_tag=<SHA complet>
+```
+
+puis `deploy/smoke.sh`. Attention aux changesets Liquibase (le runbook dit quoi faire). Le 1er de
+chaque mois, une issue `rollback-drill` rappelle de **répéter** ce chemin et d'en noter la durée.
+
+### Ajouter une métrique
+
+Un script dans [ops/bands/metrics](ops/bands/metrics/) qui imprime un nombre (ou `NA`), une entrée
+dans [bands.json](ops/bands/bands.json) avec ses seuils, puis une PR. Pour tester toute la chaîne
+sans rien casser : lancer *Bands* à la main avec `simulate=<métrique>` (par vous, via
+`! gh workflow run bands.yml -f simulate=<métrique>`).
+
 ## Aide-mémoire
 
 | Commande                                 | Étape     | Qui                     |
@@ -429,3 +474,6 @@ dès qu'il y aura un second contributeur ([CODEOWNERS](.github/CODEOWNERS)).
 | `/sdlc-review address <PR>`              | Livrer     | auteur de la PR            |
 | `/sdlc-ship <NNNN>`                      | Livrer     | relecteur (humain) qui approuve |
 | `deploy/smoke.sh`                        | Livrer     | après chaque déploiement   |
+| `/sdlc-triage`                           | Maintenir  | astreinte                  |
+| `! gh workflow run rollback-demo.yml -f image_tag=<SHA>` | Maintenir | astreinte (humain) |
+| `ops/bands/detect.sh --data /tmp/bands`  | Maintenir  | qui ajoute une métrique    |
