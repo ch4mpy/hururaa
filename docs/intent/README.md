@@ -9,6 +9,15 @@ Un dossier numéroté par changement : `NNNN-<titre>/` contient `intent.md`, pui
 (étape 2) et `plan.md` (étape 3). Une intention acceptée n'est jamais réécrite : un besoin qui
 change donne une nouvelle intention qui la remplace.
 
+**Une branche par intention.** Un changement vit sur une seule branche, `NNNN-<titre>`, avec une
+seule PR en brouillon, de sa rédaction à sa livraison : intention, spec, plan et code y sont
+commités, et elle n'arrive sur `master` qu'une fois, fusionnée par un humain juste avant le
+déploiement. Chaque décision laisse un commit de statut, un commentaire de PR nommant qui décide,
+et fait avancer l'étiquette de la PR (`stage:intent` → `stage:spec` → `stage:plan` →
+`stage:build` → `stage:review`). L'index ci-dessous liste ce qui est arrivé sur `master` ; **le
+travail en cours, ce sont les PR ouvertes étiquetées `stage:*`**
+([liste](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+is%3Aopen+label%3Astage%3Aintent%2Cstage%3Aspec%2Cstage%3Aplan%2Cstage%3Abuild%2Cstage%3Areview)).
+
 ## Contexte du projet
 
 <!-- Lu par les skills sdlc-*. À tenir court et à jour. -->
@@ -28,8 +37,9 @@ change donne une nouvelle intention qui la remplace.
 - Modèle d'intention : [_modele-intention.md](_modele-intention.md)
 - Modèle de spec : [_modele-spec.md](_modele-spec.md)
 - Modèle de plan : [_modele-plan.md](_modele-plan.md)
-- Branches : `fix/NNNN-<titre>` pour un bug, `feat/NNNN-<titre>` sinon ; une PR par changement
-  (plan puis code, un commit par étape du plan)
+- Branches : une par intention, `NNNN-<titre>`, et une seule PR, de la rédaction à la livraison
+  (intention, spec, plan, puis code, un commit par étape du plan) ; `master` y est fusionnée à
+  chaque décision (jamais de rebase)
 - Risque élevé (revue du tech lead requise) : le changement touche l'authentification, les règles
   d'accès, les noms réservés, le modèle de données (Liquibase), la configuration Keycloak ou le
   déploiement (`deploy/`)
@@ -39,20 +49,20 @@ change donne une nouvelle intention qui la remplace.
   | Clé | Libellé | Positionné par |
   | --- | --- | --- |
   | proposed | proposée | étape 1, à l'ouverture de la PR de l'intention |
-  | accepted | acceptée | le PO (PR fusionnée) |
+  | accepted | acceptée | le PO (commit de statut, commentaire, étiquette `stage:spec` ou `stage:plan`) |
   | rejected | refusée | le PO (PR fermée, jamais sur `master`) |
   | specified | spécifiée | étape 2, une fois `spec.md` approuvée |
   | planned | planifiée | étape 3, une fois `plan.md` approuvé |
-  | delivered | livrée | étape 5, une fois le changement fusionné et déployé |
+  | delivered | livrée | étape 5, juste avant la fusion qui la déploie |
   | abandoned | abandonnée | remplacée par une autre intention, ou abandonnée |
 
 ## Proposer et décider
 
 - **Proposer** : ouvrir une issue avec le formulaire *Nouvelle intention*, ou lancer
-  `/sdlc-intent draft <idée>` (ou `draft #<issue>`). L'intention arrive sous forme de PR
-  étiquetée `intent`.
-- **Décider** (PO) : `/sdlc-intent accept <NNNN>` fusionne la PR ; `/sdlc-intent reject <NNNN> <motif>`
-  la ferme avec le motif.
+  `/sdlc-intent draft <idée>` (ou `draft #<issue>`). L'intention arrive sous forme de PR en
+  brouillon étiquetée `stage:intent`, sur sa propre branche `NNNN-<titre>`.
+- **Décider** (PO) : `/sdlc-intent accept <NNNN>` consigne l'acceptation sur la branche (rien n'est
+  fusionné) ; `/sdlc-intent reject <NNNN> <motif>` ferme la PR avec le motif.
 - **Mesurer** : `/sdlc-intent stats`.
 
 ## Index
