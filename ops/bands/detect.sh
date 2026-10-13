@@ -17,7 +17,8 @@
 #   2  2 of the last 3 points beyond mean + 2σ             → diagnose
 #   4  the last 8 points above the mean (drift)            → diagnose
 # While the history holds fewer than minPoints points, or σ is 0, the metric's fixed thresholds
-# apply instead (value ≥ fixed.propose → propose, ≥ fixed.diagnose → diagnose).
+# apply instead (value ≥ fixed.propose → propose, ≥ fixed.diagnose → diagnose). They also stay a
+# floor for the rules above: below fixed.diagnose no breach, below fixed.propose at most diagnose.
 # Each breach line: {"metric","value","mean","sd","n","rule","tier","description"}.
 set -u
 cd "$(git rev-parse --show-toplevel)" || exit 1
@@ -93,5 +94,13 @@ jq -c '.metrics[]' "$config" | while IFS= read -r metric; do
     [ "$(awk -v m="$mean" '$1 > m { c++ } END { print c + 0 }' <<<"$recent")" -eq 8 ]; then
     rule=4; tier=diagnose
   fi
-  [ -z "$rule" ] || emit "$value" "$mean" "$sd" "$n" "$rule" "$tier"
+  [ -n "$rule" ] || continue
+  # The fixed thresholds stay a floor: on counts that are almost always 0, σ is tiny and a single
+  # event would otherwise pass rule 1 or 4. Below fixed.diagnose, no breach; below fixed.propose,
+  # no more than diagnose.
+  awk -v v="$value" -v t="$diagnose" 'BEGIN { exit !(v >= t) }' || continue
+  if [ "$tier" = propose ] && ! awk -v v="$value" -v t="$propose" 'BEGIN { exit !(v >= t) }'; then
+    tier=diagnose
+  fi
+  emit "$value" "$mean" "$sd" "$n" "$rule" "$tier"
 done
