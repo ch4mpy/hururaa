@@ -90,4 +90,7 @@ le front.
   `@tpe.isMember`), avec un `Location: https://<hôte>/login` qui perd le context path `/gateway` ;
   comportement antérieur à 0002, identique avec ou sans cookie, et sans effet (une `401` n'est pas
   suivie). La `401` du garde-fou `status: UNAUTHORIZED` porte aussi un `Location`. Défaut de
-  spring-addons distinct de #312 (point d'entrée), à suivre hors de cette intention.
+  spring-addons distinct de #312 (point d'entrée), à suivre hors de cette intention : spring-addons#314.
+- 2026-10-12 — Revue (constat important) : le garde-fou `status: UNAUTHORIZED` n'était plus testé.
+  Nouveau fichier `InvalidSessionSafeguardTest.java` (pass-through désactivé : `401` et un `Location`
+  qui garde `/gateway`, échoue avec `status: FOUND`).
