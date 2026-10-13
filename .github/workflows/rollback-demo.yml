@@ -1,5 +1,5 @@
-# Rolls the demo back to an earlier version: redeploys the images already built, tested and
-# scanned for that commit (GHCR tag = commit SHA), with that commit's deployment files, without
+# Rolls the demo back to an earlier version: redeploys the images of a version that was already
+# deployed successfully (GHCR tag = commit SHA), with that commit's deployment files, without
 # rebuilding anything. Behind the same `demo` environment approval as a deployment. Runbook:
 # ops/runbooks/rollback-demo.md (when, how, the Liquibase caveat, the checks); then a revert PR
 # brings master back in line.
@@ -15,32 +15,55 @@ on:
         required: true
         type: string
 
+# Its own group: in the deploy-demo group, a pending rollback would be cancelled, without any
+# error, by a deployment queued after it. The check below refuses to start while a deployment is
+# running or waiting instead.
 concurrency:
-  group: deploy-demo
+  group: rollback-demo
   cancel-in-progress: false
 
 permissions:
   contents: read
   packages: read
+  actions: read
 
 jobs:
   check:
     name: Check the version to redeploy
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: A full commit SHA
+        run: '[[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "image_tag must be a full commit SHA" >&2; exit 1; }'
+
+      - name: No deployment running or waiting
+        run: |
+          active=$(gh run list -R "$GITHUB_REPOSITORY" --workflow deploy-demo.yml --limit 20 \
+            --json status,url --jq '[.[] | select(.status != "completed")] | map(.url) | join(" ")')
+          [ -z "$active" ] || { echo "A Deploy demo run is not finished: $active. Let it finish (or cancel it), then retry." >&2; exit 1; }
+
+      - name: A version that was deployed successfully
+        # images of a build that failed its tests or its Trivy scan are in GHCR too: only redeploy
+        # a version that passed the whole pipeline (or a successful rollback to it)
+        run: |
+          deployed=$(gh run list -R "$GITHUB_REPOSITORY" --workflow deploy-demo.yml --status success --limit 200 \
+            --json headSha --jq "[.[] | select(.headSha == \"$IMAGE_TAG\")] | length")
+          rolled_back=$(gh run list -R "$GITHUB_REPOSITORY" --workflow rollback-demo.yml --status success --limit 200 \
+            --json displayTitle --jq "[.[] | select(.displayTitle == \"Rollback demo to $IMAGE_TAG\")] | length")
+          [ "$((deployed + rolled_back))" -gt 0 ] ||
+            { echo "$IMAGE_TAG was never deployed successfully: refusing to redeploy its images." >&2; exit 1; }
+
       - name: The four images exist for this tag
         run: |
-          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "image_tag must be a full commit SHA" >&2; exit 1; }
           owner=${GITHUB_REPOSITORY_OWNER,,}
-          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           for image in hururaa-keycloak hururaa-gateway hururaa-api hururaa-frontend; do
             docker manifest inspect "ghcr.io/$owner/$image:$IMAGE_TAG" > /dev/null ||
               { echo "missing image ghcr.io/$owner/$image:$IMAGE_TAG" >&2; exit 1; }
           done
-        env:
-          IMAGE_TAG: ${{ inputs.image_tag }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     name: Redeploy on the VPS
