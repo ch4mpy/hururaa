@@ -23,7 +23,21 @@ idée ─► intention ─► spec    ─►  plan    ─► code + preuves ─�
 5. **Livrer** : revue de la PR (Claude puis un humain), puis mise en production derrière des garde-fous.
 6. **Maintenir** : les anomalies détectées reviennent sous forme de correctifs ou de nouvelles intentions.
 
-Les intentions et leurs suites vivent dans [docs/intent/](docs/intent/), les décisions
+**Une branche, une PR par intention.** Tout le cycle d'un changement se passe sur une seule
+branche, `NNNN-<titre>` (`0002-me-200-session-inconnue`), et une seule PR en brouillon : intention,
+spec, plan puis code y sont commités. Chaque décision (acceptation, spec, plan) laisse un commit de
+statut, un commentaire de PR qui nomme qui a décidé, et fait avancer l'étiquette de la PR :
+
+```text
+stage:intent ─► stage:spec ─► stage:plan ─► stage:build ─► stage:review ─► fusion dans master = livraison
+   (PO)          (PO)         (dev)        (Claude)        (relecteur)        (humain)
+```
+
+La branche n'arrive sur `master` qu'une fois, fusionnée par un humain juste avant son déploiement.
+Le travail en cours se lit dans les
+[PR ouvertes étiquetées `stage:*`](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+is%3Aopen+label%3Astage%3Aintent%2Cstage%3Aspec%2Cstage%3Aplan%2Cstage%3Abuild%2Cstage%3Areview).
+
+Les intentions livrées et leurs suites vivent dans [docs/intent/](docs/intent/), les décisions
 d'architecture dans [docs/decisions/](docs/decisions/).
 
 ## Qui fait quoi
@@ -72,8 +86,9 @@ Terminal, extension VS Code ou onglet *Code* de Claude Desktop, ouvert à la rac
 
 Claude lit les intentions et décisions existantes, vous pose quelques questions (trois tours au
 plus), puis montre le brouillon `docs/intent/NNNN-<titre>/intent.md`. Une fois le brouillon
-satisfaisant et après votre confirmation, il le pousse sur une branche `intent/NNNN-<titre>` et
-ouvre une PR étiquetée `intent`. Le PO décide ensuite.
+satisfaisant et après votre confirmation, il le pousse sur la branche de l'intention,
+`NNNN-<titre>`, et ouvre sa PR en brouillon, étiquetée `stage:intent`. Cette branche et cette PR
+porteront tout le changement, jusqu'à sa livraison. Le PO décide ensuite.
 
 #### Sans Claude Code : Claude Desktop (discussion) ou claude.ai dans un navigateur
 
@@ -114,19 +129,21 @@ Remplissez directement le formulaire
 
 ### Décider d'une intention (PO)
 
-1. Lisez la PR étiquetée `intent` ([liste](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+label%3Aintent)) ;
+1. Lisez la PR étiquetée `stage:intent` ([liste](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+is%3Aopen+label%3Astage%3Aintent)) ;
    commentez-la si quelque chose manque.
 2. Dans Claude Code, sur le dépôt cloné :
 
    ```text
-   /sdlc-intent accept 0001
+   /sdlc-intent accept 0002
    ```
 
    Claude demande quelles questions ouvertes vous tranchez maintenant et, pour un bug, si une spec
-   est nécessaire, puis fusionne la PR après confirmation. Pour refuser :
+   est nécessaire, puis consigne votre décision **sans rien fusionner** : commit de statut sur la
+   branche, commentaire dans la PR, étiquette `stage:spec` (ou `stage:plan` sans spec). Pour
+   refuser :
 
    ```text
-   /sdlc-intent reject 0001 Déjà couvert par l'historique des permissions de l'application
+   /sdlc-intent reject 0002 Déjà couvert par l'historique des permissions de l'application
    ```
 
    La PR est fermée avec ce motif ; l'intention n'arrive jamais sur `master`.
@@ -143,18 +160,19 @@ d'acceptation), jamais la façon de le coder. Pour un bug, le PO peut s'en passe
 Dans Claude Code, sur le dépôt cloné :
 
 ```text
-/sdlc-spec draft 0001
+/sdlc-spec draft 0002
 ```
 
 Claude lit l'intention, les décisions, toutes les politiques et le code concerné, répond aux
 questions de l'intention que le code tranche (preuves à l'appui), vous pose au plus deux séries de
-questions sur les choix produit, puis montre le brouillon. Après votre confirmation, il ouvre une
-PR étiquetée `spec`.
+questions sur les choix produit, puis montre le brouillon. Après votre confirmation, il commite
+`spec.md` **sur la branche de l'intention** et résume la spec dans un commentaire de sa PR.
 
 ### Comprendre une spec sans Claude Code (PO)
 
-Ouvrez la PR `spec` sur GitHub ([liste](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+label%3Aspec)),
-copiez le contenu de `spec.md`, puis dans Claude Desktop ou claude.ai :
+Ouvrez la PR de l'intention, étiquetée `stage:spec`
+([liste](https://github.com/ch4mpy/hururaa/pulls?q=is%3Apr+is%3Aopen+label%3Astage%3Aspec)),
+copiez le contenu de `spec.md` (onglet *Files changed*), puis dans Claude Desktop ou claude.ai :
 
 ```text
 Je suis le PO de Hurura'a, une application qui gère les permissions des applications (Keycloak)
@@ -183,11 +201,13 @@ un choix produit ou un risque. Claude ne le tranche jamais. Chacun indique qui d
 Répondez dans la PR, puis approuvez :
 
 ```text
-/sdlc-spec approve 0001
+/sdlc-spec approve 0002
 ```
 
 Claude reprend chaque point encore ouvert, consigne les décisions et refuse d'approuver tant
-qu'il en reste un. Une fois la PR fusionnée, l'intention passe à *spécifiée*. Délais et
+qu'il en reste un. L'approbation ne fusionne rien : l'intention passe à *spécifiée* (commit de
+statut), la décision est commentée dans la PR et l'étiquette devient `stage:plan`. Une spec à
+changer après son approbation : une nouvelle version sur la même branche, à réapprouver. Délais et
 retouches : `/sdlc-spec stats`.
 
 ### Où sont les règles ?
@@ -208,8 +228,8 @@ le fichier de la politique, revue par son responsable.
 ## Étape 3 — Construire
 
 Rien ne se code sans plan approuvé. Le plan (`plan.md`, à côté de la spec) dit comment : fichiers,
-ordre de travail, risques, et la preuve de chaque critère d'acceptation. Un changement = une branche
-(`fix/NNNN-…` ou `feat/NNNN-…`) = une PR : le plan en premier commit, puis un commit par étape.
+ordre de travail, risques, et la preuve de chaque critère d'acceptation. Il est commité sur la
+branche de l'intention, puis le code, un commit par étape du plan.
 
 ### Comment démarrer un développement ?
 
@@ -217,18 +237,18 @@ Dans Claude Code, sur le dépôt cloné, passez en *plan mode* (`Shift+Tab` jusq
 puis :
 
 ```text
-/sdlc-plan draft 0001
+/sdlc-plan draft 0002
 ```
 
 Claude lit la spec, les politiques qu'elle cite, le code et la documentation des bibliothèques en
 jeu, vous pose au plus deux séries de questions techniques, puis vous présente le plan. Approuvez-le
-ou demandez des corrections : c'est votre validation. Claude crée alors la branche, y commite
-`plan.md` et, après confirmation, ouvre une PR brouillon étiquetée `plan`.
+ou demandez des corrections : c'est votre validation. Claude commite alors `plan.md` sur la branche
+de l'intention, consigne votre approbation dans la PR et passe l'étiquette à `stage:build`.
 
 Passez ensuite en mode automatique (`Shift+Tab`) et lancez :
 
 ```text
-/sdlc-plan implement 0001
+/sdlc-plan implement 0002
 ```
 
 Claude suit le plan étape par étape (vérification, puis commit), consigne tout écart dans
@@ -329,7 +349,10 @@ jamais une PR.
 
 ### Revoir une PR
 
-Dans Claude Code, sur le dépôt cloné :
+Une fois l'implémentation vérifiée, la PR de l'intention sort du brouillon et passe à
+`stage:review` (`/sdlc-ship` le propose aussi). Elle porte tout le changement : la revue juge le
+code au regard de l'intention, de la spec et du plan, déjà approuvés à leurs étapes. Dans Claude
+Code, sur le dépôt cloné :
 
 ```text
 /sdlc-review review 18
@@ -362,12 +385,14 @@ d'application, membres) ? Que faudrait-il vérifier à la main avant de livrer ?
 ### Mettre en production (démo)
 
 ```text
-/sdlc-ship 0001
+/sdlc-ship 0002
 ```
 
-Claude vérifie les préalables (PR prête, CI verte, `VERIFY OK`, rapport du `verifier`, evals si la
-configuration de Claude change, aucun constat Important ouvert), vous demande les vérifications
-manuelles et votre approbation, les consigne dans la PR et passe l'intention à *livrée*. Deux actions
+Claude vérifie les préalables (toutes les décisions consignées, PR prête et à jour de `master`,
+CI verte, `VERIFY OK`, rapport du `verifier`, evals si la configuration de Claude change, aucun
+constat Important ouvert), vous demande les vérifications manuelles et votre approbation, les
+consigne dans la PR et passe l'intention à *livrée*. La fusion amène alors pour la première fois
+l'intention, sa spec, son plan et son code sur `master`, avec tout leur historique. Deux actions
 humaines, toujours :
 
 1. **la fusion, c'est vous qui la lancez.** Claude ne lance jamais une commande de livraison
