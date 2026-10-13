@@ -29,9 +29,9 @@ expect() { # label expected-status url [curl options...]
 expect "front (fr)" 200 "$base/fr/"
 expect "front (en)" 200 "$base/en/"
 expect "gateway /me, no session: anonymous" 200 "$base/gateway/me" -H 'Accept: application/json'
-# docs/intent/0001 (spec v2): an unknown session answers 401, never a redirection. Intent 0002
-# (spring-addons#312) brings /me back to 200 here: update this check with it.
-expect "gateway /me, unknown session: 401, no redirection" 401 "$base/gateway/me" \
+# docs/intent/0002: a session cookie the gateway no longer knows is treated as no cookie on /me
+# (anonymous, a new session), never a redirection
+expect "gateway /me, unknown session: anonymous" 200 "$base/gateway/me" \
   -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
 expect "API through the BFF, no session: 401" 401 "$base/gateway/bff/api/v1/me/delegations" \
   -H 'Accept: application/json'
