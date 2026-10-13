@@ -63,7 +63,10 @@ import org.wiremock.spring.EnableWireMock;
 class InvalidSessionTest {
   private static final String CONTEXT_PATH = "/gateway";
 
-  /** Written by spring-addons' invalid-session strategy: the 401 comes from it, not elsewhere. */
+  /**
+   * Written by spring-addons' invalid-session strategy, which no route of these tests reaches any
+   * more (see {@link InvalidSessionSafeguardTest}): a {@code 401} with this body did not go through.
+   */
   private static final String INVALID_SESSION_BODY = "Invalid session. Please authenticate.";
 
   private static final String UNKNOWN_SESSION_ID = "0123456789ABCDEF0123456789ABCDEF";
@@ -95,10 +98,12 @@ class InvalidSessionTest {
             .perform(getWithUnknownSession("/me"))
             .andExpect(status().isOk())
             .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+            .andExpect(jsonPath("$.sub").value(org.hamcrest.Matchers.nullValue()))
             .andExpect(jsonPath("$.directions").isEmpty())
             .andReturn();
-    assertThat(result.getResponse().getContentAsString()).doesNotContain("\"sub\":\"");
+    // the pass-through replaced the stale session: a new one, not the unknown ID
     assertThat(result.getRequest().getSession(false)).isNotNull();
+    assertThat(result.getRequest().getSession(false).getId()).isNotEqualTo(UNKNOWN_SESSION_ID);
   }
 
   @Test
@@ -115,6 +120,8 @@ class InvalidSessionTest {
         .perform(getWithUnknownSession("/bff/api/v1/me/delegations"))
         .andExpect(status().isUnauthorized())
         .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+        // relayed from hururaa-api (WireMock: a request without a token gets a Bearer challenge)
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"))
         .andExpect(content().string(org.hamcrest.Matchers.not(INVALID_SESSION_BODY)));
   }
 
@@ -130,6 +137,8 @@ class InvalidSessionTest {
                 .contextPath(CONTEXT_PATH)
                 .with(csrf())
                 .with(unknownSession()))
-        .andExpect(status().isAccepted());
+        .andExpect(status().isAccepted())
+        // the SPA follows it: the post-logout page of the reverse proxy, not a login page
+        .andExpect(header().string(HttpHeaders.LOCATION, "https://host.docker.internal/fr/"));
   }
 }
