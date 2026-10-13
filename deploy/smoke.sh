@@ -35,6 +35,8 @@ expect "gateway /me, unknown session: anonymous" 200 "$base/gateway/me" \
   -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
 expect "API through the BFF, no session: 401" 401 "$base/gateway/bff/api/v1/me/delegations" \
   -H 'Accept: application/json'
+expect "API through the BFF, unknown session: 401" 401 "$base/gateway/bff/api/v1/me/delegations" \
+  -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
 expect "Keycloak realm (OIDC discovery)" 200 \
   "$base/auth/realms/public-facing/.well-known/openid-configuration"
 
