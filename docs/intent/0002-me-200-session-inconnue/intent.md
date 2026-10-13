@@ -3,10 +3,10 @@
 - Auteur : ch4mpy (PO et développeur)
 - Nature : évolution
 - Source : conversation ; fait suite à l'intention [0001](../0001-toast-erreur-ouverture-application/intent.md) (spec v2, EX-1) et à [spring-addons#312](https://github.com/ch4mpy/spring-addons/issues/312)
-- Spec nécessaire : oui
+- Spec nécessaire : non (décision du PO du 2026-10-13, révisant celle de `bbcba36`)
 - Statut : acceptée
 - Ouverte le : 2026-10-13
-- Décidée le : 2026-10-13
+- Décidée le : 2026-10-13 (décision révisée le même jour)
 - Remplace : —
 
 ## Problème
@@ -32,8 +32,8 @@ apporte l'évolution demandée dans spring-addons#312.
   redirection, comme sans cookie ; aucun message, accueil en anonyme.
 - Les autres routes de la gateway gardent le comportement livré par 0001 : `401` sans redirection
   pour une session inconnue, et passage à l'état déconnecté dans le front.
-- Le front n'a plus de traitement particulier pour une `401` de `/me` (décision du PO à
-  l'acceptation) : `/me` répondant toujours `200`, ce cas redevient une erreur ordinaire.
+- Le front **garde**, par prudence, son traitement « sonde de session » : une `401` de `/me` (gateway
+  plus ancienne, configuration erronée) vaut toujours l'anonyme, sans message (décision du PO).
 - Réussite : sur la démo, le test de fumée attend `200` pour `/me` avec une session inconnue et passe.
 
 ## Utilisateurs et systèmes concernés
@@ -51,6 +51,7 @@ apporte l'évolution demandée dans spring-addons#312.
 ## Questions ouvertes
 
 - Le comportement de 9.5.1 (option pour les routes en accès libre, `Location` qui garde le context
-  path) couvre-t-il tout le besoin, sans code propre à Hurura'a ? — spec (lecture de la version 9.5.1)
+  path) couvre-t-il tout le besoin, sans code propre à Hurura'a ? — plan (lecture de la version
+  9.5.1 ; pas de spec, décision du PO)
 - Solution évoquée : monter spring-addons-starter-oidc en 9.5.1 et activer son option pour les
-  routes en accès libre. — spec
+  routes en accès libre. — plan
