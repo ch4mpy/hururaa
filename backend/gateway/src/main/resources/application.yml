@@ -117,10 +117,13 @@ com:
           # while not colliding with other apps CSRF cookies
           csrf-cookie-path: /
           # A session cookie the gateway no longer knows (browser reopened, session expired, gateway
-          # restarted): 401 rather than the default 302, whose Location drops the /gateway context
-          # path and lands the SPA's XHR on an HTML page. A new session is opened, so /me then
-          # answers anonymous (docs/intent/0001).
+          # restarted). On the permit-all routes (/me, /bff/**), a new session is opened and the
+          # request proceeds as without a cookie: /me answers anonymous, a BFF route gets the API's
+          # 401 (docs/intent/0002; the default since spring-addons 9.5.1, kept explicit). No route
+          # the SPA calls reaches the invalid-session strategy any more: its 401, rather than a
+          # redirection, is a safeguard should the pass-through be turned off (docs/intent/0001).
           invalid-session:
+            permit-all-pass-through: true
             status: UNAUTHORIZED
           oauth2-redirections:
             authentication-entry-point: UNAUTHORIZED
