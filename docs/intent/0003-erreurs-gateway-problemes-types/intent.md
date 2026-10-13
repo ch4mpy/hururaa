@@ -4,9 +4,9 @@
 - Nature : évolution
 - Source : conversation ; décision PA-4 de la spec de [0001](../0001-toast-erreur-ouverture-application/spec.md) (« une nouvelle intention »)
 - Spec nécessaire : oui
-- Statut : proposée
+- Statut : acceptée
 - Ouverte le : 2026-10-13
-- Décidée le : —
+- Décidée le : 2026-10-13
 - Remplace : —
 
 ## Problème
@@ -35,7 +35,11 @@ Ce que cela coûte :
 - Toute erreur que la SPA peut recevoir, de la gateway comme de hururaa-api (y compris la `401`
   sans jeton, l'accès refusé, une erreur 5xx, l'API injoignable, une route inconnue), est un
   **problème RFC 9457** d'un type de `ProblemType` ; plus aucun corps en texte brut ni vide.
-- Le front peut garder le message générique du code HTTP là où un message propre n'apporte rien.
+- Une route inconnue de la gateway répond `404` (problème typé), avec ou sans session.
+- Quand hururaa-api est injoignable, l'utilisateur voit un **message dédié** (service
+  momentanément indisponible), pas le message générique du code HTTP.
+- Ailleurs, le front peut garder le message générique du code HTTP là où un message propre
+  n'apporte rien.
 - Réussite : un contrôle (test, test de fumée) prouve, pour chacun de ces cas, une réponse
   `application/problem+json` d'un type connu.
 
@@ -44,7 +48,8 @@ Ce que cela coûte :
 - Tous les personas déclarés (administrateurs Hurura'a, administrateurs de direction,
   gestionnaires d'application, membres d'une direction) : quiconque rencontre une erreur.
 - Les applications des directions qui appellent hururaa-api ou reposent sur les mêmes starters
-  (*non déclarées dans le contexte du projet*).
+  (*non déclarées dans le contexte du projet*) : un corps typé à la place d'un corps vide ou en
+  texte est accepté, elles s'en tiennent au code HTTP.
 - gateway (BFF OAuth2), hururaa-api, frontend Angular, starters communs.
 
 ## Contraintes
@@ -53,12 +58,11 @@ Ce que cela coûte :
 - UX-2 : une erreur s'affiche selon son type, jamais telle qu'envoyée par le serveur.
 - Ne rien perdre de 0001 et 0002 (pas de redirection, `401` → état déconnecté, `/me` toujours `200`).
 - Risque élevé (authentification, règles d'accès) : revue du tech lead.
+- Passer à spring-addons 9.5.2 (publiée, avec un contrôle sur
+  `invalid-session.pass-through-patterns`).
 
 ## Questions ouvertes
 
 - Où vit la correction : la gateway, spring-addons (point d'entrée configurable, voir
-  [spring-addons#314](https://github.com/ch4mpy/spring-addons/issues/314)), ou les deux ? — spec
-- Les clients qui attendent aujourd'hui une `401` vide ou en texte (applications des directions)
-  sont-ils affectés par un corps typé ? — spec / PO
-- Une route inconnue de la gateway doit-elle répondre `404` sans session (aujourd'hui `401`) ? — spec
-- Que voit l'utilisateur quand hururaa-api est injoignable (message dédié ou générique) ? — PO
+  [spring-addons#314](https://github.com/ch4mpy/spring-addons/issues/314)), ou les deux, compte
+  tenu de ce qu'apporte la 9.5.2 ? — spec
