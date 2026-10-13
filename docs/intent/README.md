@@ -70,3 +70,4 @@ travail en cours, ce sont les PR ouvertes étiquetées `stage:*`**
 | N° | Intention | Nature | Statut | Ouverte le | Décidée le |
 | --- | --- | --- | --- | --- | --- |
 | [0001](0001-toast-erreur-ouverture-application/intent.md) | Toast d'erreur à l'ouverture de l'application | bug | livrée | 2026-10-11 | 2026-10-11 |
+| [0002](0002-me-200-session-inconnue/intent.md) | /me répond 200 avec un cookie de session inconnu | évolution | proposée | 2026-10-13 | — |
