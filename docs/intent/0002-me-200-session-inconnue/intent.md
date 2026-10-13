@@ -4,7 +4,7 @@
 - Nature : évolution
 - Source : conversation ; fait suite à l'intention [0001](../0001-toast-erreur-ouverture-application/intent.md) (spec v2, EX-1) et à [spring-addons#312](https://github.com/ch4mpy/spring-addons/issues/312)
 - Spec nécessaire : non (décision du PO du 2026-10-13, révisant celle de `bbcba36`)
-- Statut : acceptée
+- Statut : planifiée
 - Ouverte le : 2026-10-13
 - Décidée le : 2026-10-13 (décision révisée le même jour)
 - Remplace : —
