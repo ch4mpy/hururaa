@@ -1,26 +1,50 @@
 package pf.hururaa.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
 
 /**
  * How the whole security chain treats a session cookie the gateway no longer knows (browser
- * reopened, session expired, gateway restarted): a {@code 401}, never a redirection, on the session
- * probe ({@code /me}) as on the BFF routes (docs/intent/0001). Keycloak's discovery documents are
- * served by WireMock, as for the {@code openapi} Maven profile, and so is {@code hururaa-api}, which
- * answers {@code 401} to what the gateway relays without a token (no session); the RabbitMQ
- * listeners (resource events) don't start, so no broker is needed.
+ * reopened, session expired, gateway restarted), never with a redirection:
+ *
+ * <ul>
+ * <li>on the permit-all routes, spring-addons' {@code invalid-session.permit-all-pass-through}
+ * opens a new session and the request proceeds as without a cookie: the session probe ({@code /me})
+ * answers anonymous (docs/intent/0002), a BFF route answers what {@code hururaa-api} answers to a
+ * request without a token, a {@code 401};</li>
+ * <li>{@code /logout} proceeds, its filter running before the session management.</li>
+ * </ul>
+ *
+ * <p>
+ * No route the SPA calls reaches spring-addons' invalid-session strategy any more; its
+ * {@code status: UNAUTHORIZED} stays as a safeguard should the pass-through be turned off
+ * (docs/intent/0001, 0002).
+ * </p>
+ *
+ * <p>
+ * Keycloak's discovery documents are served by WireMock, as for the {@code openapi} Maven profile,
+ * and so is {@code hururaa-api}, which answers {@code 401} to what the gateway relays without a
+ * token; the RabbitMQ listeners (resource events) don't start, so no broker is needed.
+ * </p>
  */
 @SpringBootTest(
     properties = {
@@ -42,18 +66,21 @@ class InvalidSessionTest {
   /** Written by spring-addons' invalid-session strategy: the 401 comes from it, not elsewhere. */
   private static final String INVALID_SESSION_BODY = "Invalid session. Please authenticate.";
 
+  private static final String UNKNOWN_SESSION_ID = "0123456789ABCDEF0123456789ABCDEF";
+
   @Autowired MockMvc mockMvc;
 
+  private static RequestPostProcessor unknownSession() {
+    return request -> {
+      request.setRequestedSessionId(UNKNOWN_SESSION_ID);
+      request.setRequestedSessionIdValid(false);
+      request.setRequestedSessionIdFromCookie(true);
+      return request;
+    };
+  }
+
   private static MockHttpServletRequestBuilder getWithUnknownSession(String path) {
-    return get(CONTEXT_PATH + path)
-        .contextPath(CONTEXT_PATH)
-        .with(
-            request -> {
-              request.setRequestedSessionId("0123456789ABCDEF0123456789ABCDEF");
-              request.setRequestedSessionIdValid(false);
-              request.setRequestedSessionIdFromCookie(true);
-              return request;
-            });
+    return get(CONTEXT_PATH + path).contextPath(CONTEXT_PATH).with(unknownSession());
   }
 
   @Test
@@ -62,11 +89,16 @@ class InvalidSessionTest {
   }
 
   @Test
-  void givenUnknownSessionCookie_whenGetMe_thenUnauthorizedWithoutRedirection() throws Exception {
-    mockMvc
-        .perform(getWithUnknownSession("/me"))
-        .andExpect(status().isUnauthorized())
-        .andExpect(content().string(INVALID_SESSION_BODY));
+  void givenUnknownSessionCookie_whenGetMe_thenOkAnonymousWithANewSession() throws Exception {
+    MvcResult result =
+        mockMvc
+            .perform(getWithUnknownSession("/me"))
+            .andExpect(status().isOk())
+            .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+            .andExpect(jsonPath("$.directions").isEmpty())
+            .andReturn();
+    assertThat(result.getResponse().getContentAsString()).doesNotContain("\"sub\":\"");
+    assertThat(result.getRequest().getSession(false)).isNotNull();
   }
 
   @Test
@@ -77,11 +109,27 @@ class InvalidSessionTest {
   }
 
   @Test
-  void givenUnknownSessionCookie_whenGetBffRoute_thenUnauthorizedWithoutRedirection()
+  void givenUnknownSessionCookie_whenGetBffRoute_thenUnauthorizedFromTheApiWithoutRedirection()
       throws Exception {
     mockMvc
         .perform(getWithUnknownSession("/bff/api/v1/me/delegations"))
         .andExpect(status().isUnauthorized())
-        .andExpect(content().string(INVALID_SESSION_BODY));
+        .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+        .andExpect(content().string(org.hamcrest.Matchers.not(INVALID_SESSION_BODY)));
+  }
+
+  /**
+   * The logout filter runs before the session management: a logout with a stale session cookie
+   * proceeds (RP-initiated logout, {@code 202} with the URI to follow), never a redirection.
+   */
+  @Test
+  void givenUnknownSessionCookie_whenLogout_thenAcceptedWithoutRedirection() throws Exception {
+    mockMvc
+        .perform(
+            post(CONTEXT_PATH + "/logout")
+                .contextPath(CONTEXT_PATH)
+                .with(csrf())
+                .with(unknownSession()))
+        .andExpect(status().isAccepted());
   }
 }
