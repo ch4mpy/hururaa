@@ -73,11 +73,15 @@ le front.
 | Critère (résultat attendu de l'intention) | Comment | Test ou commande |
 | --- | --- | --- |
 | `/me` + cookie inconnu → `200` anonyme, sans redirection | test automatisé + contre-épreuve | `InvalidSessionTest` ; échoue avec `permit-all-pass-through: false` |
-| Autres routes : `401` sans redirection | test automatisé | `InvalidSessionTest` (`/bff/**`, `/logout`) |
+| Autres routes : sans redirection (`/bff/**` : `401` de hururaa-api ; `/logout` : `202`, voir *Écarts*) | test automatisé | `InvalidSessionTest` (`/bff/**`, `/logout`) |
 | Front : état déconnecté sur une `401`, sonde de session gardée | tests existants inchangés | `session-expired.interceptor.spec.ts`, `user.service.spec.ts` (via `./verify.sh`) |
 | Rien de 0001 perdu (aucun toast, message gateway arrêtée) | tests existants + manuel | `./verify.sh` ; dev : cookie périmé → aucun toast (navigateur) |
 | Réussite : test de fumée de la démo | après déploiement (étape 5) | `deploy/smoke.sh` → `SMOKE OK` avec `/me` → `200` |
 
 ## Écarts
 
-<!-- rempli pendant l'implémentation -->
+- 2026-10-13 — `/logout` avec une session inconnue répond `202` (le filtre de déconnexion passe
+  avant la gestion de session), pas `401` comme prévu : aucune route appelée par la SPA n'atteint
+  plus la stratégie « session invalide ». `status: UNAUTHORIZED` est gardé en garde-fou (si le
+  pass-through était désactivé) ; le cas `/logout` du test documente le `202`. Décision du
+  développeur et tech lead.
