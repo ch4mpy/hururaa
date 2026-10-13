@@ -14,10 +14,10 @@ export const ANONYMOUS: UserResponse = { directions: [] };
  * is a member of. What the user may do in Hurura'a comes from `hururaa-api` instead (see
  * `DelegationsService`).
  *
- * `/me` answers `200 OK`, with empty values when unauthenticated, except with a session cookie the
- * gateway no longer knows (browser reopened, session expired, gateway restarted): then it answers
- * `401` and opens a new session. The request is a `SESSION_PROBE`: that `401` means anonymous, not
- * an error to show.
+ * `/me` answers `200 OK`, with empty values when unauthenticated, a session cookie the gateway no
+ * longer knows included (it opens a new session: docs/intent/0002). The request is still a
+ * `SESSION_PROBE`, by caution: should a gateway answer `401` there (an older one, a configuration
+ * error), that `401` means anonymous, not an error to show.
  *
  * Login and logout are real navigations: the gateway answers with the URI to follow in a
  * `Location` header and the browser is sent there (an XHR could not follow the redirect chain

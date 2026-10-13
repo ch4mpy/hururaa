@@ -11,9 +11,10 @@ import { problemMessage } from './problem-messages';
 export const SKIP_ERROR_BANNER = new HttpContextToken<boolean>(() => false);
 
 /**
- * Set on the request that probes the session (the gateway's `/me`): its `401` means "no session"
- * (the gateway answers so to a session cookie it no longer knows, then opens a new session), which
- * is not an error to show. Its other failures (gateway unreachable...) still are.
+ * Set on the request that probes the session (the gateway's `/me`): a `401` there means "no
+ * session", not an error to show. The gateway answers `200` anonymous even to a session cookie it no
+ * longer knows (docs/intent/0002); this guard stays by caution (an older gateway, a configuration
+ * error). The probe's other failures (gateway unreachable...) are still shown.
  */
 export const SESSION_PROBE = new HttpContextToken<boolean>(() => false);
 
