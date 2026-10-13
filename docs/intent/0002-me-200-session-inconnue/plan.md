@@ -3,7 +3,7 @@
 - Intention : [0002](intent.md) (évolution, pas de spec : décision du PO)
 - Statut : approuvé
 - Branche : `0002-me-200-session-inconnue` (PR #25, une branche par intention)
-- Approuvé : 2026-10-13, ch4mpy (développeur et tech lead : risque élevé, authentification)
+- Approuvé : 2026-10-12, ch4mpy (développeur et tech lead : risque élevé, authentification)
 
 ## Contexte
 
@@ -25,8 +25,9 @@ Conséquence à connaître : dans la gateway, `/bff/**` est **aussi** `permit-al
 `/bff/api/v1/**` avec un cookie inconnu continue donc en anonyme, sans jeton à relayer, et c'est
 **hururaa-api** qui répond `401` (au lieu de la stratégie « session invalide »). Le comportement
 observable est le même que livré par 0001 : `401`, pas de redirection, état déconnecté dans le front.
-`/bff/events/{tenant}` répond `401` par la règle d'accès (`@tpe.isMember`). `status: UNAUTHORIZED`
-reste utile pour la seule route non `permit-all` du client, `/logout`.
+`/bff/events/{tenant}` répond `401` par le point d'entrée d'authentification, et `/logout` répond
+`202` (*Écarts*) : aucune route appelée par la SPA n'atteint plus la stratégie « session
+invalide », dont `status: UNAUTHORIZED` reste en garde-fou si le pass-through était désactivé.
 
 Le traitement « sonde de session » du front est **gardé** (décision du PO) : aucun changement dans
 le front.
@@ -37,7 +38,7 @@ le front.
 | --- | --- | --- |
 | `docs/intent/0002-…/plan.md` | nouveau : ce plan | — |
 | `docs/intent/0002-…/intent.md`, `docs/intent/README.md` | statut *planifiée* (tenue de l'index) | — |
-| `backend/gateway/src/test/java/pf/hururaa/security/InvalidSessionTest.java` | modifié : `/me` + session inconnue → `200` anonyme et nouvelle session ; `/bff/**` + session inconnue → `401` sans redirection (corps de hururaa-api, plus celui de la stratégie) ; nouveau cas : `/logout` + session inconnue → `401` de la stratégie ; Javadoc (0002) | résultat attendu |
+| `backend/gateway/src/test/java/pf/hururaa/security/InvalidSessionTest.java` | modifié : `/me` + session inconnue → `200` anonyme et nouvelle session ; `/bff/**` + session inconnue → `401` sans redirection (corps de hururaa-api, plus celui de la stratégie) ; nouveau cas : `/logout` + session inconnue → `202` (*Écarts* ; prévu : `401` de la stratégie) ; Javadoc (0002) | résultat attendu |
 | `backend/pom.xml` | `com.c4-soft.springaddons.version` 9.5.0 → **9.5.1** (vérifiée sur Maven Central) | résultat attendu |
 | `backend/gateway/src/main/resources/application.yml` | `invalid-session.permit-all-pass-through: true` explicite (le comportement voulu ne dépend pas d'une valeur par défaut) ; commentaire mis à jour (0001 → 0002) | résultat attendu |
 | `deploy/smoke.sh` | contrôle « `/me`, session inconnue » : `200` anonyme (au lieu de `401`) ; commentaire | critère de réussite |
@@ -80,12 +81,12 @@ le front.
 
 ## Écarts
 
-- 2026-10-13 — `/logout` avec une session inconnue répond `202` (le filtre de déconnexion passe
+- 2026-10-12 — `/logout` avec une session inconnue répond `202` (le filtre de déconnexion passe
   avant la gestion de session), pas `401` comme prévu : aucune route appelée par la SPA n'atteint
   plus la stratégie « session invalide ». `status: UNAUTHORIZED` est gardé en garde-fou (si le
   pass-through était désactivé) ; le cas `/logout` du test documente le `202`. Décision du
   développeur et tech lead.
-- 2026-10-13 — Relevé par le `verifier`, correction du *Contexte* (aucun critère touché) :
+- 2026-10-12 — Relevé par le `verifier`, correction du *Contexte* (aucun critère touché) :
   `/bff/events/{tenant}` répond `401` par le point d'entrée d'authentification (avant la règle
   `@tpe.isMember`), avec un `Location: https://<hôte>/login` qui perd le context path `/gateway` ;
   comportement antérieur à 0002, identique avec ou sans cookie, et sans effet (une `401` n'est pas
