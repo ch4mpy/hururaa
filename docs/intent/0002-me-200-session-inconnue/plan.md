@@ -94,3 +94,6 @@ le front.
 - 2026-10-12 — Revue (constat important) : le garde-fou `status: UNAUTHORIZED` n'était plus testé.
   Nouveau fichier `InvalidSessionSafeguardTest.java` (pass-through désactivé : `401` et un `Location`
   qui garde `/gateway`, échoue avec `status: FOUND`).
+- 2026-10-12 — Revue (détail) : commentaires du front (`user.service.ts`, `http-error.interceptor.ts`)
+  qui disaient encore que `/me` répond `401` ; aucun changement de comportement. Les numéros de
+  ligne de `messages.xlf` suivent (skill `angular-fix-i18n`).
