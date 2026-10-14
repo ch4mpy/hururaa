@@ -57,6 +57,42 @@ describe('httpErrorInterceptor', () => {
     expect(banner.message()).toBe('Application n° 42 introuvable');
   });
 
+  it('shows the dedicated message when the gateway cannot reach the API', async () => {
+    const response = firstValueFrom(http.get('/gateway/bff/api/v1/applications/42'));
+    backend.expectOne('/gateway/bff/api/v1/applications/42').flush(
+      {
+        type: ProblemType.SERVICE_UNAVAILABLE,
+        title: 'Service Unavailable',
+        status: 503,
+        detail: 'A service the request depends on is temporarily unavailable',
+        instance: '/gateway/bff/api/v1/applications/42',
+      },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+
+    await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
+    expect(banner.message()).toBe(
+      'Service momentanément indisponible, réessayez dans quelques instants',
+    );
+  });
+
+  it('shows "session expired" for the unauthenticated problem', async () => {
+    const response = firstValueFrom(http.get('/gateway/bff/events/dsi'));
+    backend.expectOne('/gateway/bff/events/dsi').flush(
+      {
+        type: ProblemType.UNAUTHENTICATED,
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'Authentication is required',
+        instance: '/gateway/bff/events/dsi',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
+    expect(banner.message()).toBe('Session expirée, veuillez vous reconnecter');
+  });
+
   it('falls back to a generic message when the body is not a typed problem', async () => {
     const response = firstValueFrom(http.get('/api/forms'));
     backend

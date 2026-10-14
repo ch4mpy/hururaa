@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,13 +20,14 @@ import lombok.extern.slf4j.Slf4j;
  * {@code BasicErrorController}, which backs off when an {@link ErrorController} exists.
  *
  * <p>
- * Open to everyone, as an error dispatch is authorized like any request: the security
- * configurations permit {@code /error}. Called directly, without an error status, it answers
- * {@code 404}.
+ * Left out of the OpenAPI specs ({@link Hidden}): no client calls it. Open to everyone, as an error
+ * dispatch is authorized like any request: the security configurations permit {@code /error}.
+ * Called directly, without an error status, it answers {@code 404}.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
+@Hidden
 @RestController
 @RequestMapping("${server.error.path:${error.path:/error}}")
 @Slf4j
