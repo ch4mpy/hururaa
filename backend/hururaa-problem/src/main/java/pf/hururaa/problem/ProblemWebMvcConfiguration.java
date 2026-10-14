@@ -1,6 +1,7 @@
 package pf.hururaa.problem;
 
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.HandlerExceptionResolver;
@@ -25,8 +26,12 @@ public class ProblemWebMvcConfiguration implements WebMvcConfigurer {
 
   private final ProblemResponses problems;
 
-  public ProblemWebMvcConfiguration(JsonMapper jsonMapper) {
+  private final List<ProblemResolutionExclusion> exclusions;
+
+  public ProblemWebMvcConfiguration(JsonMapper jsonMapper,
+      ObjectProvider<ProblemResolutionExclusion> exclusions) {
     this.problems = new ProblemResponses(jsonMapper);
+    this.exclusions = exclusions.orderedStream().toList();
   }
 
   /** Declared here, rather than scanned, to be part of the {@code @WebMvcTest} slices too. */
@@ -44,6 +49,6 @@ public class ProblemWebMvcConfiguration implements WebMvcConfigurer {
         break;
       }
     }
-    resolvers.add(index, new ProblemHandlerExceptionResolver(problems));
+    resolvers.add(index, new ProblemHandlerExceptionResolver(problems, exclusions));
   }
 }

@@ -2,13 +2,16 @@ package pf.hururaa.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.session.InvalidSessionStrategy;
+import org.springframework.security.web.util.ThrowableAnalyzer;
 import com.c4_soft.springaddons.security.oidc.starter.synchronised.client.ClientSynchronizedHttpSecurityPostProcessor;
 import com.c4_soft.springaddons.security.oidc.starter.synchronised.resourceserver.ResourceServerExpressionInterceptUrlRegistryPostProcessor;
 import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.problem.ProblemAccessDeniedHandler;
 import pf.hururaa.problem.ProblemAuthenticationEntryPoint;
+import pf.hururaa.problem.ProblemResolutionExclusion;
 import pf.hururaa.problem.ProblemResponses;
 import pf.hururaa.problem.ProblemType;
 
@@ -57,6 +60,19 @@ public class ProblemSecurityConfiguration {
   ClientSynchronizedHttpSecurityPostProcessor problemAccessDenied(ProblemResponses problems) {
     return http -> http.exceptionHandling(
         exceptions -> exceptions.accessDeniedHandler(new ProblemAccessDeniedHandler(problems)));
+  }
+
+  /**
+   * {@code TokenRelay=} authorizes the client inside the handler: when the refresh token is no
+   * longer valid, its {@link ClientAuthorizationRequiredException} must reach the gateway's
+   * {@code RestfulOAuth2Filter}, which answers {@code 401} {@code unauthenticated}, rather than be
+   * written as a {@code 500} by the shared exception resolver (review of PR #26).
+   */
+  @Bean
+  ProblemResolutionExclusion clientAuthorizationRequired() {
+    final var analyzer = new ThrowableAnalyzer();
+    return ex -> analyzer.getFirstThrowableOfType(ClientAuthorizationRequiredException.class,
+        analyzer.determineCauseChain(ex)) != null;
   }
 
   @Bean

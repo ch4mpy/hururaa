@@ -2,7 +2,9 @@ package pf.hururaa.problem;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -34,8 +36,8 @@ import lombok.extern.slf4j.Slf4j;
  * <p>
  * Left to the next resolvers, and to Spring Security's exception translation: authentication and
  * access-denied exceptions (whose {@code 401} or {@code 403} the security configuration writes),
- * clients gone away ({@link AsyncRequestNotUsableException}) and responses already committed (an
- * event stream).
+ * clients gone away ({@link AsyncRequestNotUsableException}), responses already committed (an
+ * event stream) and what a {@link ProblemResolutionExclusion} bean excludes.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
@@ -45,21 +47,27 @@ public class ProblemHandlerExceptionResolver implements HandlerExceptionResolver
 
   private final ProblemResponses problems;
 
-  public ProblemHandlerExceptionResolver(ProblemResponses problems) {
+  private final List<ProblemResolutionExclusion> exclusions;
+
+  public ProblemHandlerExceptionResolver(ProblemResponses problems,
+      List<ProblemResolutionExclusion> exclusions) {
     this.problems = problems;
+    this.exclusions = List.copyOf(exclusions);
   }
 
   @Override
   public @Nullable ModelAndView resolveException(HttpServletRequest request,
       HttpServletResponse response, @Nullable Object handler, Exception ex) {
     if (response.isCommitted() || ex instanceof AccessDeniedException
-        || ex instanceof AuthenticationException || ex instanceof AsyncRequestNotUsableException) {
+        || ex instanceof AuthenticationException || ex instanceof AsyncRequestNotUsableException
+        || exclusions.stream().anyMatch(exclusion -> exclusion.excludes(ex))) {
       return null;
     }
     final HururaaProblemDetail problem;
-    if (ex instanceof HttpMessageNotReadableException || ex instanceof TypeMismatchException) {
-      // rejections Spring's DefaultHandlerExceptionResolver maps to a 400 although they are no
-      // ErrorResponse
+    if ((ex instanceof HttpMessageNotReadableException || ex instanceof TypeMismatchException)
+        && !(ex instanceof ConversionNotSupportedException)) {
+      // client rejections Spring's DefaultHandlerExceptionResolver maps to a 400 although they are
+      // no ErrorResponse (a missing converter is a server fault: a 500, as Spring answers it)
       problem = ProblemResponses.of(ProblemType.INVALID_REQUEST);
       log.debug("{} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
     } else if (ex instanceof ErrorResponse errorResponse) {

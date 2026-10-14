@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.ConversionNotSupportedException;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -27,7 +29,8 @@ class ProblemHandlerExceptionResolverTest {
 
   final ProblemResponses problems = new ProblemResponses(JsonMapper.builder().build());
 
-  final ProblemHandlerExceptionResolver resolver = new ProblemHandlerExceptionResolver(problems);
+  final ProblemHandlerExceptionResolver resolver = new ProblemHandlerExceptionResolver(problems,
+      List.of(ex -> ex instanceof UnsupportedOperationException));
 
   final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/gateway/unknown");
 
@@ -87,6 +90,22 @@ class ProblemHandlerExceptionResolverTest {
   }
 
   @Test
+  void givenAMissingConverter_whenResolve_thenServerError() throws Exception {
+    resolver.resolveException(request, response, null,
+        new ConversionNotSupportedException("value", Integer.class, null));
+
+    assertThat(response.getStatus()).isEqualTo(500);
+    assertThat(type()).isEqualTo("urn:hururaa:problem:server-error");
+  }
+
+  @Test
+  void givenAnExcludedException_whenResolve_thenLeftToTheFilters() {
+    assertThat(resolver.resolveException(request, response, null,
+        new UnsupportedOperationException("handled by a filter"))).isNull();
+    assertThat(response.getContentLength()).isZero();
+  }
+
+  @Test
   void givenACommittedResponse_whenResolve_thenLeftAlone() {
     response.setCommitted(true);
 
@@ -100,7 +119,9 @@ class ProblemHandlerExceptionResolverTest {
         List.of(new ExceptionHandlerExceptionResolver(), new ResponseStatusExceptionResolver(),
             new DefaultHandlerExceptionResolver()));
 
-    new ProblemWebMvcConfiguration(JsonMapper.builder().build()).extendHandlerExceptionResolvers(resolvers);
+    new ProblemWebMvcConfiguration(JsonMapper.builder().build(),
+        new DefaultListableBeanFactory().getBeanProvider(ProblemResolutionExclusion.class))
+        .extendHandlerExceptionResolvers(resolvers);
 
     assertThat(resolvers).hasSize(4);
     assertThat(resolvers.get(2)).isInstanceOf(ProblemHandlerExceptionResolver.class);

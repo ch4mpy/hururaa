@@ -22,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -165,10 +166,29 @@ class GatewayProblemsTest {
         ProblemType.SERVER_ERROR);
   }
 
-  /** A handler failing unexpectedly, the gateway's own ones failing only on server faults. */
+  /**
+   * What {@code TokenRelay=} throws, inside the handler, when the refresh token is no longer valid:
+   * {@code RestfulOAuth2Filter} answers it {@code 401}, the shared exception resolver leaves it alone
+   * (review of PR #26).
+   */
+  @Test
+  void givenTheClientNeedsAuthorizationAgain_whenRelayed_thenUnauthenticatedProblem()
+      throws Exception {
+    expectProblem(
+        mockMvc
+            .perform(getGateway(FailingController.CLIENT_AUTHORIZATION_REQUIRED_PATH))
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().doesNotExist(HttpHeaders.LOCATION)),
+        ProblemType.UNAUTHENTICATED);
+  }
+
+  /** Handlers failing like the gateway's own ones can only fail. */
   @RestController
   static class FailingController {
     static final String PATH = "/test/failing";
+
+    // under /bff/**, like the TokenRelay= route: the client filter chain (RestfulOAuth2Filter)
+    static final String CLIENT_AUTHORIZATION_REQUIRED_PATH = "/bff/test/client-authorization-required";
 
     static final String SECRET = "jdbc:postgresql://internal-host/secret";
 
@@ -176,6 +196,12 @@ class GatewayProblemsTest {
     @PreAuthorize("permitAll()")
     String fail() {
       throw new IllegalStateException(SECRET);
+    }
+
+    @GetMapping(CLIENT_AUTHORIZATION_REQUIRED_PATH)
+    @PreAuthorize("permitAll()")
+    String requireClientAuthorization() {
+      throw new ClientAuthorizationRequiredException("hururaa-bff");
     }
   }
 
