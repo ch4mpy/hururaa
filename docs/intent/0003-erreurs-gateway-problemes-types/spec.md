@@ -1,13 +1,14 @@
 # Spec : erreurs de la gateway en problèmes RFC 9457 typés
 
 - Intention : [0003](intent.md)
-- Statut : brouillon
+- Statut : approuvée
 - Version : 1
 - Risque : élevé — le changement touche l'authentification (point d'entrée, session invalide) et
   les réponses des règles d'accès
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
   policy-delegation @229653c, policy-tracabilite @229653c
-- Approuvée : —
+- Approuvée : 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech lead sont la
+  même personne : accord consigné une seule fois)
 
 ## Résumé
 
@@ -229,4 +230,5 @@ Aucune.
 
 ## Historique
 
-- v1 — 2026-10-13 — première version
+- v1 — 2026-10-13 — première version ; décisions PA-1 à PA-3 le 2026-10-14 (motif `/me` au lieu
+  de `/me/**` pour PA-2), approuvée le 2026-10-14
