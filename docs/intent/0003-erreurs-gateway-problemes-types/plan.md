@@ -148,3 +148,22 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 ## Écarts
 
 <!-- rempli pendant l'implémentation : date — quoi — pourquoi — effet sur les fichiers ou la preuve -->
+
+- 2026-10-14 — Étape 2 : `ProblemResponses` n'est pas un `@Component` mais un `@Bean` de
+  `ProblemWebMvcConfiguration` — les tranches `@WebMvcTest` ne chargent pas les composants simples
+  (contexte en échec dans les tests des contrôleurs). Aucun effet sur la preuve.
+- 2026-10-14 — Étape 3 : le résolveur commun type aussi `HttpMessageNotReadableException` et
+  `TypeMismatchException` (`400` `invalid-request`) : ce ne sont pas des `ErrorResponse`, et
+  `DefaultHandlerExceptionResolver` les aurait rendues sans corps. Test ajouté au résolveur.
+- 2026-10-14 — Étape 4 : `invalid-session.status` retiré de `application.yml` de la gateway — sans
+  effet une fois la stratégie remplacée par celle de Hurura'a. `InvalidSessionSafeguardTest` vérifie
+  désormais le problème de cette stratégie (plus de `Location`).
+- 2026-10-14 — Étape 4 : CA-7 prouvé par un contrôleur de test qui échoue
+  (`GatewayProblemsTest.FailingController`) et non par `SseController` sans session : en MockMvc,
+  le support de test de Spring Security ouvre une session. Pour la même raison, « aucune session
+  ouverte » (CA-3) se prouve sur la stratégie elle-même : nouveau fichier
+  `backend/gateway/src/test/java/pf/hururaa/security/ProblemSecurityConfigurationTest.java`.
+- 2026-10-14 — Étape 4 : un `POST` **sans** jeton CSRF répond `401` `unauthenticated`, pas `403` :
+  `CsrfConfigurer` confie `MissingCsrfTokenException` à la stratégie de session invalide. Décision du
+  PO : garder ce comportement de Spring → **spec v2** (EX-5, CA-5), à approuver avant de reprendre
+  l'étape 4. Preuve de CA-5 : jeton invalide → `403`, jeton absent → `401` (`GatewayProblemsTest`).

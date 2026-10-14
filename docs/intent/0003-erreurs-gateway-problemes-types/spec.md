@@ -1,8 +1,8 @@
 # Spec : erreurs de la gateway en problèmes RFC 9457 typés
 
 - Intention : [0003](intent.md)
-- Statut : approuvée
-- Version : 1
+- Statut : brouillon (v2 à approuver ; v1 approuvée)
+- Version : 2
 - Risque : élevé — le changement touche l'authentification (point d'entrée, session invalide) et
   les réponses des règles d'accès
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
@@ -29,8 +29,9 @@ le front leur donne un message, dont un message dédié quand l'API est injoigna
   `401` `unauthenticated` ailleurs, sans redirection (0001). (contrainte « ne rien perdre »)
 - EX-4 Une route que ni la gateway ni hururaa-api ne connaît répond `404` `not-found`, avec ou sans
   session. (résultat 2)
-- EX-5 Un accès refusé (règle `@PreAuthorize`, jeton CSRF absent ou invalide), de la gateway comme
-  de hururaa-api, répond `403` `access-denied`. (résultat 1)
+- EX-5 Un accès refusé (règle `@PreAuthorize`, jeton CSRF invalide), de la gateway comme de
+  hururaa-api, répond `403` `access-denied`. Un jeton CSRF **absent** garde le traitement de Spring
+  Security, qui y voit une session expirée : `401` `unauthenticated`. (résultat 1 ; v2)
 - EX-6 Une requête que le framework rejette (corps illisible, méthode ou type de contenu non
   supporté…) répond avec son statut `4xx` et le type `invalid-request`. (résultat 1)
 - EX-7 Une exception non gérée répond `500` `server-error` ; son détail est journalisé, jamais
@@ -100,8 +101,8 @@ Nouveaux types de `ProblemType` (`urn:hururaa:problem:<slug>`), sans paramètre 
 
 | Constante | Slug | Statut | Émis par |
 | --- | --- | --- | --- |
-| `UNAUTHENTICATED` | `unauthenticated` | 401 | gateway (sans session, session inconnue), hururaa-api (jeton absent ou refusé) |
-| `ACCESS_DENIED` | `access-denied` | 403 | gateway, hururaa-api |
+| `UNAUTHENTICATED` | `unauthenticated` | 401 | gateway (sans session, session inconnue, jeton CSRF absent), hururaa-api (jeton absent ou refusé) |
+| `ACCESS_DENIED` | `access-denied` | 403 | gateway (règle, jeton CSRF invalide), hururaa-api |
 | `NOT_FOUND` | `not-found` | 404 | gateway, hururaa-api (route inconnue) |
 | `INVALID_REQUEST` | `invalid-request` | 4xx du framework (400 par défaut) | gateway, hururaa-api |
 | `SERVER_ERROR` | `server-error` | 500 | gateway, hururaa-api |
@@ -205,7 +206,8 @@ Aucune.
 - CA-5 Étant donné un utilisateur connecté non membre de `daf`, quand il ouvre
   `/gateway/bff/events/daf`, alors `403` `access-denied` ; étant donné un membre sans rôle, quand
   hururaa-api refuse une écriture par sa règle, alors `403` `access-denied` ; étant donné un `POST`
-  sans jeton CSRF, alors `403` `access-denied`. (EX-5, EX-12)
+  avec un jeton CSRF invalide, alors `403` `access-denied` ; sans jeton CSRF, alors `401`
+  `unauthenticated`. (EX-5, EX-12)
 - CA-6 Étant donné un corps JSON illisible ou une méthode non supportée, quand on appelle
   hururaa-api, alors `400` (resp. `405`) `invalid-request`. (EX-6, EX-12)
 - CA-7 Étant donné une exception non gérée, alors `500` `server-error`, `detail` générique, le
@@ -232,3 +234,8 @@ Aucune.
 
 - v1 — 2026-10-13 — première version ; décisions PA-1 à PA-3 le 2026-10-14 (motif `/me` au lieu
   de `/me/**` pour PA-2), approuvée le 2026-10-14
+- v2 — 2026-10-14 — EX-5, CA-5 et le tableau des types : un jeton CSRF absent répond `401`
+  `unauthenticated`, seul un jeton invalide répond `403` `access-denied`. Constaté au build :
+  Spring Security (`CsrfConfigurer`) confie un jeton absent à la stratégie de session invalide, pas
+  au gestionnaire d'accès refusé ; le PO garde ce comportement (2026-10-14) plutôt que de le
+  contourner selon l'état de la session.
