@@ -167,3 +167,6 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
   `CsrfConfigurer` confie `MissingCsrfTokenException` à la stratégie de session invalide. Décision du
   PO : garder ce comportement de Spring → **spec v2** (EX-5, CA-5), à approuver avant de reprendre
   l'étape 4. Preuve de CA-5 : jeton invalide → `403`, jeton absent → `401` (`GatewayProblemsTest`).
+- 2026-10-14 — Étape 5 : `HururaaErrorController` annoté `@Hidden` — springdoc le publiait dans les
+  deux specs OpenAPI (un service `hururaaErrorController` généré dans `@api/*`). Specs et clients
+  régénérés, sans `/error`.
