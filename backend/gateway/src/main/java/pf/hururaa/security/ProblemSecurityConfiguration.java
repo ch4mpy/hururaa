@@ -7,7 +7,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.session.InvalidSessionStrategy;
 import org.springframework.security.web.util.ThrowableAnalyzer;
 import com.c4_soft.springaddons.security.oidc.starter.synchronised.client.ClientSynchronizedHttpSecurityPostProcessor;
-import com.c4_soft.springaddons.security.oidc.starter.synchronised.resourceserver.ResourceServerExpressionInterceptUrlRegistryPostProcessor;
+import com.c4_soft.springaddons.security.oidc.starter.synchronised.resourceserver.ResourceServerSynchronizedHttpSecurityPostProcessor;
 import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.problem.ProblemAccessDeniedHandler;
 import pf.hururaa.problem.ProblemAuthenticationEntryPoint;
@@ -30,10 +30,16 @@ import pf.hururaa.problem.ProblemType;
  * <li>an access rule or the CSRF protection refusing an authenticated request: {@code 403}
  * {@link ProblemType#ACCESS_DENIED};</li>
  * <li>the resource server filter chain, which handles every route outside spring-addons' client
- * {@code security-matchers}, requires a token for the actuator only: the gateway serves nothing
- * else to bearers, and an unknown route then reaches Spring MVC's {@code 404} (a
- * {@link ProblemType#NOT_FOUND}) instead of this chain's {@code 401}.</li>
+ * {@code security-matchers}: the same {@code 401} problem (with a {@code Bearer} challenge) for
+ * what its {@code permit-all} doesn't list, an unknown route included. It ignores the session: a
+ * logged-in user gets a {@code 404} on an unknown route under the client's prefixes only (spec
+ * v4, EX-4).</li>
  * </ul>
+ *
+ * <p>
+ * What anonymous requests may reach is listed explicitly in the two chains' {@code permit-all}
+ * ({@code application.yml}, EX-13); nothing here widens it.
+ * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
  */
@@ -75,9 +81,18 @@ public class ProblemSecurityConfiguration {
         analyzer.determineCauseChain(ex)) != null;
   }
 
+  /**
+   * The resource server chain's {@code 401}, for no token as for a rejected one (its
+   * {@code BearerTokenAuthenticationFilter} has its own entry point), as a problem instead of
+   * spring-addons' bare {@code sendError}.
+   */
   @Bean
-  ResourceServerExpressionInterceptUrlRegistryPostProcessor actuatorOnlyRequiresAToken() {
-    return registry -> registry.requestMatchers("/actuator/**").authenticated().anyRequest()
-        .permitAll();
+  ResourceServerSynchronizedHttpSecurityPostProcessor resourceServerProblems(
+      ProblemResponses problems) {
+    final var entryPoint = new ProblemAuthenticationEntryPoint(problems, "Bearer");
+    return http -> http
+        .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(entryPoint)
+            .accessDeniedHandler(new ProblemAccessDeniedHandler(problems)))
+        .oauth2ResourceServer(resourceServer -> resourceServer.authenticationEntryPoint(entryPoint));
   }
 }

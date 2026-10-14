@@ -209,3 +209,11 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
     - `CLAUDE.md` : listes d'accès anonyme de la gateway ; évals relancées.
   - Preuve : CA-4, CA-12 à CA-14 par ces tests ; `smoke.sh` ; contre-épreuve de CA-12 (une route
     relayée retirée de `permit-all` fait échouer le test).
+- 2026-10-14 — Étape 9, preuve :
+  - nouveau fichier `backend/gateway/src/test/java/pf/hururaa/ActuatorExposureTest.java` (vrai
+    serveur, port de management aléatoire) pour CA-14 : MockMvc n'atteint pas le port de
+    management. `info` se prouve sur les endpoints exposés (`PathMappedEndpoints`) : sans jeton,
+    `/actuator/info` répond `401` (refus par défaut, EX-13), qu'il soit exposé ou non ; le `404`
+    de CA-14 n'est observable qu'avec un jeton ;
+  - `GatewayProblemsTest.FailingController` passe sous `/bff/**` et s'appelle avec une session :
+    hors des listes, un chemin anonyme est refusé par défaut (EX-13).

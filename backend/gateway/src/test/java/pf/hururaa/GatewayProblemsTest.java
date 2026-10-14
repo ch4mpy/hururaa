@@ -22,8 +22,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -79,6 +81,17 @@ class GatewayProblemsTest {
     return authentication(new OAuth2AuthenticationToken(user, user.getAuthorities(), "hururaa-bff"));
   }
 
+  /** An HTTP session holding the security context, as {@code oauth2Login} leaves it. */
+  private static MockHttpSession loggedInSession() {
+    final var user = HururaaOidcUserFixture.hururaaOidcUser(Map.of("dsi", Set.of()));
+    final var session = new MockHttpSession();
+    session.setAttribute(
+        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+        new SecurityContextImpl(
+            new OAuth2AuthenticationToken(user, user.getAuthorities(), "hururaa-bff")));
+    return session;
+  }
+
   private static ResultActions expectProblem(ResultActions result, ProblemType type)
       throws Exception {
     return result
@@ -100,22 +113,34 @@ class GatewayProblemsTest {
   }
 
   @Test
-  void givenNoSession_whenGetUnknownRoute_thenNotFoundProblem() throws Exception {
+  void givenNoSession_whenGetUnknownRoutes_thenUnauthenticatedProblem() throws Exception {
+    // refused by default (EX-13), in both filter chains (spec v3, v4)
     expectProblem(
-        mockMvc.perform(getGateway("/inconnue")).andExpect(status().isNotFound()),
-        ProblemType.NOT_FOUND);
+        mockMvc.perform(getGateway("/inconnue")).andExpect(status().isUnauthorized()),
+        ProblemType.UNAUTHENTICATED);
+    expectProblem(
+        mockMvc.perform(getGateway("/bff/inconnue")).andExpect(status().isUnauthorized()),
+        ProblemType.UNAUTHENTICATED);
   }
 
+  /**
+   * The security context is in the HTTP session, as after a real login, not set by the test support
+   * (which every filter chain would see): the resource server chain, stateless, ignores the session
+   * (spec v4, EX-4).
+   */
   @Test
-  void givenALoggedInUser_whenGetUnknownRoutes_thenNotFoundProblem() throws Exception {
+  void givenASession_whenGetUnknownRoutes_thenNotFoundUnderTheClientPrefixesOnly()
+      throws Exception {
     expectProblem(
-        mockMvc.perform(getGateway("/inconnue").with(dsiMember())).andExpect(status().isNotFound()),
+        mockMvc
+            .perform(getGateway("/bff/inconnue").session(loggedInSession()))
+            .andExpect(status().isNotFound()),
         ProblemType.NOT_FOUND);
     expectProblem(
         mockMvc
-            .perform(getGateway("/bff/inconnue").with(dsiMember()))
-            .andExpect(status().isNotFound()),
-        ProblemType.NOT_FOUND);
+            .perform(getGateway("/inconnue").session(loggedInSession()))
+            .andExpect(status().isUnauthorized()),
+        ProblemType.UNAUTHENTICATED);
   }
 
   @Test
@@ -160,7 +185,7 @@ class GatewayProblemsTest {
   void givenAFailingHandler_whenCallIt_thenServerErrorProblemWithoutDetails() throws Exception {
     expectProblem(
         mockMvc
-            .perform(getGateway(FailingController.PATH))
+            .perform(getGateway(FailingController.PATH).session(loggedInSession()))
             .andExpect(status().isInternalServerError())
             .andExpect(content().string(not(containsString(FailingController.SECRET)))),
         ProblemType.SERVER_ERROR);
@@ -185,7 +210,8 @@ class GatewayProblemsTest {
   /** Handlers failing like the gateway's own ones can only fail. */
   @RestController
   static class FailingController {
-    static final String PATH = "/test/failing";
+    // under /bff/**, reached with a session: not anonymous, refused by default (EX-13)
+    static final String PATH = "/bff/test/failing";
 
     // under /bff/**, like the TokenRelay= route: the client filter chain (RestfulOAuth2Filter)
     static final String CLIENT_AUTHORIZATION_REQUIRED_PATH = "/bff/test/client-authorization-required";
@@ -228,7 +254,35 @@ class GatewayProblemsTest {
 
   /** The resource server filter chain still requires a token for the actuator. */
   @Test
-  void givenNoToken_whenGetActuator_thenUnauthorized() throws Exception {
-    mockMvc.perform(getGateway("/actuator/info")).andExpect(status().isUnauthorized());
+  void givenNoToken_whenGetActuatorOnTheMainPort_thenUnauthenticatedProblem() throws Exception {
+    // the actuator is on the management port (ActuatorExposureTest): here, an unlisted path
+    expectProblem(
+        mockMvc.perform(getGateway("/actuator/info")).andExpect(status().isUnauthorized()),
+        ProblemType.UNAUTHENTICATED);
+  }
+
+  // ---------- what anonymous requests may reach (EX-13, CA-13) ----------
+
+  @Test
+  void givenNoSession_whenStartLogin_thenOkWithTheAuthorizationUri() throws Exception {
+    mockMvc
+        .perform(getGateway("/oauth2/authorization/hururaa-bff"))
+        .andExpect(status().isOk())
+        .andExpect(header().exists(HttpHeaders.LOCATION));
+  }
+
+  @Test
+  void givenNoSession_whenLogout_thenAcceptedWithoutEffect() throws Exception {
+    mockMvc
+        .perform(post(CONTEXT_PATH + "/logout").contextPath(CONTEXT_PATH).with(csrf()))
+        .andExpect(status().isAccepted());
+  }
+
+  @Test
+  void givenNoSession_whenGetError_thenItsProblem() throws Exception {
+    // called directly, without an error status: 404 (an error dispatch carries its status)
+    expectProblem(
+        mockMvc.perform(getGateway("/error")).andExpect(status().isNotFound()),
+        ProblemType.NOT_FOUND);
   }
 }

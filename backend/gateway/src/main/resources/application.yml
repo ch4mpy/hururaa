@@ -106,12 +106,20 @@ com:
             - /logout/**
             - /bff/**
             - /me/**
+          # What anonymous requests may reach, listed explicitly; anything else needs a session
+          # (docs/intent/0003, EX-13). With resourceserver.permit-all below, the whole list.
           permit-all:
+            # Routes relayed downstream (spring.cloud.gateway.server.webmvc.routes): their access
+            # control belongs to the downstream service. Every route's Path= must be here
+            # (AnonymousAccessConfigurationTest).
+            - /bff/api/v1/**
+            # Gateway endpoints that work without a session
+            - /me
             - /login/**
             - /oauth2/**
+            # without a session, a logout has no effect, and the SPA ends up logged out anyway
+            - /logout
             - /logout/connect/back-channel/hururaa-bff
-            - /bff/**
-            - /me/**
           csrf: cookie-accessible-from-js
           # the CSRF cookie must be accessible to both the BFF and the SPA code
           # while not colliding with other apps CSRF cookies
@@ -134,11 +142,17 @@ com:
             enabled: true
             internal-logout-uri: ${reverse-proxy-uri}${server.servlet.context-path}/logout/connect/back-channel/hururaa-bff
         resourceserver:
+          # The rest of the anonymous list (see client.permit-all); everything else outside the
+          # client's security-matchers needs a token, which only the actuator serves
           permit-all:
+            # Public actuator endpoints (management port, docs/decisions/0004)
             - /actuator/health
             - /actuator/health/readiness
             - /actuator/health/liveness
-            # This endpoint is exposed only with the Maven "openapi" profile
+            # Gateway endpoints that work without a session
+            # error dispatches are authorized like any request (pf.hururaa.problem.HururaaErrorController)
+            - /error
+            # exposed only with the Maven "openapi" profile
             - /v3/api-docs
 
 management:
@@ -153,8 +167,9 @@ management:
   endpoints:
     web:
       exposure:
-        # Surface minimale : voir le commentaire equivalent dans hururaa-api.
-        include: health,info
+        # Surface minimale : voir le commentaire equivalent dans hururaa-api. Pas d'info : il ne
+        # servait rien ({}) et n'avait aucun consommateur (docs/intent/0003, EX-14).
+        include: health
   health:
     livenessstate:
       enabled: true

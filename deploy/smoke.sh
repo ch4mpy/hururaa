@@ -57,7 +57,8 @@ expect_problem "API through the BFF, unknown session" 401 unauthenticated \
   -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
 expect_problem "events, no session" 401 unauthenticated "$base/gateway/bff/events/dsi" \
   -H 'Accept: text/event-stream'
-expect_problem "gateway, unknown route" 404 not-found "$base/gateway/inconnue" \
+# docs/intent/0003 (spec v3): anything not listed for anonymous requests is refused by default
+expect_problem "gateway, unknown route, no session" 401 unauthenticated "$base/gateway/inconnue" \
   -H 'Accept: application/json'
 expect "Keycloak realm (OIDC discovery)" 200 \
   "$base/auth/realms/public-facing/.well-known/openid-configuration"
