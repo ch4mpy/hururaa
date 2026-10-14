@@ -40,16 +40,17 @@ const PROBLEM_MESSAGES: Record<ProblemType, (p: Parameters) => string> = {
     $localize`:@@problem.dataIntegrityViolation:La demande est en conflit avec des données existantes`,
   [ProblemType.IDENTITY_PROVIDER_ERROR]: () =>
     $localize`:@@problem.identityProviderError:La communication avec le serveur d'identité a échoué : réessayez plus tard`,
-  // Generic types of the gateway and the API (docs/intent/0003): the texts of `httpErrorMessage`'s
-  // status classes, but a dedicated one when the API is unreachable.
+  // Generic types of the gateway and the API (docs/intent/0003): the messages of `httpErrorMessage`'s
+  // status classes, under the same ids (one translation each), but a dedicated one when the API is
+  // unreachable.
   [ProblemType.UNAUTHENTICATED]: () =>
-    $localize`:@@problem.unauthenticated:Session expirée, veuillez vous reconnecter`,
-  [ProblemType.ACCESS_DENIED]: () => $localize`:@@problem.accessDenied:Accès refusé`,
-  [ProblemType.NOT_FOUND]: () => $localize`:@@problem.notFound:Ressource introuvable`,
+    $localize`:@@http.error.unauthorized:Session expirée, veuillez vous reconnecter`,
+  [ProblemType.ACCESS_DENIED]: () => $localize`:@@http.error.forbidden:Accès refusé`,
+  [ProblemType.NOT_FOUND]: () => $localize`:@@http.error.notFound:Ressource introuvable`,
   [ProblemType.INVALID_REQUEST]: () =>
-    $localize`:@@problem.invalidRequest:Requête refusée par le serveur`,
+    $localize`:@@http.error.client:Requête refusée par le serveur`,
   [ProblemType.SERVER_ERROR]: () =>
-    $localize`:@@problem.serverError:Erreur du serveur, veuillez réessayer plus tard`,
+    $localize`:@@http.error.server:Erreur du serveur, veuillez réessayer plus tard`,
   [ProblemType.SERVICE_UNAVAILABLE]: () =>
     $localize`:@@problem.serviceUnavailable:Service momentanément indisponible, réessayez dans quelques instants`,
 };

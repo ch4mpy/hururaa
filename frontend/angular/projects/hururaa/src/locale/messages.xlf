@@ -130,12 +130,20 @@
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
           <context context-type="linenumber">40</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
+          <context context-type="linenumber">47</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="http.error.forbidden" datatype="html">
         <source>Accès refusé</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
           <context context-type="linenumber">43</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
+          <context context-type="linenumber">48</context>
         </context-group>
       </trans-unit>
       <trans-unit id="http.error.notFound" datatype="html">
@@ -144,6 +152,10 @@
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
           <context context-type="linenumber">46</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
+          <context context-type="linenumber">49</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="http.error.server" datatype="html">
         <source>Erreur du serveur, veuillez réessayer plus tard</source>
@@ -151,11 +163,19 @@
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
           <context context-type="linenumber">49</context>
         </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
+          <context context-type="linenumber">53</context>
+        </context-group>
       </trans-unit>
       <trans-unit id="http.error.client" datatype="html">
         <source>Requête refusée par le serveur</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/http-error.interceptor.ts</context>
+          <context context-type="linenumber">51</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
           <context context-type="linenumber">51</context>
         </context-group>
       </trans-unit>
@@ -257,46 +277,11 @@
           <context context-type="linenumber">42</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="problem.unauthenticated" datatype="html">
-        <source>Session expirée, veuillez vous reconnecter</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">46</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.accessDenied" datatype="html">
-        <source>Accès refusé</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">47</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.notFound" datatype="html">
-        <source>Ressource introuvable</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">48</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.invalidRequest" datatype="html">
-        <source>Requête refusée par le serveur</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">50</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.serverError" datatype="html">
-        <source>Erreur du serveur, veuillez réessayer plus tard</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">52</context>
-        </context-group>
-      </trans-unit>
       <trans-unit id="problem.serviceUnavailable" datatype="html">
         <source>Service momentanément indisponible, réessayez dans quelques instants</source>
         <context-group purpose="location">
           <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">54</context>
+          <context context-type="linenumber">55</context>
         </context-group>
       </trans-unit>
       <trans-unit id="session.ended" datatype="html">

@@ -290,46 +290,6 @@
           <context context-type="linenumber">42</context>
         </context-group>
       </trans-unit>
-      <trans-unit id="problem.unauthenticated" datatype="html">
-        <source>Session expirée, veuillez vous reconnecter</source>
-        <target>Session expired, please log in again</target>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">46</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.accessDenied" datatype="html">
-        <source>Accès refusé</source>
-        <target>Access denied</target>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">47</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.notFound" datatype="html">
-        <source>Ressource introuvable</source>
-        <target>Resource not found</target>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">48</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.invalidRequest" datatype="html">
-        <source>Requête refusée par le serveur</source>
-        <target>Request rejected by the server</target>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">50</context>
-        </context-group>
-      </trans-unit>
-      <trans-unit id="problem.serverError" datatype="html">
-        <source>Erreur du serveur, veuillez réessayer plus tard</source>
-        <target>Server error, please try again later</target>
-        <context-group purpose="location">
-          <context context-type="sourcefile">projects/hururaa/src/app/core/problem-messages.ts</context>
-          <context context-type="linenumber">52</context>
-        </context-group>
-      </trans-unit>
       <trans-unit id="problem.serviceUnavailable" datatype="html">
         <source>Service momentanément indisponible, réessayez dans quelques instants</source>
         <target>Service temporarily unavailable, please try again in a moment</target>
