@@ -4,7 +4,7 @@
 - Nature : évolution
 - Source : conversation ; décision PA-4 de la spec de [0001](../0001-toast-erreur-ouverture-application/spec.md) (« une nouvelle intention »)
 - Spec nécessaire : oui
-- Statut : spécifiée
+- Statut : planifiée
 - Ouverte le : 2026-10-13
 - Décidée le : 2026-10-13
 - Remplace : —
