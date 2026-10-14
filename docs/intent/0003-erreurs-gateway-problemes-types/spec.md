@@ -1,14 +1,14 @@
 # Spec : erreurs de la gateway en problèmes RFC 9457 typés
 
 - Intention : [0003](intent.md)
-- Statut : brouillon (v2 à approuver ; v1 approuvée)
+- Statut : approuvée (v2)
 - Version : 2
 - Risque : élevé — le changement touche l'authentification (point d'entrée, session invalide) et
   les réponses des règles d'accès
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
   policy-delegation @229653c, policy-tracabilite @229653c
-- Approuvée : 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech lead sont la
-  même personne : accord consigné une seule fois)
+- Approuvée : v1 et v2 le 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech
+  lead sont la même personne : accord consigné une seule fois)
 
 ## Résumé
 
@@ -238,4 +238,4 @@ Aucune.
   `unauthenticated`, seul un jeton invalide répond `403` `access-denied`. Constaté au build :
   Spring Security (`CsrfConfigurer`) confie un jeton absent à la stratégie de session invalide, pas
   au gestionnaire d'accès refusé ; le PO garde ce comportement (2026-10-14) plutôt que de le
-  contourner selon l'état de la session.
+  contourner selon l'état de la session. Approuvée le 2026-10-14.
