@@ -119,13 +119,13 @@ com:
           # A session cookie the gateway no longer knows (browser reopened, session expired, gateway
           # restarted). On /me only, a new session is opened and the request proceeds as without a
           # cookie: the session probe answers anonymous (docs/intent/0002). Every other route gets
-          # the invalid-session strategy's 401, never a redirection (docs/intent/0001), and opens
-          # no session: parallel requests holding the stale cookie don't each leave an orphaned
-          # one behind (docs/intent/0003).
+          # the 401 unauthenticated problem of the gateway's own invalid-session strategy (so no
+          # invalid-session.status here), never a redirection (docs/intent/0001), and opens no
+          # session: parallel requests holding the stale cookie don't each leave an orphaned one
+          # behind (pf.hururaa.security.ProblemSecurityConfiguration, docs/intent/0003).
           invalid-session:
             pass-through-patterns:
               - /me
-            status: UNAUTHORIZED
           oauth2-redirections:
             authentication-entry-point: UNAUTHORIZED
             pre-authorization-code: OK

@@ -3,6 +3,7 @@ package pf.hururaa.security;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -10,17 +11,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
+import pf.hururaa.problem.ProblemType;
 
 /**
- * The safeguard {@link InvalidSessionTest} cannot reach: with spring-addons'
+ * The safeguard of the session probe: with spring-addons'
  * {@code invalid-session.pass-through-patterns} emptied, a session cookie the gateway no longer
- * knows goes to the invalid-session strategy, whose {@code status: UNAUTHORIZED} must keep it a
- * {@code 401}, never the default {@code 302} that took the SPA out of the gateway
- * (docs/intent/0001, 0002). Same infrastructure as {@link InvalidSessionTest}.
+ * knows sends {@code /me} to the gateway's invalid-session strategy, whose {@code 401}
+ * {@code unauthenticated} problem the SPA treats as logged out, never spring-addons' default
+ * {@code 302} that took the SPA out of the gateway
+ * (docs/intent/0001, 0002, 0003). Same infrastructure as {@link InvalidSessionTest}.
  */
 @SpringBootTest(
     properties = {
@@ -57,12 +61,8 @@ class InvalidSessionSafeguardTest {
                       return request;
                     }))
         .andExpect(status().isUnauthorized())
-        .andExpect(content().string("Invalid session. Please authenticate."))
-        // since spring-addons 9.5.1, the strategy's Location keeps the context path
-        .andExpect(
-            header()
-                .string(
-                    HttpHeaders.LOCATION,
-                    org.hamcrest.Matchers.containsString(CONTEXT_PATH + "/me")));
+        .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(ProblemType.UNAUTHENTICATED.uri().toString()));
   }
 }

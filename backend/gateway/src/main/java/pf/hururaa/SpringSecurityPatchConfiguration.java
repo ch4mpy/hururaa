@@ -6,9 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +24,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Supplier;
+
+import pf.hururaa.problem.ProblemResponses;
+import pf.hururaa.problem.ProblemType;
 
 /**
  * Workaround https://github.com/spring-projects/spring-security/issues/17754
@@ -34,12 +37,18 @@ import java.util.List;
 @Component
 public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
 
+  private final ObjectProvider<ProblemResponses> problems;
+
+  public SpringSecurityPatchConfiguration(ObjectProvider<ProblemResponses> problems) {
+    this.problems = problems;
+  }
+
   @Override
   public @Nullable Object postProcessBeforeInitialization(
       @Nullable Object bean,
       @Nullable String beanName) throws BeansException {
     if (bean instanceof OAuth2AuthorizationRequestRedirectFilter oauth2AuthorizationRequestRedirectFilter) {
-      return new RestfulOAuth2Filter(oauth2AuthorizationRequestRedirectFilter);
+      return new RestfulOAuth2Filter(oauth2AuthorizationRequestRedirectFilter, problems::getObject);
     }
     return bean;
   }
@@ -50,11 +59,8 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
 
     private final RedirectStrategy authorizationRedirectStrategy;
 
-    private final RedirectStrategy unauthorizedStrategy = (
-        @SuppressWarnings("unused") HttpServletRequest request, HttpServletResponse response, String location) -> {
-      response.setStatus(HttpStatus.UNAUTHORIZED.value());
-      response.setHeader(HttpHeaders.LOCATION, location);
-    };
+    /** Resolved at request time: this filter is built by a {@link BeanPostProcessor}. */
+    private final Supplier<ProblemResponses> problems;
 
     private final OAuth2AuthorizationRequestResolver authorizationRequestResolver;
 
@@ -75,8 +81,10 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
         AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository,
         RedirectStrategy authorizationRedirectStrategy,
         AuthenticationFailureHandler authenticationFailureHandler,
-        ThrowableAnalyzer throwableAnalyzer) {
+        ThrowableAnalyzer throwableAnalyzer,
+        Supplier<ProblemResponses> problems) {
       super(authorizationRequestResolver);
+      this.problems = problems;
       this.authorizationRequestResolver = authorizationRequestResolver;
 
       this.throwableAnalyzer = throwableAnalyzer;
@@ -91,13 +99,15 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
       super.setAuthenticationFailureHandler(authenticationFailureHandler);
     }
 
-    public RestfulOAuth2Filter(OAuth2AuthorizationRequestRedirectFilter other) {
+    public RestfulOAuth2Filter(OAuth2AuthorizationRequestRedirectFilter other,
+        Supplier<ProblemResponses> problems) {
       this(
           getField("authorizationRequestResolver", other),
           getField("authorizationRequestRepository", other),
           getField("authorizationRedirectStrategy", other),
           getField("authenticationFailureHandler", other),
-          getField("throwableAnalyzer", other));
+          getField("throwableAnalyzer", other),
+          problems);
     }
 
     @SuppressWarnings("unchecked")
@@ -154,7 +164,7 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
             if (authorizationRequest == null) {
               throw authzEx;
             }
-            this.sendUnauthorized(request, response, authorizationRequest);
+            this.sendUnauthorized(request, response);
           } catch (Exception failed) {
             AuthenticationException wrappedException = new OAuth2AuthorizationRequestException(ex);
             this.authenticationFailureHandler.onAuthenticationFailure(
@@ -174,14 +184,15 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
       }
     }
 
+    /**
+     * The user must log in again (refresh token expired or revoked): a {@code 401}
+     * {@link ProblemType#UNAUTHENTICATED}, without the authorization request's URI, which the SPA
+     * never follows (it logs in through {@code /oauth2/authorization}, docs/intent/0003).
+     */
     private void sendUnauthorized(
         HttpServletRequest request,
-        HttpServletResponse response,
-        OAuth2AuthorizationRequest authorizationRequest) throws IOException {
-      this.unauthorizedStrategy.sendRedirect(
-          request,
-          response,
-          authorizationRequest.getAuthorizationRequestUri());
+        HttpServletResponse response) throws IOException {
+      this.problems.get().write(request, response, ProblemType.UNAUTHENTICATED);
     }
 
     private void sendRedirectForAuthorization(

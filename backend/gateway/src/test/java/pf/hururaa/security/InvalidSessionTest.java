@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
+import pf.hururaa.problem.ProblemType;
 
 /**
  * How the whole security chain treats a session cookie the gateway no longer knows (browser
@@ -101,15 +104,32 @@ class InvalidSessionTest {
         .andExpect(status().isUnauthorized());
   }
 
-  /** Not passed through (docs/intent/0003): the gateway answers, the request is not relayed. */
+  /**
+   * Not passed through (docs/intent/0003): the gateway answers an {@code unauthenticated} problem
+   * and the request is not relayed (that it opens no session:
+   * {@link ProblemSecurityConfigurationTest}).
+   */
   @Test
-  void givenUnknownSessionCookie_whenGetBffRoute_thenUnauthorizedFromTheGateway()
+  void givenUnknownSessionCookie_whenGetBffRoute_thenUnauthenticatedProblemFromTheGateway()
       throws Exception {
     mockMvc
         .perform(getWithUnknownSession("/bff/api/v1/me/delegations"))
         .andExpect(status().isUnauthorized())
+        .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
         // not relayed: hururaa-api (WireMock) would have answered with a Bearer challenge
-        .andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
+        .andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE))
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(ProblemType.UNAUTHENTICATED.uri().toString()));
+  }
+
+  @Test
+  void givenUnknownSessionCookie_whenSubscribeToEvents_thenUnauthenticatedProblemWithoutRedirection()
+      throws Exception {
+    mockMvc
+        .perform(getWithUnknownSession("/bff/events/dsi").accept(MediaType.TEXT_EVENT_STREAM))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+        .andExpect(jsonPath("$.type").value(ProblemType.UNAUTHENTICATED.uri().toString()));
   }
 
   /**
