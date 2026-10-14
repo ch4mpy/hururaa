@@ -1,8 +1,8 @@
 # Spec : erreurs de la gateway en problèmes RFC 9457 typés
 
 - Intention : [0003](intent.md)
-- Statut : approuvée (v2)
-- Version : 2
+- Statut : brouillon (v3 à approuver ; v1 et v2 approuvées)
+- Version : 3
 - Risque : élevé — le changement touche l'authentification (point d'entrée, session invalide) et
   les réponses des règles d'accès
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
@@ -27,8 +27,9 @@ le front leur donne un message, dont un message dédié quand l'API est injoigna
   `401` `unauthenticated`. (résultat 1)
 - EX-3 Un cookie de session que la gateway ne connaît plus donne `200` anonyme sur `/me` (0002) et
   `401` `unauthenticated` ailleurs, sans redirection (0001). (contrainte « ne rien perdre »)
-- EX-4 Une route que ni la gateway ni hururaa-api ne connaît répond `404` `not-found`, avec ou sans
-  session. (résultat 2)
+- EX-4 Une route que ni la gateway ni hururaa-api ne connaît répond, sans session, `401`
+  `unauthenticated` (refus par défaut, EX-13) et, avec une session, `404` `not-found`. (résultat 2 ;
+  v3)
 - EX-5 Un accès refusé (règle `@PreAuthorize`, jeton CSRF invalide), de la gateway comme de
   hururaa-api, répond `403` `access-denied`. Un jeton CSRF **absent** garde le traitement de Spring
   Security, qui y voit une session expirée : `401` `unauthenticated`. (résultat 1 ; v2)
@@ -45,6 +46,22 @@ le front leur donne un message, dont un message dédié quand l'API est injoigna
 - EX-11 La gateway et hururaa-api utilisent spring-addons 9.5.2. (contrainte)
 - EX-12 Un test automatisé prouve chaque cas EX-1 à EX-8 : statut, `application/problem+json`,
   type connu. (critère de réussite)
+- EX-13 Ce que la gateway sert aux requêtes anonymes est **listé explicitement** dans sa
+  configuration, en trois catégories commentées ; tout le reste exige une authentification (refus
+  par défaut) :
+  - les endpoints actuator publics : `health` et ses sondes, sur le port de management (décision
+    0004) ;
+  - les routes relayées vers un service en aval (`/bff/api/v1/**`) : leur contrôle d'accès est
+    celui de ce service ;
+  - les endpoints de la gateway qui fonctionnent sans session : `/me`, connexion (`/login/**`,
+    `/oauth2/**`), déconnexion (`/logout`, sans effet sans session), back-channel logout, `/error`,
+    `/v3/api-docs` (profil `openapi`).
+
+  Les endpoints propres de la gateway non listés (`/bff/events/**`) exigent une session, en plus
+  de leur `@PreAuthorize`. Un test vérifie que chaque route relayée de la configuration est dans
+  la liste. (constat 6 de la revue de la PR #26, décision du PO et tech lead ; v3)
+- EX-14 La gateway n'expose plus l'endpoint actuator `info`, qui ne servait rien (`{}`, aucun
+  consommateur) : seul `health` reste exposé. (constat 6 ; v3)
 
 ## Hors périmètre
 
@@ -52,8 +69,11 @@ le front leur donne un message, dont un message dédié quand l'API est injoigna
   arrêtée : le front garde son message générique (statut `502`/`0`). Typer celles-ci touche le
   déploiement : une autre intention si besoin.
 - Les navigations du navigateur (connexion, retour de Keycloak, déconnexion) : pages, pas appels.
-- Le port de management (actuator) : ni la SPA ni les directions ne l'appellent.
+- Les erreurs du port de management (actuator) : ni la SPA ni les directions ne l'appellent ; la
+  liste de ses endpoints publics, elle, est dans le périmètre (EX-13).
 - Les applications des directions : starters inchangés (PA-1).
+- Les listes explicites de hururaa-api : il liste déjà ses routes publiques ; EX-13 ne vise que la
+  gateway (v3).
 
 ## Conception
 
@@ -121,6 +141,10 @@ Nouveaux types de `ProblemType` (`urn:hururaa:problem:<slug>`), sans paramètre 
 - Sous `/bff/api/v1/**`, c'est hururaa-api qui décide : sans session, `401` avant `404` (la route
   de relais existe ; l'API n'évalue pas une route sans jeton).
 - spring-addons 9.5.2 : `invalid-session.pass-through-patterns: /me` (→ PA-2).
+- Listes d'accès anonyme de la gateway (EX-13), dans ses deux chaînes de filtres actuelles :
+  `client.permit-all` (routes relayées, `/me`, connexion, déconnexion, back-channel logout) et
+  `resourceserver.permit-all` (sondes `health`, `/error`, `/v3/api-docs`). Pas de règle « tout
+  autoriser » : un chemin absent des listes reçoit le `401` de la chaîne qui le traite.
 - OpenAPI : les types apparaissent dans `hururaa-api.openapi.json` ; `npm run api` les génère.
 
 ### Interface
@@ -147,7 +171,7 @@ Aucune.
 
 | Règle | Comment elle est respectée |
 | --- | --- |
-| SEC-1 | Aucun endpoint ajouté ; `SseController` garde sa règle. |
+| SEC-1 | Aucun endpoint ajouté ; `SseController` garde sa règle. Les endpoints de la gateway hors des listes anonymes exigent en plus une authentification (EX-13). |
 | SEC-4 | Inchangé : les `404` métier des convertisseurs restent prioritaires sur `NOT_FOUND`. |
 | SEC-6 | Toute erreur reçue par la SPA est un type de l'unique `ProblemType` (EX-1 à EX-8) ; `detail` générique, 5xx journalisées (EX-7). |
 | SEC-7 | Les tests d'accès gardent leurs statuts ; de nouveaux tests vérifient le type des corps (EX-12). |
@@ -201,8 +225,8 @@ Aucune.
 - CA-3 Étant donné un cookie de session inconnu, quand on appelle `/gateway/me`, alors `200`
   anonyme ; quand on appelle `/gateway/bff/events/dsi`, alors `401` `unauthenticated` sans
   `Location`. (EX-3)
-- CA-4 Étant donné une session ou non, quand on appelle `/gateway/inconnue`, alors `404`
-  `not-found`. (EX-4, EX-12)
+- CA-4 Étant donné aucune session, quand on appelle `/gateway/inconnue`, alors `401`
+  `unauthenticated` ; étant donné une session, alors `404` `not-found`. (EX-4, EX-12 ; v3)
 - CA-5 Étant donné un utilisateur connecté non membre de `daf`, quand il ouvre
   `/gateway/bff/events/daf`, alors `403` `access-denied` ; étant donné un membre sans rôle, quand
   hururaa-api refuse une écriture par sa règle, alors `403` `access-denied` ; étant donné un `POST`
@@ -220,6 +244,15 @@ Aucune.
 - CA-10 Étant donné `APPLICATION_NOT_FOUND` renvoyé par hururaa-api, quand il traverse la
   gateway, alors son corps arrive inchangé. (EX-10)
 - CA-11 `./verify.sh` finit par `VERIFY OK` avec spring-addons 9.5.2. (EX-11)
+- CA-12 Étant donné la configuration de la gateway, alors chaque prédicat `Path=` de ses routes
+  relayées figure dans `client.permit-all`, et un test échoue si une route relayée en est absente.
+  (EX-13)
+- CA-13 Étant donné aucune session, quand on appelle `/me`, la connexion, `/error` ou une sonde
+  `health`, alors ils répondent comme avant ; quand on appelle `POST /logout` avec un jeton CSRF,
+  alors `202`, sans effet ; quand on ouvre `/bff/events/dsi`, alors `401` `unauthenticated`.
+  (EX-13)
+- CA-14 Étant donné le port de management de la gateway, quand on appelle `/actuator/info`, alors
+  il n'existe plus (`404`) ; `/actuator/health` répond toujours sans jeton. (EX-14)
 
 ## Questions de l'intention
 
@@ -239,3 +272,11 @@ Aucune.
   Spring Security (`CsrfConfigurer`) confie un jeton absent à la stratégie de session invalide, pas
   au gestionnaire d'accès refusé ; le PO garde ce comportement (2026-10-14) plutôt que de le
   contourner selon l'état de la session. Approuvée le 2026-10-14.
+- v3 — 2026-10-14 — Constat 6 de la revue de la PR #26 (la chaîne resource server de la gateway
+  passait en `permitAll`), décision du PO et tech lead :
+  - nouvelle EX-13 : listes explicites de ce que la gateway sert aux anonymes (actuator public,
+    routes relayées, endpoints propres), refus par défaut, test de cohérence routes / `permit-all` ;
+  - EX-4 et CA-4 : une route inconnue répond `401` sans session (conséquence du refus par défaut),
+    `404` avec ;
+  - nouvelle EX-14 : `info` retiré de l'exposition actuator de la gateway ;
+  - CA-12 à CA-14 ; hururaa-api hors périmètre de EX-13.
