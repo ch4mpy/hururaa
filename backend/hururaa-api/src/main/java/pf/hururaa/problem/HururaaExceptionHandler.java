@@ -58,7 +58,7 @@ import lombok.extern.slf4j.Slf4j;
 public class HururaaExceptionHandler {
 
   static final String VALIDATION_DETAIL = "Validation failed";
-  static final String SERVER_ERROR_DETAIL = "The request could not be completed because of a server-side failure";
+  static final String SERVER_ERROR_DETAIL = ProblemResponses.genericDetail(ProblemType.SERVER_ERROR);
 
   @ExceptionHandler(HururaaProblemException.class)
   @ApiResponses({

@@ -46,6 +46,17 @@ class HururaaErrorControllerTest {
   }
 
   @Test
+  void givenANonStandardServerErrorStatus_whenError_thenServerErrorNotNotFound() throws Exception {
+    request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 599);
+
+    controller.error(request, response);
+
+    assertThat(response.getStatus()).isEqualTo(500);
+    assertThat(JsonPath.<String>read(response.getContentAsString(), "$.type"))
+        .isEqualTo("urn:hururaa:problem:server-error");
+  }
+
+  @Test
   void givenNoErrorStatus_whenError_thenNotFound() throws Exception {
     controller.error(request, response);
 

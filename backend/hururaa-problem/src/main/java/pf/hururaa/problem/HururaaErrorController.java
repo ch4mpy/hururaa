@@ -1,9 +1,9 @@
 package pf.hururaa.problem;
 
 import java.io.IOException;
-import java.util.Objects;
 import org.springframework.boot.webmvc.error.ErrorController;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Hidden
 @RestController
-@RequestMapping("${server.error.path:${error.path:/error}}")
+@RequestMapping("${spring.web.error.path:${error.path:/error}}")
 @Slf4j
 public class HururaaErrorController implements ErrorController {
 
@@ -42,10 +42,11 @@ public class HururaaErrorController implements ErrorController {
   @RequestMapping
   @PreAuthorize("permitAll()")
   public void error(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    final var statusCode = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) instanceof Integer code
-        ? HttpStatus.resolve(code)
-        : null;
-    final var status = Objects.requireNonNullElse(statusCode, HttpStatus.NOT_FOUND);
+    // HttpStatusCode, not HttpStatus: a non-standard code (599...) keeps its class
+    final HttpStatusCode status =
+        request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE) instanceof Integer code
+            ? HttpStatusCode.valueOf(code)
+            : HttpStatus.NOT_FOUND;
     final var uri = request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) instanceof String errorUri
         ? errorUri
         : request.getRequestURI();

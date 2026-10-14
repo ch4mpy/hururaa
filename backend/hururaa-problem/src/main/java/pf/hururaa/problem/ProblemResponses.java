@@ -85,7 +85,8 @@ public class ProblemResponses {
     response.flushBuffer();
   }
 
-  static String genericDetail(ProblemType type) {
+  /** The generic {@code detail} of a problem of that type: never an exception message (SEC-6). */
+  public static String genericDetail(ProblemType type) {
     return switch (type) {
       case UNAUTHENTICATED -> "Authentication is required";
       case ACCESS_DENIED -> "Access is denied";
