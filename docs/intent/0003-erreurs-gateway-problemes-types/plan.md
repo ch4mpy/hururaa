@@ -1,6 +1,6 @@
 # Plan : erreurs de la gateway en problèmes RFC 9457 typés (0003)
 
-- Spec : [v1](spec.md) (approuvée le 2026-10-14, risque élevé : authentification)
+- Spec : [v2](spec.md) (v1 puis v2 approuvées le 2026-10-14, risque élevé : authentification)
 - Statut : approuvé
 - Branche : `0003-erreurs-gateway-problemes-types` (PR #26)
 - Approuvé : 2026-10-14, ch4mpy (développeur et tech lead : risque élevé, authentification)
@@ -135,11 +135,11 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 | --- | --- | --- |
 | CA-1 | test automatisé | `GatewayProblemsTest` : `/bff/events/dsi` sans session → `401` `unauthenticated`, ni URL ni `Location` ; `smoke.sh` |
 | CA-2 | tests automatisés + fumée | `ApiProblemsTest` (anonyme → `401`, `WWW-Authenticate: Bearer`) ; `RestfulOAuth2FilterTest` ; `smoke.sh` (`/bff/api/v1/me/delegations` sans session, relayé) |
-| CA-3 | test automatisé + contre-épreuve | `InvalidSessionTest` (`/me` → `200` anonyme ; `/bff/events/dsi` → `401` sans `Location` ni nouvelle session) ; échoue sans `pass-through-patterns` |
+| CA-3 | tests automatisés + contre-épreuve | `InvalidSessionTest` (`/me` → `200` anonyme ; `/bff/**` et `/bff/events/dsi` → `401` `unauthenticated` sans `Location`) ; `ProblemSecurityConfigurationTest` (aucune session ouverte) ; `InvalidSessionSafeguardTest` et contre-épreuve de l'étape 1 (sans `pass-through-patterns`, `/me` → `401`) |
 | CA-4 | test automatisé + fumée | `GatewayProblemsTest` : `/inconnue` sans et avec session → `404` `not-found` ; `smoke.sh` |
-| CA-5 | tests automatisés | `GatewayProblemsTest` (non-membre sur `/bff/events/daf`, `POST /logout` sans CSRF → `403`) ; `ApiProblemsTest` (règle refusée → `403`) |
+| CA-5 | tests automatisés | `GatewayProblemsTest` (non-membre sur `/bff/events/daf` → `403` ; jeton CSRF invalide → `403` ; jeton absent → `401` `unauthenticated`, spec v2) ; `ApiProblemsTest` (membre sans rôle de Hurura'a, administrateur d'une autre direction → `403`) |
 | CA-6 | tests automatisés | `ApiProblemsTest` (`400`, `405` `invalid-request`) ; tests du résolveur |
-| CA-7 | tests automatisés | `GatewayProblemsTest` (`IllegalStateException` de `SseController` sans session → `500` `server-error`, `detail` générique) ; test du résolveur (journalisé, non envoyé) |
+| CA-7 | tests automatisés | `GatewayProblemsTest.givenAFailingHandler_whenCallIt_thenServerErrorProblemWithoutDetails` (`500` `server-error`, message absent du corps) ; `ProblemHandlerExceptionResolverTest`, `HururaaErrorControllerTest` (journalisé, non envoyé) |
 | CA-8 | tests automatisés + manuel | `ApiUnavailableTest` (`503` `service-unavailable`) ; `http-error.interceptor.spec.ts` (message dédié) ; dev : API arrêtée, ouvrir une application → bannière « Service momentanément indisponible… » |
 | CA-9 | test automatisé | `session-expired.interceptor.spec.ts` / `http-error.interceptor.spec.ts` : `401` typé → état déconnecté et « Session expirée… » |
 | CA-10 | tests automatisés | `GatewayProblemsTest` (stub `APPLICATION_NOT_FOUND` relayé tel quel) ; `ApiProblemsTest` |
@@ -170,3 +170,15 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 - 2026-10-14 — Étape 5 : `HururaaErrorController` annoté `@Hidden` — springdoc le publiait dans les
   deux specs OpenAPI (un service `hururaaErrorController` généré dans `@api/*`). Specs et clients
   régénérés, sans `/error`.
+- 2026-10-14 — Revue du `verifier` :
+  - `HururaaProblemDetail.getParameters()` annoté `@JsonInclude(ALWAYS)` : le mixin de Spring
+    omettait les paramètres vides, contre la spec (« `parameters` vide ») et le schéma OpenAPI, qui
+    les exige. Vaut aussi pour les types métier sans paramètre. `ProblemResponsesTest` vérifie un
+    objet vide.
+  - `ApiProblemsTest` : cas « membre sans rôle de Hurura'a » (persona de CA-5, `dpam-agent`), en
+    plus de l'administrateur d'une autre direction.
+  - Fichier non listé : `backend/hururaa-problem/src/main/java/pf/hururaa/problem/package-info.java`
+    (`@NullMarked`, comme tout paquet du projet).
+  - En-tête (spec v2) et lignes CA-3, CA-5 et CA-7 de *Preuve* mises à jour selon les écarts.
+  - Non couvert par un test dédié : un jeton **refusé** par hururaa-api (EX-2) ; même point d'entrée
+    que le jeton absent, testé (`ApiProblemsTest`).
