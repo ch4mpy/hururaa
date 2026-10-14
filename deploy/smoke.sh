@@ -26,6 +26,23 @@ expect() { # label expected-status url [curl options...]
   fi
 }
 
+expect_problem() { # label expected-status expected-type-slug url [curl options...]
+  # docs/intent/0003: every error is an RFC 9457 problem of a known type
+  local label=$1 want=$2 slug=$3 url=$4
+  shift 4
+  local out got ctype body
+  out=$(curl -s -m 20 -w '\n%{http_code} %{content_type}' ${curl_opts[@]+"${curl_opts[@]}"} "$@" "$url")
+  body=$(printf '%s' "$out" | sed '$d')
+  read -r got ctype <<<"$(printf '%s' "$out" | tail -n 1)"
+  if [ "$got" = "$want" ] && [[ "$ctype" == application/problem+json* ]] \
+    && [[ "$body" == *"\"urn:hururaa:problem:$slug\""* ]]; then
+    printf 'OK  %-55s %s %s\n' "$label" "$got" "$slug"
+  else
+    printf 'KO  %-55s %s %s (expected %s %s problem)\n' "$label" "$got" "${ctype:-no content type}" "$want" "$slug"
+    failures=$((failures + 1))
+  fi
+}
+
 expect "front (fr)" 200 "$base/fr/"
 expect "front (en)" 200 "$base/en/"
 expect "gateway /me, no session: anonymous" 200 "$base/gateway/me" -H 'Accept: application/json'
@@ -33,10 +50,15 @@ expect "gateway /me, no session: anonymous" 200 "$base/gateway/me" -H 'Accept: a
 # (anonymous, a new session), never a redirection
 expect "gateway /me, unknown session: anonymous" 200 "$base/gateway/me" \
   -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
-expect "API through the BFF, no session: 401" 401 "$base/gateway/bff/api/v1/me/delegations" \
-  -H 'Accept: application/json'
-expect "API through the BFF, unknown session: 401" 401 "$base/gateway/bff/api/v1/me/delegations" \
+expect_problem "API through the BFF, no session" 401 unauthenticated \
+  "$base/gateway/bff/api/v1/me/delegations" -H 'Accept: application/json'
+expect_problem "API through the BFF, unknown session" 401 unauthenticated \
+  "$base/gateway/bff/api/v1/me/delegations" \
   -H 'Accept: application/json' -H 'Cookie: JSESSIONID=0123456789ABCDEF0123456789ABCDEF'
+expect_problem "events, no session" 401 unauthenticated "$base/gateway/bff/events/dsi" \
+  -H 'Accept: text/event-stream'
+expect_problem "gateway, unknown route" 404 not-found "$base/gateway/inconnue" \
+  -H 'Accept: application/json'
 expect "Keycloak realm (OIDC discovery)" 200 \
   "$base/auth/realms/public-facing/.well-known/openid-configuration"
 
