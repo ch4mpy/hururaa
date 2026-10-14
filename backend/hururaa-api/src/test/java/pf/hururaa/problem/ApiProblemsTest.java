@@ -112,6 +112,17 @@ class ApiProblemsTest {
   }
 
   @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenAMemberWithoutHururaaRole_whenCreateApplication_thenAccessDeniedProblem()
+      throws Exception {
+    final var result = api
+        .post(new ApplicationCreationRequest("anahei", "Anahei"),
+            ApplicationController.DIRECTION_APPLICATIONS_PATH, DPAM)
+        .andExpect(status().isForbidden());
+    expectProblem(result, ProblemType.ACCESS_DENIED);
+  }
+
+  @Test
   @WithJwt("jwt/dpam-admin.json")
   void givenAnUnreadableBody_whenCreateApplication_thenInvalidRequestProblem() throws Exception {
     final var result = api

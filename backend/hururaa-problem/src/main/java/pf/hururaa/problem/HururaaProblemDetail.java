@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Map;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -50,7 +51,12 @@ public class HururaaProblemDetail extends ProblemDetail {
     return super.getType();
   }
 
-  /** Named values to interpolate in the localized message for the {@link #getType() type}. */
+  /**
+   * Named values to interpolate in the localized message for the {@link #getType() type}. Always
+   * serialized, even empty: Spring's {@code ProblemDetailJacksonMixin} would otherwise leave an
+   * empty map out, against the schema, which requires it.
+   */
+  @JsonInclude(JsonInclude.Include.ALWAYS)
   @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
   public Map<String, Object> getParameters() {
     return parameters;

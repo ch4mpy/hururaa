@@ -29,8 +29,10 @@ class ProblemResponsesTest {
     assertThat(JsonPath.<Integer>read(body, "$.status")).isEqualTo(401);
     assertThat(JsonPath.<String>read(body, "$.instance")).isEqualTo("/gateway/bff/events/dsi");
     // Spring's ProblemDetail mixin, as for the problems Spring MVC renders: members at the root, no
-    // "properties" map, empty members (the parameters of a parameterless type) left out
-    assertThat(body).doesNotContain("\"properties\"").doesNotContain("\"parameters\"");
+    // "properties" map; the parameters always there, empty for a parameterless type (the schema
+    // requires them)
+    assertThat(body).doesNotContain("\"properties\"");
+    assertThat(JsonPath.<java.util.Map<String, Object>>read(body, "$.parameters")).isEmpty();
   }
 
   @Test
