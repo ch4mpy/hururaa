@@ -107,6 +107,7 @@
 	<modules>
 		<module>common-events-starter</module>
 		<module>common-security-starter</module>
+		<module>hururaa-problem</module>
 		<module>gateway</module>
 		<module>hururaa-api</module>
 	</modules>
@@ -129,6 +130,11 @@
 			<dependency>
 				<groupId>pf.hururaa</groupId>
 				<artifactId>common-security-starter</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>pf.hururaa</groupId>
+				<artifactId>hururaa-problem</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 

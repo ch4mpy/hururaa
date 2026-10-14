@@ -33,10 +33,6 @@ import io.swagger.v3.oas.models.media.StringSchema;
 @Component
 public class ProblemTypeOpenApiCustomizer implements OpenApiCustomizer {
 
-  public static final String PROBLEM_TYPE_SCHEMA = "ProblemType";
-
-  public static final String PROBLEM_TYPE_SCHEMA_REF = "#/components/schemas/" + PROBLEM_TYPE_SCHEMA;
-
   static final String ENUM_VARNAMES_EXTENSION = "x-enum-varnames";
 
   static final List<String> PROBLEM_DETAIL_SCHEMAS = List.of(
@@ -50,7 +46,7 @@ public class ProblemTypeOpenApiCustomizer implements OpenApiCustomizer {
     if (schemas == null) {
       return;
     }
-    schemas.put(PROBLEM_TYPE_SCHEMA, problemTypeSchema());
+    schemas.put(HururaaProblemDetail.PROBLEM_TYPE_SCHEMA, problemTypeSchema());
     PROBLEM_DETAIL_SCHEMAS.stream().map(schemas::get).filter(Objects::nonNull)
         .forEach(ProblemTypeOpenApiCustomizer::trim);
   }

@@ -2,6 +2,7 @@ package pf.hururaa.problem;
 
 import java.net.URI;
 import java.util.Map;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -10,8 +11,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * the frontend interpolates in the localized message for that type.
  *
  * <p>
- * Returned as-is from {@link HururaaExceptionHandler}: Spring MVC sets the {@code instance} and
- * {@code application/problem+json} content type for any {@link ProblemDetail} body.
+ * Returned as-is from the REST API's exception handlers (Spring MVC sets the {@code instance} and
+ * {@code application/problem+json} content type for any {@link ProblemDetail} body), or written by
+ * {@link ProblemResponses} where Spring MVC does not render the response.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
@@ -19,17 +21,31 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public class HururaaProblemDetail extends ProblemDetail {
   private static final long serialVersionUID = -5170243660409538104L;
 
+  /** The name of the {@link ProblemType} schema in the OpenAPI spec. */
+  public static final String PROBLEM_TYPE_SCHEMA = "ProblemType";
+
+  public static final String PROBLEM_TYPE_SCHEMA_REF = "#/components/schemas/" + PROBLEM_TYPE_SCHEMA;
+
   private final Map<String, Object> parameters;
 
   public HururaaProblemDetail(ProblemType type, String detail, Map<String, Object> parameters) {
-    super(ProblemDetail.forStatusAndDetail(type.status(), detail));
+    this(type, type.status(), detail, parameters);
+  }
+
+  /**
+   * For {@link ProblemType#INVALID_REQUEST}, whose status is that of the rejection: every other
+   * type has its own.
+   */
+  public HururaaProblemDetail(ProblemType type, HttpStatusCode status, String detail,
+      Map<String, Object> parameters) {
+    super(ProblemDetail.forStatusAndDetail(status, detail));
     setType(type.uri());
     this.parameters = Map.copyOf(parameters);
   }
 
   /** Same value as the parent's, overridden only to document it as a {@link ProblemType}. */
   @Override
-  @Schema(ref = ProblemTypeOpenApiCustomizer.PROBLEM_TYPE_SCHEMA_REF)
+  @Schema(ref = PROBLEM_TYPE_SCHEMA_REF)
   public URI getType() {
     return super.getType();
   }
