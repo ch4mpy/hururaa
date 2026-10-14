@@ -182,3 +182,10 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
   - En-tête (spec v2) et lignes CA-3, CA-5 et CA-7 de *Preuve* mises à jour selon les écarts.
   - Non couvert par un test dédié : un jeton **refusé** par hururaa-api (EX-2) ; même point d'entrée
     que le jeton absent, testé (`ApiProblemsTest`).
+- 2026-10-14 — Revue de la PR #26 (constat 1) : le résolveur commun interceptait la
+  `ClientAuthorizationRequiredException` que `TokenRelay=` lève dans le handler (refresh refusé →
+  `500` au lieu du `401` de `RestfulOAuth2Filter`). Nouveau fichier
+  `backend/hururaa-problem/src/main/java/pf/hururaa/problem/ProblemResolutionExclusion.java` : les
+  exceptions qu'une application déclare (bean) ne sont pas résolues ; la gateway y déclare
+  `ClientAuthorizationRequiredException`. Preuve : `GatewayProblemsTest.givenTheClientNeedsAuthorizationAgain_whenRelayed_thenUnauthenticatedProblem`
+  (handler sous `/bff/**`, comme la route relayée).
