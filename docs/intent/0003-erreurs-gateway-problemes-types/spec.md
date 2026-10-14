@@ -1,13 +1,13 @@
 # Spec : erreurs de la gateway en problèmes RFC 9457 typés
 
 - Intention : [0003](intent.md)
-- Statut : brouillon (v3 à approuver ; v1 et v2 approuvées)
+- Statut : approuvée (v3)
 - Version : 3
 - Risque : élevé — le changement touche l'authentification (point d'entrée, session invalide) et
   les réponses des règles d'accès
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
   policy-delegation @229653c, policy-tracabilite @229653c
-- Approuvée : v1 et v2 le 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech
+- Approuvée : v1, v2 et v3 le 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech
   lead sont la même personne : accord consigné une seule fois)
 
 ## Résumé
@@ -280,3 +280,5 @@ Aucune.
     `404` avec ;
   - nouvelle EX-14 : `info` retiré de l'exposition actuator de la gateway ;
   - CA-12 à CA-14 ; hururaa-api hors périmètre de EX-13.
+
+  Approuvée le 2026-10-14.
