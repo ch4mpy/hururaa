@@ -22,8 +22,13 @@ public class ProblemSecurityConfiguration {
   @Bean
   ResourceServerSynchronizedHttpSecurityPostProcessor problemExceptionHandling(
       ProblemResponses problems) {
-    return http -> http.exceptionHandling(exceptions -> exceptions
-        .authenticationEntryPoint(new ProblemAuthenticationEntryPoint(problems, "Bearer"))
-        .accessDeniedHandler(new ProblemAccessDeniedHandler(problems)));
+    final var entryPoint = new ProblemAuthenticationEntryPoint(problems, "Bearer");
+    return http -> http
+        // no token: the exception translation's entry point
+        .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(entryPoint)
+            .accessDeniedHandler(new ProblemAccessDeniedHandler(problems)))
+        // a token, rejected (expired, bad signature, other issuer...): BearerTokenAuthenticationFilter
+        // has its own entry point, set by this configurer (review of PR #26)
+        .oauth2ResourceServer(resourceServer -> resourceServer.authenticationEntryPoint(entryPoint));
   }
 }

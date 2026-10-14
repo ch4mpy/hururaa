@@ -2,6 +2,7 @@ package pf.hururaa.problem;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -95,6 +96,18 @@ class ApiProblemsTest {
   void givenAnonymous_whenGetApplications_thenUnauthenticatedProblemWithABearerChallenge()
       throws Exception {
     final var result = api.get(ApplicationController.BASE_PATH)
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
+    expectProblem(result, ProblemType.UNAUTHENTICATED);
+  }
+
+  /** EX-2: a token the API refuses gets the same problem as no token (review of PR #26). */
+  @Test
+  @WithAnonymousUser
+  void givenARejectedToken_whenGetApplications_thenUnauthenticatedProblem() throws Exception {
+    final var result = api
+        .perform(get(ApplicationController.BASE_PATH)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-valid-token"))
         .andExpect(status().isUnauthorized())
         .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"));
     expectProblem(result, ProblemType.UNAUTHENTICATED);
