@@ -1,13 +1,13 @@
 # Spec : erreurs de la gateway en problèmes RFC 9457 typés
 
 - Intention : [0003](intent.md)
-- Statut : approuvée (v3)
-- Version : 3
+- Statut : approuvée (v4)
+- Version : 4
 - Risque : élevé — le changement touche l'authentification (point d'entrée, session invalide) et
   les réponses des règles d'accès
 - Politiques appliquées : policy-securite-api @229653c, policy-ux-i18n @229653c,
   policy-delegation @229653c, policy-tracabilite @229653c
-- Approuvée : v1, v2 et v3 le 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech
+- Approuvée : v1 à v4 le 2026-10-14, ch4mpy (PO) ; tech lead : ch4mpy, 2026-10-14 (PO et tech
   lead sont la même personne : accord consigné une seule fois)
 
 ## Résumé
@@ -28,8 +28,10 @@ le front leur donne un message, dont un message dédié quand l'API est injoigna
 - EX-3 Un cookie de session que la gateway ne connaît plus donne `200` anonyme sur `/me` (0002) et
   `401` `unauthenticated` ailleurs, sans redirection (0001). (contrainte « ne rien perdre »)
 - EX-4 Une route que ni la gateway ni hururaa-api ne connaît répond, sans session, `401`
-  `unauthenticated` (refus par défaut, EX-13) et, avec une session, `404` `not-found`. (résultat 2 ;
-  v3)
+  `unauthenticated` (refus par défaut, EX-13). Avec une session, elle répond `404` `not-found` sous
+  les préfixes de la chaîne client de la gateway (`/bff/**`, `/me/**`, `/login/**`, `/oauth2/**`,
+  `/logout/**`), et `401` ailleurs : la chaîne resource server, qui traite le reste, ignore la
+  session. (résultat 2 ; v3, v4)
 - EX-5 Un accès refusé (règle `@PreAuthorize`, jeton CSRF invalide), de la gateway comme de
   hururaa-api, répond `403` `access-denied`. Un jeton CSRF **absent** garde le traitement de Spring
   Security, qui y voit une session expirée : `401` `unauthenticated`. (résultat 1 ; v2)
@@ -225,8 +227,10 @@ Aucune.
 - CA-3 Étant donné un cookie de session inconnu, quand on appelle `/gateway/me`, alors `200`
   anonyme ; quand on appelle `/gateway/bff/events/dsi`, alors `401` `unauthenticated` sans
   `Location`. (EX-3)
-- CA-4 Étant donné aucune session, quand on appelle `/gateway/inconnue`, alors `401`
-  `unauthenticated` ; étant donné une session, alors `404` `not-found`. (EX-4, EX-12 ; v3)
+- CA-4 Étant donné aucune session, quand on appelle `/gateway/inconnue` ou `/gateway/bff/inconnue`,
+  alors `401` `unauthenticated` ; étant donné une session (contexte de sécurité en session HTTP),
+  quand on appelle `/gateway/bff/inconnue`, alors `404` `not-found`, et `/gateway/inconnue`, alors
+  `401` `unauthenticated`. (EX-4, EX-12 ; v3, v4)
 - CA-5 Étant donné un utilisateur connecté non membre de `daf`, quand il ouvre
   `/gateway/bff/events/daf`, alors `403` `access-denied` ; étant donné un membre sans rôle, quand
   hururaa-api refuse une écriture par sa règle, alors `403` `access-denied` ; étant donné un `POST`
@@ -282,3 +286,8 @@ Aucune.
   - CA-12 à CA-14 ; hururaa-api hors périmètre de EX-13.
 
   Approuvée le 2026-10-14.
+- v4 — 2026-10-14 — EX-4 et CA-4 : avec une session, `404` seulement sous les préfixes de la
+  chaîne client de la gateway, `401` ailleurs. Constaté avant le build de la v3 : la chaîne resource
+  server (sans état, `resourceserver.stateless-sessions`) ne lit pas la session ; le PO et tech lead
+  garde les deux chaînes (2026-10-14) plutôt que d'étendre la chaîne client à tous les chemins.
+  Approuvée le 2026-10-14, en session.

@@ -1,6 +1,6 @@
 # Plan : erreurs de la gateway en problèmes RFC 9457 typés (0003)
 
-- Spec : [v2](spec.md) (v1 puis v2 approuvées le 2026-10-14, risque élevé : authentification)
+- Spec : [v4](spec.md) (v1 à v4 approuvées le 2026-10-14, risque élevé : authentification)
 - Statut : approuvé
 - Branche : `0003-erreurs-gateway-problemes-types` (PR #26)
 - Approuvé : 2026-10-14, ch4mpy (développeur et tech lead : risque élevé, authentification)
@@ -189,3 +189,23 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
   exceptions qu'une application déclare (bean) ne sont pas résolues ; la gateway y déclare
   `ClientAuthorizationRequiredException`. Preuve : `GatewayProblemsTest.givenTheClientNeedsAuthorizationAgain_whenRelayed_thenUnauthenticatedProblem`
   (handler sous `/bff/**`, comme la route relayée).
+- 2026-10-14 — **Spec v3 et v4** (constat 6 de la revue de la PR #26) : étape 9 ajoutée.
+  - Étape 9 — Accès anonyme listé explicitement dans la gateway — skill : aucun — vérification :
+    `./mvnw -pl gateway -am verify`, puis `./verify.sh` et `deploy/smoke.sh` sur la pile de dev.
+  - Fichiers :
+    - `backend/gateway/src/main/resources/application.yml` : `client.permit-all` et
+      `resourceserver.permit-all` en trois catégories commentées (actuator public, routes
+      relayées, endpoints propres sans session), `management.endpoints.web.exposure.include:
+      health` (EX-13, EX-14) ;
+    - `backend/gateway/src/main/java/pf/hururaa/security/ProblemSecurityConfiguration.java` :
+      post-processeur `permitAll` retiré ; point d'entrée problème pour la chaîne resource server
+      (route inconnue sans session → `401` `unauthenticated`, avec corps) (EX-4, EX-13) ;
+    - `backend/gateway/src/test/java/pf/hururaa/GatewayProblemsTest.java` : CA-4 avec une vraie
+      session (contexte de sécurité en session HTTP, sans l'authentification de test, qui
+      masquerait l'absence de session de la chaîne resource server), CA-13, CA-14 ;
+    - nouveau `backend/gateway/src/test/java/pf/hururaa/security/AnonymousAccessConfigurationTest.java` :
+      chaque `Path=` des routes relayées est dans `client.permit-all` (CA-12) ;
+    - `deploy/smoke.sh` : route inconnue → `401` `unauthenticated` ;
+    - `CLAUDE.md` : listes d'accès anonyme de la gateway ; évals relancées.
+  - Preuve : CA-4, CA-12 à CA-14 par ces tests ; `smoke.sh` ; contre-épreuve de CA-12 (une route
+    relayée retirée de `permit-all` fait échouer le test).
