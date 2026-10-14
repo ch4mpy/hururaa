@@ -17,6 +17,7 @@ import pf.hururaa.direction.domain.User;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.security.HururaaAuthenticationConverter;
+import pf.hururaa.security.ProblemSecurityConfiguration;
 import pf.hururaa.uaa.UaaProperties;
 
 /**
@@ -94,12 +95,13 @@ public final class HururaaFixtures {
    * setup of {@code common-security-starter}, this API's JWT converter (the Hurura'a roles held in
    * the DSI as authorities), and the real {@link DelegationResolver} the path variable converters
    * resolve directions and groups with, with their properties bound from {@code application.yml}
-   * (its repositories and Keycloak services being mocked by each test).
+   * (its repositories and Keycloak services being mocked by each test), and the {@code 401} and
+   * {@code 403} problems of {@link ProblemSecurityConfiguration}.
    */
   @TestConfiguration
   @EnableConfigurationProperties({UaaProperties.class, KeycloakAdminApiProperties.class})
   @Import({HururaaSecurityConfiguration.class, HururaaAuthenticationConverter.class,
-      DelegationResolver.class})
+      ProblemSecurityConfiguration.class, DelegationResolver.class})
   public static class WebMvcTestConfiguration {
   }
 }

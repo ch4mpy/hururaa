@@ -3,7 +3,9 @@ package pf.hururaa.problem;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.ErrorResponse;
@@ -16,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Writes the exceptions no {@code @ExceptionHandler} handled as problems: a framework rejection
- * ({@link ErrorResponse}: unknown route, unreadable body, unsupported method...) by its status (see
+ * ({@link ErrorResponse}: unknown route, unsupported method or media type..., or an unreadable body,
+ * a parameter of the wrong type) by its status (see
  * {@link ProblemResponses#forStatus}), any other exception as a {@code 500}
  * {@link ProblemType#SERVER_ERROR} whose details are logged, never sent (SEC-6).
  *
@@ -54,7 +57,12 @@ public class ProblemHandlerExceptionResolver implements HandlerExceptionResolver
       return null;
     }
     final HururaaProblemDetail problem;
-    if (ex instanceof ErrorResponse errorResponse) {
+    if (ex instanceof HttpMessageNotReadableException || ex instanceof TypeMismatchException) {
+      // rejections Spring's DefaultHandlerExceptionResolver maps to a 400 although they are no
+      // ErrorResponse
+      problem = ProblemResponses.of(ProblemType.INVALID_REQUEST);
+      log.debug("{} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+    } else if (ex instanceof ErrorResponse errorResponse) {
       problem = ProblemResponses.forStatus(errorResponse.getStatusCode());
       errorResponse.getHeaders().forEach((name, values) -> values
           .forEach(value -> response.addHeader(name, value)));

@@ -8,6 +8,8 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
@@ -54,6 +56,15 @@ class ProblemHandlerExceptionResolverTest {
     assertThat(response.getStatus()).isEqualTo(405);
     assertThat(type()).isEqualTo("urn:hururaa:problem:invalid-request");
     assertThat(response.getHeader(HttpHeaders.ALLOW)).isEqualTo("GET");
+  }
+
+  @Test
+  void givenAnUnreadableBody_whenResolve_thenInvalidRequest() throws Exception {
+    resolver.resolveException(request, response, null, new HttpMessageNotReadableException(
+        "JSON parse error", new MockHttpInputMessage(new byte[0])));
+
+    assertThat(response.getStatus()).isEqualTo(400);
+    assertThat(type()).isEqualTo("urn:hururaa:problem:invalid-request");
   }
 
   @Test

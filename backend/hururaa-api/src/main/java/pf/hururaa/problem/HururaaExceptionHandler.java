@@ -30,8 +30,9 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Turns {@link HururaaProblemException} and validation failures into {@link HururaaProblemDetail}
- * bodies. Every other exception is left to Spring Boot's {@code ProblemDetailsExceptionHandler}
- * (enabled with {@code spring.mvc.problemdetails.enabled}).
+ * bodies. Every other exception is left to {@link ProblemHandlerExceptionResolver} (framework
+ * rejections, unexpected failures) or to the security configuration ({@code 401}, {@code 403}),
+ * which write the generic problem types (docs/intent/0003).
  *
  * <p>
  * springdoc propagates the {@code @ApiResponse}s below to the operations
@@ -44,9 +45,9 @@ import lombok.extern.slf4j.Slf4j;
  * </p>
  *
  * <p>
- * Highest precedence so that it is consulted before Boot's handler, which would otherwise catch
- * validation exceptions (as bare {@code 400}s) and the type-mismatch exceptions in which Spring
- * MVC wraps an {@link HururaaProblemException} thrown by a path-variable converter.
+ * Highest precedence so that it is consulted before any other advice for validation exceptions
+ * and the type-mismatch exceptions in which Spring MVC wraps an {@link HururaaProblemException}
+ * thrown by a path-variable converter (otherwise generic {@code 400}s).
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
