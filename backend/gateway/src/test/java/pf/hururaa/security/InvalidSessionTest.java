@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,18 +26,13 @@ import org.wiremock.spring.EnableWireMock;
  * reopened, session expired, gateway restarted), never with a redirection:
  *
  * <ul>
- * <li>on the permit-all routes, spring-addons' {@code invalid-session.permit-all-pass-through}
- * opens a new session and the request proceeds as without a cookie: the session probe ({@code /me})
- * answers anonymous (docs/intent/0002), a BFF route answers what {@code hururaa-api} answers to a
- * request without a token, a {@code 401};</li>
+ * <li>on {@code /me} only, spring-addons' {@code invalid-session.pass-through-patterns} opens a new
+ * session and the request proceeds as without a cookie: the session probe answers anonymous
+ * (docs/intent/0002);</li>
+ * <li>every other route gets the invalid-session strategy's {@code 401} (docs/intent/0001,
+ * 0003);</li>
  * <li>{@code /logout} proceeds, its filter running before the session management.</li>
  * </ul>
- *
- * <p>
- * No route the SPA calls reaches spring-addons' invalid-session strategy any more; its
- * {@code status: UNAUTHORIZED} stays as a safeguard should the pass-through be turned off
- * (docs/intent/0001, 0002).
- * </p>
  *
  * <p>
  * Keycloak's discovery documents are served by WireMock, as for the {@code openapi} Maven profile,
@@ -62,12 +56,6 @@ import org.wiremock.spring.EnableWireMock;
 })
 class InvalidSessionTest {
   private static final String CONTEXT_PATH = "/gateway";
-
-  /**
-   * Written by spring-addons' invalid-session strategy, which no route of these tests reaches any
-   * more (see {@link InvalidSessionSafeguardTest}): a {@code 401} with this body did not go through.
-   */
-  private static final String INVALID_SESSION_BODY = "Invalid session. Please authenticate.";
 
   private static final String UNKNOWN_SESSION_ID = "0123456789ABCDEF0123456789ABCDEF";
 
@@ -113,16 +101,15 @@ class InvalidSessionTest {
         .andExpect(status().isUnauthorized());
   }
 
+  /** Not passed through (docs/intent/0003): the gateway answers, the request is not relayed. */
   @Test
-  void givenUnknownSessionCookie_whenGetBffRoute_thenUnauthorizedFromTheApiWithoutRedirection()
+  void givenUnknownSessionCookie_whenGetBffRoute_thenUnauthorizedFromTheGateway()
       throws Exception {
     mockMvc
         .perform(getWithUnknownSession("/bff/api/v1/me/delegations"))
         .andExpect(status().isUnauthorized())
-        .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
-        // relayed from hururaa-api (WireMock: a request without a token gets a Bearer challenge)
-        .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"))
-        .andExpect(content().string(org.hamcrest.Matchers.not(INVALID_SESSION_BODY)));
+        // not relayed: hururaa-api (WireMock) would have answered with a Bearer challenge
+        .andExpect(header().doesNotExist(HttpHeaders.WWW_AUTHENTICATE));
   }
 
   /**

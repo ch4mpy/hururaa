@@ -117,13 +117,14 @@ com:
           # while not colliding with other apps CSRF cookies
           csrf-cookie-path: /
           # A session cookie the gateway no longer knows (browser reopened, session expired, gateway
-          # restarted). On the permit-all routes (/me, /bff/**), a new session is opened and the
-          # request proceeds as without a cookie: /me answers anonymous, a BFF route gets the API's
-          # 401 (docs/intent/0002; the default since spring-addons 9.5.1, kept explicit). No route
-          # the SPA calls reaches the invalid-session strategy any more: its 401, rather than a
-          # redirection, is a safeguard should the pass-through be turned off (docs/intent/0001).
+          # restarted). On /me only, a new session is opened and the request proceeds as without a
+          # cookie: the session probe answers anonymous (docs/intent/0002). Every other route gets
+          # the invalid-session strategy's 401, never a redirection (docs/intent/0001), and opens
+          # no session: parallel requests holding the stale cookie don't each leave an orphaned
+          # one behind (docs/intent/0003).
           invalid-session:
-            permit-all-pass-through: true
+            pass-through-patterns:
+              - /me
             status: UNAUTHORIZED
           oauth2-redirections:
             authentication-entry-point: UNAUTHORIZED

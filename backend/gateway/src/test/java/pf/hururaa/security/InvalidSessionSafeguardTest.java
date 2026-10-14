@@ -17,7 +17,7 @@ import org.wiremock.spring.EnableWireMock;
 
 /**
  * The safeguard {@link InvalidSessionTest} cannot reach: with spring-addons'
- * {@code invalid-session.permit-all-pass-through} turned off, a session cookie the gateway no longer
+ * {@code invalid-session.pass-through-patterns} emptied, a session cookie the gateway no longer
  * knows goes to the invalid-session strategy, whose {@code status: UNAUTHORIZED} must keep it a
  * {@code 401}, never the default {@code 302} that took the SPA out of the gateway
  * (docs/intent/0001, 0002). Same infrastructure as {@link InvalidSessionTest}.
@@ -29,7 +29,7 @@ import org.wiremock.spring.EnableWireMock;
       "server.ssl.enabled=false",
       "spring.rabbitmq.listener.simple.auto-startup=false",
       "spring.rabbitmq.listener.direct.auto-startup=false",
-      "com.c4-soft.springaddons.oidc.client.invalid-session.permit-all-pass-through=false"
+      "com.c4-soft.springaddons.oidc.client.invalid-session.pass-through-patterns="
     })
 @ActiveProfiles("no-observability")
 @AutoConfigureMockMvc
