@@ -8,6 +8,7 @@ import {
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideApi } from '@api/gateway';
+import { ProblemType } from '@api/hururaa-api';
 import { firstValueFrom } from 'rxjs';
 import { SESSION_PROBE } from './http-error.interceptor';
 import { LOCATION } from './location';
@@ -48,6 +49,24 @@ describe('sessionExpiredInterceptor', () => {
     backend
       .expectOne('/gateway/bff/api/v1/me/delegations')
       .flush(null, { status: 401, statusText: 'Unauthorized' });
+    await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
+
+    backend.expectOne('/gateway/me').flush({ directions: [] });
+    expect(user.isAuthenticated()).toBe(false);
+  });
+
+  it('switches to the logged-out state on the unauthenticated problem', async () => {
+    const response = firstValueFrom(http.get('/gateway/bff/api/v1/me/delegations'));
+    backend.expectOne('/gateway/bff/api/v1/me/delegations').flush(
+      {
+        type: ProblemType.UNAUTHENTICATED,
+        title: 'Unauthorized',
+        status: 401,
+        detail: 'Authentication is required',
+        instance: '/gateway/bff/api/v1/me/delegations',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
     await expect(response).rejects.toBeInstanceOf(HttpErrorResponse);
 
     backend.expectOne('/gateway/me').flush({ directions: [] });

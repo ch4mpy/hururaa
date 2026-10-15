@@ -11,7 +11,15 @@
   "response": {
     "status": 401,
     "headers": {
-      "WWW-Authenticate": "Bearer"
+      "WWW-Authenticate": "Bearer",
+      "Content-Type": "application/problem+json"
+    },
+    "jsonBody": {
+      "type": "urn:hururaa:problem:unauthenticated",
+      "title": "Unauthorized",
+      "status": 401,
+      "detail": "Authentication is required",
+      "instance": "/me/delegations"
     }
   }
 }

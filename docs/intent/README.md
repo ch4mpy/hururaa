@@ -71,3 +71,4 @@ travail en cours, ce sont les PR ouvertes étiquetées `stage:*`**
 | --- | --- | --- | --- | --- | --- |
 | [0001](0001-toast-erreur-ouverture-application/intent.md) | Toast d'erreur à l'ouverture de l'application | bug | livrée | 2026-10-11 | 2026-10-11 |
 | [0002](0002-me-200-session-inconnue/intent.md) | /me répond 200 avec un cookie de session inconnu | évolution | livrée | 2026-10-12 | 2026-10-12 |
+| [0003](0003-erreurs-gateway-problemes-types/intent.md) | Erreurs de la gateway en problèmes RFC 9457 typés | évolution | livrée | 2026-10-13 | 2026-10-13 |

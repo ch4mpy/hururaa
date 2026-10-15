@@ -62,9 +62,6 @@ spring:
         # Meme plafond que PageParams.MAX_SIZE pour les endpoints adosses a Keycloak. Sans cette
         # valeur, les endpoints JPA retombent sur le defaut Spring Data de 2000.
         max-page-size: 200
-  mvc:
-    problemdetails:
-      enabled: true
   profiles:
     active:
       - postgresql
@@ -113,6 +110,9 @@ com:
               - path: $.realm_access.roles
         resourceserver:
           permit-all:
+            # error dispatches are authorized like any request: an anonymous one must reach the
+            # problem of its status (pf.hururaa.problem.HururaaErrorController, docs/intent/0003)
+            - /error
             - /actuator/health
             - /actuator/health/readiness
             - /actuator/health/liveness

@@ -1,0 +1,23 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "url": "/applications/99"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/problem+json"
+    },
+    "jsonBody": {
+      "type": "urn:hururaa:problem:application-not-found",
+      "title": "Not Found",
+      "status": 404,
+      "detail": "No application with id 99",
+      "instance": "/applications/99",
+      "parameters": {
+        "applicationId": 99
+      }
+    }
+  }
+}

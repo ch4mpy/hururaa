@@ -78,7 +78,35 @@ public enum ProblemType {
    * Parameters: none. A REST call to the identity provider (Keycloak, where directions, users,
    * groups and application roles live) failed.
    */
-  IDENTITY_PROVIDER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "identity-provider-error");
+  IDENTITY_PROVIDER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "identity-provider-error"),
+
+  /**
+   * Parameters: none. No session (BFF), no or a rejected access token (REST API), or a session
+   * cookie the BFF no longer knows: the user must log in (again).
+   */
+  UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "unauthenticated"),
+
+  /** Parameters: none. An access rule, or the CSRF protection, refused the request. */
+  ACCESS_DENIED(HttpStatus.FORBIDDEN, "access-denied"),
+
+  /** Parameters: none. No route matches the request. */
+  NOT_FOUND(HttpStatus.NOT_FOUND, "not-found"),
+
+  /**
+   * Parameters: none. The framework rejected the request (unreadable body, unsupported method or
+   * media type...). The only type whose status varies: that of the rejection, {@code 400} by
+   * default.
+   */
+  INVALID_REQUEST(HttpStatus.BAD_REQUEST, "invalid-request"),
+
+  /** Parameters: none. An unexpected server-side failure, logged with its details. */
+  SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "server-error"),
+
+  /**
+   * Parameters: none. The BFF could not reach the REST API (connection refused, timeout): try again
+   * in a moment.
+   */
+  SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "service-unavailable");
 
   private static final String NAMESPACE = "urn:hururaa:problem:";
 

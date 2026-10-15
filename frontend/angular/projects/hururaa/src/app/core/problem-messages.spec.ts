@@ -29,9 +29,19 @@ describe('problemMessage', () => {
           }),
         }),
       ),
-    ).toBe(
-      "L'application a encore des groupes (escales.agent) : supprimez-les d'abord",
-    );
+    ).toBe("L'application a encore des groupes (escales.agent) : supprimez-les d'abord");
+  });
+
+  it('translates a generic problem, sent without parameters', () => {
+    expect(
+      problemMessage({
+        type: ProblemType.SERVICE_UNAVAILABLE,
+        title: 'Service Unavailable',
+        status: 503,
+        detail: 'x',
+        instance: '/gateway/bff/api/v1/me/delegations',
+      }),
+    ).toBe('Service momentanément indisponible, réessayez dans quelques instants');
   });
 
   it('is undefined for anything but a typed problem', () => {

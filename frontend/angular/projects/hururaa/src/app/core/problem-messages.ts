@@ -40,6 +40,19 @@ const PROBLEM_MESSAGES: Record<ProblemType, (p: Parameters) => string> = {
     $localize`:@@problem.dataIntegrityViolation:La demande est en conflit avec des données existantes`,
   [ProblemType.IDENTITY_PROVIDER_ERROR]: () =>
     $localize`:@@problem.identityProviderError:La communication avec le serveur d'identité a échoué : réessayez plus tard`,
+  // Generic types of the gateway and the API (docs/intent/0003): the messages of `httpErrorMessage`'s
+  // status classes, under the same ids (one translation each), but a dedicated one when the API is
+  // unreachable.
+  [ProblemType.UNAUTHENTICATED]: () =>
+    $localize`:@@http.error.unauthorized:Session expirée, veuillez vous reconnecter`,
+  [ProblemType.ACCESS_DENIED]: () => $localize`:@@http.error.forbidden:Accès refusé`,
+  [ProblemType.NOT_FOUND]: () => $localize`:@@http.error.notFound:Ressource introuvable`,
+  [ProblemType.INVALID_REQUEST]: () =>
+    $localize`:@@http.error.client:Requête refusée par le serveur`,
+  [ProblemType.SERVER_ERROR]: () =>
+    $localize`:@@http.error.server:Erreur du serveur, veuillez réessayer plus tard`,
+  [ProblemType.SERVICE_UNAVAILABLE]: () =>
+    $localize`:@@problem.serviceUnavailable:Service momentanément indisponible, réessayez dans quelques instants`,
 };
 
 const PROBLEM_TYPES = new Set<string>(Object.values(ProblemType));
@@ -59,9 +72,9 @@ export function isValidationProblem(body: unknown): body is ValidationProblemDet
 }
 
 /**
- * The localized message for a failed API call, or `undefined` when the error is not one of the
- * API's typed problems (network failure, gateway `401`/`403`, unknown problem...): callers keep
- * their own generic "failed" message for those.
+ * The localized message for a failed call, or `undefined` when the error is not one of the typed
+ * problems of the API or the gateway (network failure, reverse proxy error page, unknown problem...):
+ * callers keep their own generic "failed" message for those.
  */
 export function problemMessage(error: unknown): string | undefined {
   const body: unknown = error instanceof HttpErrorResponse ? error.error : error;

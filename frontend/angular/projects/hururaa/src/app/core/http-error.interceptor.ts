@@ -19,8 +19,9 @@ export const SKIP_ERROR_BANNER = new HttpContextToken<boolean>(() => false);
 export const SESSION_PROBE = new HttpContextToken<boolean>(() => false);
 
 /**
- * The localized message for a failed HTTP call: the one matching the API's typed problem when the
- * body is one (see `problemMessage`), otherwise a generic message for the status class.
+ * The localized message for a failed HTTP call: the one matching the typed problem when the body is
+ * one (see `problemMessage`; every error of the API and the gateway is, docs/intent/0003), otherwise
+ * a generic message for the status class (network failure, reverse proxy error page).
  */
 export function httpErrorMessage(error: HttpErrorResponse): string {
   const message = problemMessage(error);
