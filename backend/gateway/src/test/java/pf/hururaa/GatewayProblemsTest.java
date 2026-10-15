@@ -24,8 +24,10 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.oauth2.client.ClientAuthorizationException;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -214,7 +216,24 @@ class GatewayProblemsTest {
       throws Exception {
     expectProblem(
         mockMvc
-            .perform(getGateway(FailingController.CLIENT_AUTHORIZATION_REQUIRED_PATH))
+            // with a session: anonymous, the client chain would answer 401 before the handler (EX-13)
+            .perform(getGateway(FailingController.CLIENT_AUTHORIZATION_REQUIRED_PATH).session(loggedInSession()))
+            .andExpect(status().isUnauthorized())
+            .andExpect(header().doesNotExist(HttpHeaders.LOCATION)),
+        ProblemType.UNAUTHENTICATED);
+  }
+
+  /**
+   * A refresh Keycloak refuses ({@code invalid_grant}: SSO session or refresh token expired) throws a
+   * plain {@code ClientAuthorizationException}: also a {@code 401}, not a {@code 500} (second review
+   * of PR #26).
+   */
+  @Test
+  void givenARefusedRefresh_whenRelayed_thenUnauthenticatedProblem() throws Exception {
+    expectProblem(
+        mockMvc
+            // with a session: anonymous, the client chain would answer 401 before the handler (EX-13)
+            .perform(getGateway(FailingController.REFRESH_REFUSED_PATH).session(loggedInSession()))
             .andExpect(status().isUnauthorized())
             .andExpect(header().doesNotExist(HttpHeaders.LOCATION)),
         ProblemType.UNAUTHENTICATED);
@@ -241,6 +260,15 @@ class GatewayProblemsTest {
     @PreAuthorize("permitAll()")
     String requireClientAuthorization() {
       throw new ClientAuthorizationRequiredException("hururaa-bff");
+    }
+
+    static final String REFRESH_REFUSED_PATH = "/bff/test/refresh-refused";
+
+    /** What a refresh the authorization server refuses throws (SSO session expired). */
+    @GetMapping(REFRESH_REFUSED_PATH)
+    @PreAuthorize("permitAll()")
+    String refuseRefresh() {
+      throw new ClientAuthorizationException(new OAuth2Error("invalid_grant"), "hururaa-bff");
     }
   }
 

@@ -11,9 +11,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.oauth2.client.ClientAuthorizationException;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -58,5 +60,26 @@ class RestfulOAuth2FilterTest {
     assertThat(JsonPath.<String>read(response.getContentAsString(), "$.type"))
         .isEqualTo("urn:hururaa:problem:unauthenticated");
     assertThat(response.getContentAsString()).doesNotContain("keycloak");
+  }
+
+  /** A refresh the authorization server refused: the plain parent exception (review of PR #26). */
+  @SuppressWarnings("unchecked")
+  @Test
+  void givenARefusedRefresh_whenFilter_thenUnauthenticatedProblem() throws Exception {
+    final var filter = new RestfulOAuth2Filter(mock(OAuth2AuthorizationRequestResolver.class),
+        mock(AuthorizationRequestRepository.class), mock(RedirectStrategy.class),
+        mock(AuthenticationFailureHandler.class), new ThrowableAnalyzer(),
+        () -> new ProblemResponses(JsonMapper.builder().build()));
+    final var response = new MockHttpServletResponse();
+    final FilterChain chain = (req, res) -> {
+      throw new ClientAuthorizationException(new OAuth2Error("invalid_grant"), "hururaa-bff");
+    };
+
+    filter.doFilter(new MockHttpServletRequest("GET", "/gateway/bff/api/v1/me/delegations"),
+        response, chain);
+
+    assertThat(response.getStatus()).isEqualTo(401);
+    assertThat(JsonPath.<String>read(response.getContentAsString(), "$.type"))
+        .isEqualTo("urn:hururaa:problem:unauthenticated");
   }
 }

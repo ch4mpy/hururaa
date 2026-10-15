@@ -11,7 +11,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.security.oauth2.client.ClientAuthorizationException;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
@@ -145,11 +145,15 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
       } catch (IOException ex) {
         throw ex;
       } catch (Throwable ex) {
-        // Check to see if we need to handle ClientAuthorizationRequiredException
+        // The user must log in again: no authorized client any more
+        // (ClientAuthorizationRequiredException), or its refresh refused by the authorization
+        // server (a plain ClientAuthorizationException, invalid_grant: SSO session or refresh token
+        // expired; the failure handler has already removed the client). Both answer 401, without
+        // resolving an authorization request the SPA would not follow (review of PR #26).
         Throwable[] causeChain = this.throwableAnalyzer.determineCauseChain(ex);
-        ClientAuthorizationRequiredException authzEx = (ClientAuthorizationRequiredException) this.throwableAnalyzer
+        ClientAuthorizationException authzEx = (ClientAuthorizationException) this.throwableAnalyzer
             .getFirstThrowableOfType(
-                ClientAuthorizationRequiredException.class,
+                ClientAuthorizationException.class,
                 causeChain);
         if (authzEx != null) {
           if ("401".equals(authzEx.getError().getErrorCode())) {
@@ -157,21 +161,7 @@ public class SpringSecurityPatchConfiguration implements BeanPostProcessor {
                 .getContext()
                 .setAuthentication(new AnonymousAuthenticationToken("anonymous", "", List.of()));
           }
-          try {
-            OAuth2AuthorizationRequest authorizationRequest = this.authorizationRequestResolver.resolve(
-                request,
-                authzEx.getClientRegistrationId());
-            if (authorizationRequest == null) {
-              throw authzEx;
-            }
-            this.sendUnauthorized(request, response);
-          } catch (Exception failed) {
-            AuthenticationException wrappedException = new OAuth2AuthorizationRequestException(ex);
-            this.authenticationFailureHandler.onAuthenticationFailure(
-                request,
-                response,
-                wrappedException);
-          }
+          this.sendUnauthorized(request, response);
           return;
         }
         if (ex instanceof ServletException) {

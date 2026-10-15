@@ -221,3 +221,13 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
     de CA-14 n'est observable qu'avec un jeton ;
   - `GatewayProblemsTest.FailingController` passe sous `/bff/**` et s'appelle avec une session :
     hors des listes, un chemin anonyme est refusé par défaut (EX-13).
+- 2026-10-15 — 2ᵉ revue de la PR #26, constat 1 : un refresh refusé par Keycloak (`invalid_grant`)
+  lève une `ClientAuthorizationException` simple, que ni l'exclusion ni `RestfulOAuth2Filter` ne
+  reconnaissaient (`500` au lieu de `401`, écart préexistant à 0003). Les deux traitent désormais la
+  classe parente ; le filtre ne résout plus de requête d'autorisation inutile (constat 4).
+  Preuve : `GatewayProblemsTest.givenARefusedRefresh_whenRelayed_thenUnauthenticatedProblem`,
+  `RestfulOAuth2FilterTest.givenARefusedRefresh_whenFilter_thenUnauthenticatedProblem` ;
+  contre-épreuve : sur le code précédent, `500`. **Test corrigé** :
+  `givenTheClientNeedsAuthorizationAgain_whenRelayed_thenUnauthenticatedProblem` s'appelle avec une
+  session — depuis l'étape 9, sans session, la chaîne client répondait `401` avant le handler et le
+  test passait sans rien exercer (vu par la contre-épreuve).

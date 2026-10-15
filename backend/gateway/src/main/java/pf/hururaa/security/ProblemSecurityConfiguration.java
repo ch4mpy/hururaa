@@ -2,7 +2,7 @@ package pf.hururaa.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
+import org.springframework.security.oauth2.client.ClientAuthorizationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.session.InvalidSessionStrategy;
 import org.springframework.security.web.util.ThrowableAnalyzer;
@@ -69,15 +69,16 @@ public class ProblemSecurityConfiguration {
   }
 
   /**
-   * {@code TokenRelay=} authorizes the client inside the handler: when the refresh token is no
-   * longer valid, its {@link ClientAuthorizationRequiredException} must reach the gateway's
+   * {@code TokenRelay=} authorizes the client inside the handler: with no authorized client any more
+   * ({@code ClientAuthorizationRequiredException}) or a refresh the authorization server refused
+   * (a plain {@link ClientAuthorizationException}), the exception must reach the gateway's
    * {@code RestfulOAuth2Filter}, which answers {@code 401} {@code unauthenticated}, rather than be
    * written as a {@code 500} by the shared exception resolver (review of PR #26).
    */
   @Bean
   ProblemResolutionExclusion clientAuthorizationRequired() {
     final var analyzer = new ThrowableAnalyzer();
-    return ex -> analyzer.getFirstThrowableOfType(ClientAuthorizationRequiredException.class,
+    return ex -> analyzer.getFirstThrowableOfType(ClientAuthorizationException.class,
         analyzer.determineCauseChain(ex)) != null;
   }
 
