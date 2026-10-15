@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
@@ -171,6 +172,18 @@ class GatewayProblemsTest {
    * Spring Security hands a missing CSRF token to the invalid-session strategy, as a session that
    * expired (spec v2, EX-5): {@code 401} {@code unauthenticated}, not {@code 403}.
    */
+  /** The other side of the default refusal (EX-13): a member's session still opens the stream. */
+  @Test
+  void givenAMemberSession_whenSubscribeToEvents_thenTheStreamStarts() throws Exception {
+    mockMvc
+        .perform(
+            getGateway("/bff/events/dsi")
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .session(loggedInSession()))
+        .andExpect(status().isOk())
+        .andExpect(request().asyncStarted());
+  }
+
   @Test
   void givenNoCsrfToken_whenLogout_thenUnauthenticatedProblem() throws Exception {
     expectProblem(

@@ -61,10 +61,10 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 | `backend/hururaa-api/src/test/java/pf/hururaa/HururaaFixtures.java` | importe `ProblemSecurityConfiguration` | CA-2, CA-5 |
 | `backend/hururaa-api/src/test/java/pf/hururaa/problem/ApiProblemsTest.java` | nouveau `@WebMvcTest` (vrai contrôleur, ex. applications) : anonyme → `401` `unauthenticated` ; membre sans rôle → `403` `access-denied` ; JSON illisible → `400`, méthode → `405` `invalid-request` ; `APPLICATION_NOT_FOUND` inchangé | CA-2, CA-5, CA-6, CA-10 |
 | `backend/gateway/pom.xml` | dépendance `hururaa-problem` | — |
-| `backend/gateway/src/main/java/pf/hururaa/security/ProblemSecurityConfiguration.java` | nouveau : beans `AuthenticationEntryPoint` et `InvalidSessionStrategy` (`401`, sans session ni `Location`), `ClientSynchronizedHttpSecurityPostProcessor` (accès refusé), `ResourceServerExpressionInterceptUrlRegistryPostProcessor` (`/actuator/**` authentifié, reste `permitAll`) | EX-1, EX-3, EX-4, EX-5 |
+| `backend/gateway/src/main/java/pf/hururaa/security/ProblemSecurityConfiguration.java` | nouveau : beans `AuthenticationEntryPoint` et `InvalidSessionStrategy` (`401`, sans session ni `Location`), `ClientSynchronizedHttpSecurityPostProcessor` (accès refusé), `ResourceServerSynchronizedHttpSecurityPostProcessor` (`401` problème de la chaîne resource server ; pas de `permitAll`, spec v3), exclusion de `ClientAuthorizationRequiredException` (revue) | EX-1, EX-3, EX-4, EX-5, EX-13 |
 | `backend/gateway/src/main/java/pf/hururaa/ApiUnavailableExceptionResolver.java` | nouveau : `ResourceAccessException` → `503` `SERVICE_UNAVAILABLE` (journalisé) | EX-8 |
 | `backend/gateway/src/main/java/pf/hururaa/SpringSecurityPatchConfiguration.java` | `401` du rafraîchissement refusé : problème `UNAUTHENTICATED`, sans `Location` | EX-2 |
-| `backend/gateway/src/main/resources/application.yml` | `pass-through-patterns: [/me]` ; commentaires (0003) | EX-3, EX-11 |
+| `backend/gateway/src/main/resources/application.yml` | `pass-through-patterns: [/me]` ; listes `permit-all` en trois catégories commentées ; exposition actuator `health` seule (spec v3) | EX-3, EX-11, EX-13, EX-14 |
 | `backend/gateway/src/test/java/pf/hururaa/GatewayProblemsTest.java` | nouveau (MockMvc, WireMock) : les cas de la gateway (CA-1, 3, 4, 5, 7, 10) | EX-12 |
 | `backend/gateway/src/test/java/pf/hururaa/ApiUnavailableTest.java` | nouveau : `rest-api-v1` sur un port fermé → `503` | CA-8 |
 | `backend/gateway/src/test/java/pf/hururaa/RestfulOAuth2FilterTest.java` | nouveau (unitaire) : rafraîchissement refusé → `401` problème sans `Location` | CA-2 |
@@ -73,7 +73,7 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 | `frontend/angular/projects/hururaa/src/app/core/problem-messages.ts` (+ `.spec.ts`) | six messages (tableau de la spec) | EX-9, CA-8, CA-9 |
 | `frontend/angular/projects/hururaa/src/app/core/http-error.interceptor.ts` (+ `.spec.ts`), `session-expired.interceptor.spec.ts` | commentaire ; cas `503` typé (message dédié), `401` typé (état déconnecté, « Session expirée… ») | CA-8, CA-9 |
 | `frontend/angular/projects/hururaa/src/locale/messages*.xlf` | régénérés (skill `angular-fix-i18n`) | UX-1 |
-| `deploy/smoke.sh` | `expect_problem` (statut, `application/problem+json`, type) : route inconnue `404`, `/bff/events` et `/bff/api` sans session `401`, `/bff/api` cookie inconnu `401` | EX-12 |
+| `deploy/smoke.sh` | `expect_problem` (statut, `application/problem+json`, type) : route inconnue sans session `401` (spec v3), `/bff/events` et `/bff/api` sans session `401`, `/bff/api` cookie inconnu `401` | EX-12 |
 | `CLAUDE.md` | module `hururaa-problem`, section *Error responses* (types génériques, résolveur, filet `/error`, entrée de la gateway), pass-through `/me` | — |
 
 ## Ordre de travail
@@ -114,9 +114,10 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
   (`APPLICATION_NOT_FOUND` inchangé) le vérifie.
 - Flux SSE (`text/event-stream`, réponse engagée, délai de l'émetteur) → réponses engagées et
   `AsyncRequestNotUsableException` ignorées ; `SseEmitterRegistryTest` et CA-1 restent verts.
-- La chaîne resource server de la gateway passe en `permitAll` → seul `/actuator/**` reste
-  authentifié (le port de management, décision 0004) ; sur le port principal, `/actuator/**` répond
-  `401` plutôt que `404` (aucune route de la SPA). Test : `/actuator/info` anonyme → `401`.
+- Refus par défaut dans la gateway (spec v3) → un chemin anonyme oublié des listes répond `401` :
+  `smoke.sh`, CA-13 (endpoints anonymes) et `AnonymousAccessConfigurationTest` (routes relayées) le
+  détectent. La chaîne resource server ignore la session (spec v4) : test de CA-4 avec un contexte
+  de sécurité en session HTTP, pas avec l'authentification de test.
 - `/error` ouvert dans hururaa-api → il ne rend qu'un problème générique tiré des attributs de la
   requête ; appelé directement, `404` `not-found`.
 - Oubli du renommage de 9.5.2 → `/me` répondrait `401` (régression de 0002) → `InvalidSessionTest`
@@ -136,7 +137,7 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 | CA-1 | test automatisé | `GatewayProblemsTest` : `/bff/events/dsi` sans session → `401` `unauthenticated`, ni URL ni `Location` ; `smoke.sh` |
 | CA-2 | tests automatisés + fumée | `ApiProblemsTest` (anonyme → `401`, `WWW-Authenticate: Bearer`) ; `RestfulOAuth2FilterTest` ; `smoke.sh` (`/bff/api/v1/me/delegations` sans session, relayé) |
 | CA-3 | tests automatisés + contre-épreuve | `InvalidSessionTest` (`/me` → `200` anonyme ; `/bff/**` et `/bff/events/dsi` → `401` `unauthenticated` sans `Location`) ; `ProblemSecurityConfigurationTest` (aucune session ouverte) ; `InvalidSessionSafeguardTest` et contre-épreuve de l'étape 1 (sans `pass-through-patterns`, `/me` → `401`) |
-| CA-4 | test automatisé + fumée | `GatewayProblemsTest` : `/inconnue` sans et avec session → `404` `not-found` ; `smoke.sh` |
+| CA-4 | test automatisé + fumée | `GatewayProblemsTest` : sans session, `/inconnue` et `/bff/inconnue` → `401` ; avec une session en HTTP, `/bff/inconnue` → `404`, `/inconnue` → `401` (spec v4) ; `smoke.sh` |
 | CA-5 | tests automatisés | `GatewayProblemsTest` (non-membre sur `/bff/events/daf` → `403` ; jeton CSRF invalide → `403` ; jeton absent → `401` `unauthenticated`, spec v2) ; `ApiProblemsTest` (membre sans rôle de Hurura'a, administrateur d'une autre direction → `403`) |
 | CA-6 | tests automatisés | `ApiProblemsTest` (`400`, `405` `invalid-request`) ; tests du résolveur |
 | CA-7 | tests automatisés | `GatewayProblemsTest.givenAFailingHandler_whenCallIt_thenServerErrorProblemWithoutDetails` (`500` `server-error`, message absent du corps) ; `ProblemHandlerExceptionResolverTest`, `HururaaErrorControllerTest` (journalisé, non envoyé) |
@@ -144,6 +145,9 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
 | CA-9 | test automatisé | `session-expired.interceptor.spec.ts` / `http-error.interceptor.spec.ts` : `401` typé → état déconnecté et « Session expirée… » |
 | CA-10 | tests automatisés | `GatewayProblemsTest` (stub `APPLICATION_NOT_FOUND` relayé tel quel) ; `ApiProblemsTest` |
 | CA-11 | commande | `./verify.sh` → `VERIFY OK` |
+| CA-12 | test automatisé + contre-épreuve | `AnonymousAccessConfigurationTest` (chaque `Path=` relayé dans `client.permit-all` ; une route absente est signalée) |
+| CA-13 | tests automatisés + fumée | `GatewayProblemsTest` (connexion `200`, `POST /logout` sans session `202`, `/error` `404`, `/bff/events/dsi` `401`, session de membre → flux ouvert) ; `InvalidSessionTest` (`/me`) ; `ActuatorExposureTest` (`health`) ; `smoke.sh` |
+| CA-14 | test automatisé | `ActuatorExposureTest` : `info` absent des endpoints exposés, `/actuator/info` sans jeton → `401` (le `404` n'est observable qu'avec un jeton, voir *Écarts*) ; `health` → `200` |
 
 ## Écarts
 
