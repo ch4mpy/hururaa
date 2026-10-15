@@ -124,7 +124,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-keycloak:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/hururaa-keycloak:latest
           build-args: |
-            KC_VERSION=${{ vars.KC_VERSION || '26.7' }}
             CN=${{ env.DEMO_HOST }}
             KC_HEALTH_ENABLED=true
             KC_METRICS_ENABLED=true

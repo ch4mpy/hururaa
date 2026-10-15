@@ -64,7 +64,6 @@ continuously to `https://hururaa.c4-soft.com` by
    | Kind | Name | Value |
    |---|---|---|
    | variable | `DEMO_HOST` | optional, defaults to `hururaa.c4-soft.com` |
-   | variable | `KC_VERSION` | optional, defaults to `26.7` |
    | variable | `KC_ADMIN_USERNAME` | optional, defaults to `admin` |
    | secret | `VPS_HOST` | the VPS IP or host name |
    | secret | `VPS_SSH_KEY` | the private key generated above |

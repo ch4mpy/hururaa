@@ -1,4 +1,3 @@
-ARG KC_VERSION=26.7
 ARG CN=host.docker.internal
 ARG KC_HEALTH_ENABLED=true
 ARG KC_METRICS_ENABLED=true
@@ -6,7 +5,8 @@ ARG KC_HTTP_ENABLED=false
 ARG KC_HTTPS_PORT=3643
 ARG KC_LOG_LEVEL=INFO
 
-FROM quay.io/keycloak/keycloak:${KC_VERSION}
+# Pinned, not an ARG: Dependabot only updates a literal tag in FROM (.github/dependabot.yml)
+FROM quay.io/keycloak/keycloak:26.7.5
 
 ARG CN
 ARG KC_HOSTNAME
