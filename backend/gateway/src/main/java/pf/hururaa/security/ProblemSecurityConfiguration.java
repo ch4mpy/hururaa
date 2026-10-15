@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import pf.hururaa.problem.ProblemAccessDeniedHandler;
 import pf.hururaa.problem.ProblemAuthenticationEntryPoint;
 import pf.hururaa.problem.ProblemResolutionExclusion;
+import pf.hururaa.problem.ProblemResourceServerSecurity;
 import pf.hururaa.problem.ProblemResponses;
 import pf.hururaa.problem.ProblemType;
 
@@ -83,17 +84,13 @@ public class ProblemSecurityConfiguration {
   }
 
   /**
-   * The resource server chain's {@code 401}, for no token as for a rejected one (its
-   * {@code BearerTokenAuthenticationFilter} has its own entry point), as a problem instead of
-   * spring-addons' bare {@code sendError}.
+   * The resource server chain's {@code 401}, for no token as for a rejected one, and its
+   * {@code 403}, as problems instead of spring-addons' bare {@code sendError}: the same as
+   * hururaa-api's ({@link ProblemResourceServerSecurity}).
    */
   @Bean
   ResourceServerSynchronizedHttpSecurityPostProcessor resourceServerProblems(
       ProblemResponses problems) {
-    final var entryPoint = new ProblemAuthenticationEntryPoint(problems, "Bearer");
-    return http -> http
-        .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(entryPoint)
-            .accessDeniedHandler(new ProblemAccessDeniedHandler(problems)))
-        .oauth2ResourceServer(resourceServer -> resourceServer.authenticationEntryPoint(entryPoint));
+    return http -> ProblemResourceServerSecurity.apply(http, problems);
   }
 }

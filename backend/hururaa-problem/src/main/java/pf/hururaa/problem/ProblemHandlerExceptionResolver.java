@@ -6,7 +6,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -74,7 +74,8 @@ public class ProblemHandlerExceptionResolver implements HandlerExceptionResolver
       problem = ProblemResponses.forStatus(errorResponse.getStatusCode());
       errorResponse.getHeaders().forEach((name, values) -> values
           .forEach(value -> response.addHeader(name, value)));
-      if (HttpStatus.valueOf(problem.getStatus()).is5xxServerError()) {
+      // HttpStatusCode, not HttpStatus: a non-standard 4xx keeps its status (forStatus)
+      if (HttpStatusCode.valueOf(problem.getStatus()).is5xxServerError()) {
         log.error("{} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage(), ex);
       } else {
         log.debug("{} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());

@@ -55,6 +55,12 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-config</artifactId>
         </dependency>
+        <!-- ProblemResourceServerSecurity: provided by the applications, which are resource servers -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-resource-server</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>io.swagger.core.v3</groupId>

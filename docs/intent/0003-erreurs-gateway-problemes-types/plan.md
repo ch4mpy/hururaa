@@ -231,3 +231,9 @@ pass-through de session invalide réduit à `/me`. Constats de lecture qui orien
   `givenTheClientNeedsAuthorizationAgain_whenRelayed_thenUnauthenticatedProblem` s'appelle avec une
   session — depuis l'étape 9, sans session, la chaîne client répondait `401` avant le handler et le
   test passait sans rien exercer (vu par la contre-épreuve).
+- 2026-10-15 — 2ᵉ revue, constats 2, 3 et 5 : `HttpStatusCode.valueOf` dans le résolveur commun ;
+  `oauth2-redirections.authentication-entry-point` retiré de la gateway (seul le point d'entrée de
+  spring-addons, remplacé, le lisait) ; nouveau fichier
+  `backend/hururaa-problem/src/main/java/pf/hururaa/problem/ProblemResourceServerSecurity.java`,
+  appliqué par les deux applications au lieu de deux copies, et dépendance optionnelle
+  `spring-security-oauth2-resource-server` dans `backend/hururaa-problem/pom.xml`.

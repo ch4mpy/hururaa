@@ -135,7 +135,8 @@ com:
             pass-through-patterns:
               - /me
           oauth2-redirections:
-            authentication-entry-point: UNAUTHORIZED
+            # no authentication-entry-point: the gateway's own entry point replaces spring-addons'
+            # (401 unauthenticated problem, pf.hururaa.security.ProblemSecurityConfiguration)
             pre-authorization-code: OK
             rp-initiated-logout: ACCEPTED
           back-channel-logout:
