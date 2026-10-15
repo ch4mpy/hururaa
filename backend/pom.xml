@@ -60,7 +60,7 @@
 
 		<com.c4-soft.springaddons.version>9.5.2</com.c4-soft.springaddons.version>
 
-		<openapi-generator-maven-plugin.version>7.25.0</openapi-generator-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>7.26.0</openapi-generator-maven-plugin.version>
 		<swagger-annotations.version>2.2.55</swagger-annotations.version>
 		<springdoc-openapi.version>3.1.1</springdoc-openapi.version>
 		<springdoc-openapi-maven-plugin.version>1.5</springdoc-openapi-maven-plugin.version>
