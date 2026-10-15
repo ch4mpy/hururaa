@@ -8,7 +8,7 @@
 # resolves to — still bundles the vulnerable versions, which is why `--ignore-unfixed` does not
 # filter them out (upstream *has* published fixes, Keycloak has not picked them up yet).
 #
-# Re-check this file when bumping KC_VERSION: the paths carry the jar version, so an entry that no
+# Re-check this file when bumping the base image (keycloak/Dockerfile): the paths carry the jar version, so an entry that no
 # longer matches means the base image moved and the exemption has to be re-assessed rather than
 # silently kept. `expired_at` forces that review even if nobody bumps the image.
 vulnerabilities:
@@ -51,3 +51,14 @@ vulnerabilities:
       - opt/keycloak/lib/lib/main/com.microsoft.sqlserver.mssql-jdbc-13.2.1.jre11.jar
     statement: Unused SQL Server driver bundled by the Keycloak base image; Keycloak runs on H2 here.
     expired_at: 2026-12-31
+
+  # pcre2, an OS package of the Keycloak base image (Red Hat UBI 9.8): fixed in 10.40-7.el9_8,
+  # Keycloak 26.7.5 ships 10.40-6.el9. Scoped by PURL to the Red Hat packages, so the Ubuntu-based
+  # Spring images are still scanned for it. Dependabot proposes the next Keycloak image
+  # (keycloak/Dockerfile pins it): take the first one that ships the fixed pcre2, then drop this.
+  - id: CVE-2026-103111
+    purls:
+      - "pkg:rpm/redhat/pcre2"
+      - "pkg:rpm/redhat/pcre2-syntax"
+    statement: OS package of the Keycloak base image; no Keycloak image ships the fixed pcre2 yet.
+    expired_at: 2026-11-15
