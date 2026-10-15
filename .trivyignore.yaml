@@ -52,11 +52,23 @@ vulnerabilities:
     statement: Unused SQL Server driver bundled by the Keycloak base image; Keycloak runs on H2 here.
     expired_at: 2026-12-31
 
-  # pcre2, an OS package of the Keycloak base image (Red Hat UBI 9.8): fixed in 10.40-7.el9_8,
-  # Keycloak 26.7.5 ships 10.40-6.el9. Scoped by PURL to the Red Hat packages, so the Ubuntu-based
-  # Spring images are still scanned for it. Dependabot proposes the next Keycloak image
+  # pcre2, an OS package of the Keycloak base image (Red Hat UBI 9.8): three CVEs, all fixed in
+  # 10.40-7.el9_8; Keycloak 26.7.5 ships 10.40-6.el9. Scoped by PURL to the Red Hat packages, so the
+  # Ubuntu-based Spring images are still scanned for them. Dependabot proposes the next Keycloak image
   # (keycloak/Dockerfile pins it): take the first one that ships the fixed pcre2, then drop this.
   - id: CVE-2026-103111
+    purls:
+      - "pkg:rpm/redhat/pcre2"
+      - "pkg:rpm/redhat/pcre2-syntax"
+    statement: OS package of the Keycloak base image; no Keycloak image ships the fixed pcre2 yet.
+    expired_at: 2026-11-15
+  - id: CVE-2026-86145
+    purls:
+      - "pkg:rpm/redhat/pcre2"
+      - "pkg:rpm/redhat/pcre2-syntax"
+    statement: OS package of the Keycloak base image; no Keycloak image ships the fixed pcre2 yet.
+    expired_at: 2026-11-15
+  - id: CVE-2026-89161
     purls:
       - "pkg:rpm/redhat/pcre2"
       - "pkg:rpm/redhat/pcre2-syntax"
