@@ -6,7 +6,7 @@ ARG KC_HTTPS_PORT=3643
 ARG KC_LOG_LEVEL=INFO
 
 # Pinned, not an ARG: Dependabot only updates a literal tag in FROM (.github/dependabot.yml)
-FROM quay.io/keycloak/keycloak:26.7.5
+FROM quay.io/keycloak/keycloak:26.8.1
 
 ARG CN
 ARG KC_HOSTNAME
