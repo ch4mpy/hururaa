@@ -164,3 +164,21 @@ Constats de lecture qui orientent le plan :
 ## Écarts
 
 <!-- rempli pendant l'implémentation : date — quoi — pourquoi — effet sur les fichiers ou la preuve -->
+
+- 2026-10-15 — Étapes 2 et 3 en un seul commit — la co-gestion (étape 2, `DelegatedGroup`) change
+  la règle d'accès des écritures de membres (étape 3) dans les mêmes fichiers (`GroupController`,
+  `GroupControllerTest`) : séparées, l'étape 2 laisserait un test d'écriture faux entre les deux —
+  aucun fichier en plus ; la preuve ne change pas.
+- 2026-10-15 — Règle de lecture des rôles et de l'historique portée par
+  `DelegatedDirection.canReadApplication(application, authentication)`, pas par
+  `Application.isReadableBy(direction, authentication)` — `application.domain` dépendrait de
+  `direction.domain`, qui dépend déjà de lui — mêmes fichiers (`DelegatedDirection` est listé),
+  même règle, même preuve (SEC-2 tenu : méthode de l'objet résolu prenant l'`Authentication`).
+- 2026-10-15 — Recherche de membres : la règle garde `#direction.hasDelegate(authentication)` et
+  remplace l'égalité de direction par `#application.isAvailableIn(#direction.alias)`, au lieu de
+  `isReadableBy` — c'était déjà la règle de la recherche (délégués de la direction), seule
+  l'exclusion de Hurura'a tombe — aucun effet sur les fichiers ni la preuve.
+- 2026-10-15 — Un groupe `hururaa.*` qui ne porte aucune délégation connue (ni `hururaa.admins`, ni
+  le `product-owners` d'une application de la direction) refuse l'ajout ou le retrait de membres
+  (`RESERVED_NAME`) — Hurura'a ne saurait ni le journaliser ni ce qu'il attribue (EX-7) — test
+  `GroupControllerTest.givenReservedGroupOfNoKnownDelegation_whenAddMember_thenReservedName`.
