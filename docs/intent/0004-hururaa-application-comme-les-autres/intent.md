@@ -4,7 +4,7 @@
 - Nature : évolution
 - Source : conversation
 - Spec nécessaire : oui
-- Statut : spécifiée
+- Statut : planifiée
 - Ouverte le : 2026-10-15
 - Décidée le : 2026-10-15
 - Remplace : —
