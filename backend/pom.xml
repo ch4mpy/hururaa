@@ -92,7 +92,7 @@
 		<nullaway.version>0.14.2</nullaway.version>
 		<nullability-maven-plugin.version>0.5.2</nullability-maven-plugin.version>
 
-		<wiremock-standalone.version>4.0.0-beta.39</wiremock-standalone.version>
+		<wiremock-standalone.version>4.0.0-beta.40</wiremock-standalone.version>
 		<wiremock-maven-plugin.version>7.3.0</wiremock-maven-plugin.version>
 		<wiremock-spring-boot.version>4.4.3</wiremock-spring-boot.version>
 
