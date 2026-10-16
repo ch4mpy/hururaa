@@ -14,39 +14,48 @@ import { ApplicationContext } from './application-context';
   selector: 'app-application-roles',
   imports: [ReactiveFormsModule, ButtonModule, InputTextModule, TableModule],
   template: `
-    <form
-      [formGroup]="form"
-      (ngSubmit)="create()"
-      class="flex flex-wrap align-items-end gap-3 mb-3"
-    >
-      <div class="flex flex-column gap-1">
-        <label for="roleName" i18n="@@application.role.name">Nom</label>
-        <input
-          pInputText
-          id="roleName"
-          formControlName="name"
-          [placeholder]="(context.application.value()?.clientPrefix ?? '') + '.ressource.action'"
+    @if (context.isHururaa()) {
+      <p class="mt-0 mb-3 text-color-secondary" i18n="@@application.roles.hururaa">
+        Les rôles de Hurura'a sont ceux des délégations : seuls ceux qui valent dans cette direction
+        sont listés, et ils ne se modifient pas.
+      </p>
+    } @else {
+      <form
+        [formGroup]="form"
+        (ngSubmit)="create()"
+        class="flex flex-wrap align-items-end gap-3 mb-3"
+      >
+        <div class="flex flex-column gap-1">
+          <label for="roleName" i18n="@@application.role.name">Nom</label>
+          <input
+            pInputText
+            id="roleName"
+            formControlName="name"
+            [placeholder]="(context.application.value()?.clientPrefix ?? '') + '.ressource.action'"
+          />
+        </div>
+        <div class="flex flex-column gap-1 flex-grow-1">
+          <label for="roleDescription" i18n="@@application.role.description">Description</label>
+          <input pInputText id="roleDescription" formControlName="description" />
+        </div>
+        <p-button
+          type="submit"
+          icon="ri-add-line"
+          [disabled]="form.invalid"
+          i18n-label="@@application.role.create"
+          label="Définir le rôle"
         />
-      </div>
-      <div class="flex flex-column gap-1 flex-grow-1">
-        <label for="roleDescription" i18n="@@application.role.description">Description</label>
-        <input pInputText id="roleDescription" formControlName="description" />
-      </div>
-      <p-button
-        type="submit"
-        icon="ri-add-line"
-        [disabled]="form.invalid"
-        i18n-label="@@application.role.create"
-        label="Définir le rôle"
-      />
-    </form>
+      </form>
+    }
 
     <p-table [value]="context.roles.value() ?? []" [loading]="context.roles.isLoading()">
       <ng-template #header>
         <tr>
           <th i18n="@@application.roles.name">Nom</th>
           <th i18n="@@application.roles.description">Description</th>
-          <th><span class="sr-only" i18n="@@actions">Actions</span></th>
+          @if (!context.isHururaa()) {
+            <th><span class="sr-only" i18n="@@actions">Actions</span></th>
+          }
         </tr>
       </ng-template>
       <ng-template #body let-role>
@@ -55,16 +64,18 @@ import { ApplicationContext } from './application-context';
             <code>{{ role.name }}</code>
           </td>
           <td>{{ role.description }}</td>
-          <td class="text-right">
-            <p-button
-              icon="ri-delete-bin-line"
-              severity="danger"
-              [text]="true"
-              i18n-ariaLabel="@@application.role.delete"
-              ariaLabel="Supprimer le rôle"
-              (onClick)="delete(role.name)"
-            />
-          </td>
+          @if (!context.isHururaa()) {
+            <td class="text-right">
+              <p-button
+                icon="ri-delete-bin-line"
+                severity="danger"
+                [text]="true"
+                i18n-ariaLabel="@@application.role.delete"
+                ariaLabel="Supprimer le rôle"
+                (onClick)="delete(role.name)"
+              />
+            </td>
+          }
         </tr>
       </ng-template>
       <ng-template #emptymessage>

@@ -38,28 +38,31 @@ import { GroupRoles } from './group-roles';
       <p class="m-0 text-color-secondary" i18n="@@application.groups.intro">
         Les membres d'un groupe reçoivent les rôles qu'il attribue.
       </p>
-      <div class="flex flex-wrap align-items-center gap-2">
-        <p-inputgroup class="w-auto">
-          <p-inputgroup-addon>
-            <code>{{ context.application.value()?.clientPrefix }}.</code>
-          </p-inputgroup-addon>
-          <input
-            pInputText
-            formControlName="name"
-            i18n-aria-label="@@application.group.name"
-            aria-label="Nom du groupe"
-            i18n-placeholder="@@application.group.name.placeholder"
-            placeholder="agent"
+      <!-- Hurura'a's groups are those of the delegations, created with directions and applications -->
+      @if (!context.isHururaa()) {
+        <div class="flex flex-wrap align-items-center gap-2">
+          <p-inputgroup class="w-auto">
+            <p-inputgroup-addon>
+              <code>{{ context.application.value()?.clientPrefix }}.</code>
+            </p-inputgroup-addon>
+            <input
+              pInputText
+              formControlName="name"
+              i18n-aria-label="@@application.group.name"
+              aria-label="Nom du groupe"
+              i18n-placeholder="@@application.group.name.placeholder"
+              placeholder="agent"
+            />
+          </p-inputgroup>
+          <p-button
+            type="submit"
+            icon="ri-add-line"
+            [disabled]="form.invalid"
+            i18n-label="@@application.group.create"
+            label="Créer le groupe"
           />
-        </p-inputgroup>
-        <p-button
-          type="submit"
-          icon="ri-add-line"
-          [disabled]="form.invalid"
-          i18n-label="@@application.group.create"
-          label="Créer le groupe"
-        />
-      </div>
+        </div>
+      }
     </form>
 
     <p-table [value]="groups.value() ?? []" [loading]="groups.isLoading()">

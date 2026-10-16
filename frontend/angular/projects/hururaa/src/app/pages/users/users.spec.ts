@@ -76,4 +76,56 @@ describe('Users', () => {
     expect(search.request.params.get('page')).toBe('0');
     search.flush({ content: [], page: { totalElements: 0 } });
   });
+
+  it("narrows to Hurura'a, whose groups are the direction's delegations", async () => {
+    const fixture = TestBed.createComponent(Users);
+    fixture.componentRef.setInput('direction', 'dpam');
+    http.expectOne('/gateway/me').flush({ sub: 'u1', directions: ['dpam'] });
+    fixture.detectChanges();
+    TestBed.tick();
+    http.match('/api/me/delegations').forEach((r) =>
+      r.flush({
+        hururaaRoles: [],
+        platformOrganization: 'dsi',
+        administeredDirections: ['dpam'],
+        managedApplications: [],
+      }),
+    );
+    http.match('/api/directions').forEach((r) => r.flush([]));
+    http
+      .expectOne((r) => r.url === '/api/applications')
+      .flush([
+        {
+          id: 1,
+          clientPrefix: 'hururaa',
+          name: "Hurura'a",
+          direction: 'dsi',
+          bffClientId: 'hururaa-bff',
+          apiClientId: 'hururaa-api',
+        },
+      ]);
+    http
+      .expectOne('/api/directions/dpam/groups')
+      .flush([{ id: 'g0', name: 'hururaa.admins', applicationId: 1, applicationName: "Hurura'a" }]);
+    http
+      .expectOne((r) => r.url === '/api/directions/dpam/users')
+      .flush({ content: [], page: { totalElements: 0 } });
+    await fixture.whenStable();
+
+    (
+      fixture.componentInstance as unknown as { selectApplication(id: number): void }
+    ).selectApplication(1);
+    TestBed.tick();
+    http
+      .expectOne((r) => r.url === '/api/directions/dpam/applications/1/roles')
+      .flush([{ name: 'hururaa.direction.admin' }]);
+    const search = http.expectOne((r) => r.url === '/api/directions/dpam/users');
+    expect(search.request.params.get('applicationId')).toBe('1');
+    search.flush({
+      content: [{ id: 'a', username: 'dpam.admin', firstName: 'Admin', lastName: 'Dpam' }],
+      page: { totalElements: 1 },
+    });
+    await fixture.whenStable();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Admin Dpam');
+  });
 });

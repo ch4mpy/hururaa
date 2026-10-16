@@ -3,7 +3,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideApi as provideGatewayApi } from '@api/gateway';
 import { DelegationsResponse, provideApi as provideHururaaApi } from '@api/hururaa-api';
-import { DelegationsService, HururaaRoles } from './delegations.service';
+import {
+  ADMINS_GROUP,
+  DelegationsService,
+  HururaaRoles,
+  isReservedGroup,
+  productOwnersGroup,
+} from './delegations.service';
 
 const escales = {
   id: 3,
@@ -126,5 +132,69 @@ describe('DelegationsService', () => {
 
     expect(service.canManageApplication(escales)).toBe(true);
     expect(service.canEditApplicationsOf('dpam')).toBe(false);
+  });
+
+  describe("Hurura'a's groups (decision 0008)", () => {
+    const hururaa = {
+      id: 1,
+      clientPrefix: 'hururaa',
+      name: "Hurura'a",
+      direction: 'dsi',
+      bffClientId: 'hururaa-bff',
+      apiClientId: 'hururaa-api',
+    };
+    const dpamAdmins = { name: ADMINS_GROUP, applicationId: 1 };
+    const escalesProductOwners = { name: productOwnersGroup('escales'), applicationId: 1 };
+
+    it("makes Hurura'a's managers delegates of every direction, managing its groups", () => {
+      login({
+        hururaaRoles: [],
+        platformOrganization: 'dsi',
+        administeredDirections: [],
+        managedApplications: [hururaa],
+      });
+
+      expect(service.isHururaaManager()).toBe(true);
+      expect(service.directions()).toBeUndefined();
+      expect(service.canReadDirection('dpam')).toBe(true);
+      expect(service.canManageGroup(dpamAdmins, 'dpam')).toBe(true);
+      expect(service.canManageGroup({ name: 'escales.agent', applicationId: 3 }, 'dpam')).toBe(
+        false,
+      );
+    });
+
+    it("lets direction administrators manage Hurura'a's groups of their direction only", () => {
+      login({
+        hururaaRoles: [],
+        platformOrganization: 'dsi',
+        administeredDirections: ['dpam'],
+        managedApplications: [],
+      });
+
+      expect(service.canManageGroup(dpamAdmins, 'dpam')).toBe(true);
+      expect(service.canManageGroup(dpamAdmins, 'daf')).toBe(false);
+    });
+
+    it('lets the managers of an application co-manage its managers group, nothing else', () => {
+      login({
+        hururaaRoles: [],
+        platformOrganization: 'dsi',
+        administeredDirections: [],
+        managedApplications: [escales],
+      });
+
+      expect(service.isHururaaManager()).toBe(false);
+      expect(service.canManageGroup(escalesProductOwners, 'dpam')).toBe(true);
+      expect(service.canManageGroup(dpamAdmins, 'dpam')).toBe(false);
+      expect(service.canManageApplication({ ...hururaa, direction: 'dpam' })).toBe(true);
+      expect(service.canManageApplication({ ...hururaa, direction: 'daf' })).toBe(false);
+    });
+
+    it("tells Hurura'a's groups apart", () => {
+      expect(isReservedGroup(ADMINS_GROUP)).toBe(true);
+      expect(isReservedGroup(productOwnersGroup('escales'))).toBe(true);
+      expect(isReservedGroup('escales.agent')).toBe(false);
+      http.expectOne('/gateway/me').flush({ directions: [] });
+    });
   });
 });

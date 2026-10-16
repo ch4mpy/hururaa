@@ -33,7 +33,9 @@ const PROBLEM_MESSAGES: Record<ProblemType, (p: Parameters) => string> = {
   [ProblemType.APPLICATION_HAS_GROUPS]: (p) =>
     $localize`:@@problem.applicationHasGroups:L'application a encore des groupes (${str(p['groups'])}:groups:) : supprimez-les d'abord`,
   [ProblemType.RESERVED_NAME]: (p) =>
-    $localize`:@@problem.reservedName:« ${str(p['name'])}:name: » est réservé à Hurura'a : désignez plutôt des administrateurs ou des gestionnaires`,
+    $localize`:@@problem.reservedName:« ${str(p['name'])}:name: » est réservé à Hurura'a : seuls les membres de ses groupes se modifient`,
+  [ProblemType.LAST_HURURAA_ADMIN]: () =>
+    $localize`:@@problem.lastHururaaAdmin:Impossible de retirer le dernier administrateur Hurura'a : désignez-en d'abord un autre`,
   [ProblemType.CONCURRENT_MODIFICATION]: () =>
     $localize`:@@problem.concurrentModification:Modifié entre-temps par quelqu'un d'autre : rechargez la page avant de réessayer`,
   [ProblemType.DATA_INTEGRITY_VIOLATION]: () =>

@@ -1,60 +1,53 @@
-import { Component, inject, input, numberAttribute } from '@angular/core';
+import { Component, computed, inject, input, numberAttribute } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApplicationManagersApi, UserResponse } from '@api/hururaa-api';
-import { ButtonModule } from 'primeng/button';
+import { RouterLink } from '@angular/router';
+import { ApplicationManagersApi, ApplicationsApi } from '@api/hururaa-api';
 import { TableModule } from 'primeng/table';
-import { DelegationsService } from '../../core/delegations.service';
+import { map, of } from 'rxjs';
+import { HURURAA_CLIENT_PREFIX, productOwnersGroup } from '../../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
-import { injectNotifier, userLabel } from '../shared/labels';
-import { UserPicker } from '../shared/user-picker';
+import { userLabel } from '../shared/labels';
+import { ApplicationContext } from './application-context';
 
 /**
- * The managers tab of an application: who manages its roles, groups and co-managers, designated
- * by its direction's administrators and by its managers.
+ * The managers tab of an application: who manages its roles, groups and co-managers. They are the
+ * members of its `hururaa.<prefix>.product-owners` group, one of Hurura'a's groups: they are
+ * designated there, which this tab links to.
  */
 @Component({
   selector: 'app-application-managers',
-  imports: [ButtonModule, TableModule, UserPicker],
+  imports: [RouterLink, TableModule],
   template: `
     <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
       <p class="m-0 text-color-secondary" i18n="@@application.managers.intro">
         Les gestionnaires définissent les rôles, les groupes et leurs membres.
       </p>
-      <app-user-picker
-        [direction]="direction()"
-        inputId="manager-picker"
-        i18n-label="@@application.manager.add"
-        label="Désigner gestionnaire"
-        (picked)="add($event)"
-      />
+      @if (hururaa.value(); as app) {
+        <a
+          [routerLink]="['/applications', direction(), app.id, 'groups', productOwners()]"
+          class="flex align-items-center gap-2"
+        >
+          <i class="ri-group-line" aria-hidden="true"></i>
+          <span i18n="@@application.managers.group">Gérer le groupe des gestionnaires</span>
+        </a>
+      }
     </div>
     <p-table [value]="managers.value() ?? []" [loading]="managers.isLoading()">
       <ng-template #header>
         <tr>
           <th i18n="@@user.name">Nom</th>
           <th i18n="@@user.email">Courriel</th>
-          <th><span class="sr-only" i18n="@@actions">Actions</span></th>
         </tr>
       </ng-template>
       <ng-template #body let-manager>
         <tr>
           <td>{{ labelOf(manager) }}</td>
           <td>{{ manager.email }}</td>
-          <td class="text-right">
-            <p-button
-              icon="ri-user-unfollow-line"
-              severity="danger"
-              [text]="true"
-              i18n-ariaLabel="@@application.manager.remove"
-              ariaLabel="Retirer ce gestionnaire"
-              (onClick)="remove(manager)"
-            />
-          </td>
         </tr>
       </ng-template>
       <ng-template #emptymessage>
         <tr>
-          <td colspan="3" i18n="@@application.managers.empty">Aucun gestionnaire</td>
+          <td colspan="2" i18n="@@application.managers.empty">Aucun gestionnaire</td>
         </tr>
       </ng-template>
     </p-table>
@@ -62,8 +55,8 @@ import { UserPicker } from '../shared/user-picker';
 })
 export class ApplicationManagers {
   private readonly api = inject(ApplicationManagersApi);
-  private readonly delegations = inject(DelegationsService);
-  private readonly notify = injectNotifier();
+  private readonly applicationsApi = inject(ApplicationsApi);
+  private readonly context = inject(ApplicationContext);
   protected readonly labelOf = userLabel;
 
   readonly direction = input.required<string>();
@@ -74,6 +67,23 @@ export class ApplicationManagers {
     stream: ({ params }) => this.api.getApplicationManagers(params.direction, params.id),
   });
 
+  /** The application's managers' group, one of Hurura'a's groups in the application's direction. */
+  protected readonly productOwners = computed(() => {
+    const clientPrefix = this.context.application.value()?.clientPrefix;
+    return clientPrefix ? productOwnersGroup(clientPrefix) : undefined;
+  });
+
+  /** Hurura'a, available in every direction, the application the managers' group belongs to. */
+  protected readonly hururaa = rxResource({
+    params: () => (this.productOwners() ? this.direction() : undefined),
+    stream: ({ params }) =>
+      params
+        ? this.applicationsApi
+            .getApplications(params)
+            .pipe(map((apps) => apps.find((a) => a.clientPrefix === HURURAA_CLIENT_PREFIX)))
+        : of(undefined),
+  });
+
   constructor() {
     inject(ResourceEventsService)
       .of(ResourceTypes.APPLICATION)
@@ -81,29 +91,5 @@ export class ApplicationManagers {
       .subscribe(
         (event) => event.resourceId === String(this.applicationId()) && this.managers.reload(),
       );
-  }
-
-  protected add(user: UserResponse): void {
-    this.api
-      .addApplicationManager(this.direction(), this.applicationId(), user.id)
-      .subscribe(() => {
-        this.notify(
-          $localize`:@@application.manager.added:${userLabel(user)}:user: désigné gestionnaire`,
-        );
-        this.managers.reload();
-        this.delegations.refresh();
-      });
-  }
-
-  protected remove(user: UserResponse): void {
-    this.api
-      .removeApplicationManager(this.direction(), this.applicationId(), user.id)
-      .subscribe(() => {
-        this.notify(
-          $localize`:@@application.manager.removed:${userLabel(user)}:user: n'est plus gestionnaire`,
-        );
-        this.managers.reload();
-        this.delegations.refresh();
-      });
   }
 }

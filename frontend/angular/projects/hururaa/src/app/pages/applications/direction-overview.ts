@@ -1,37 +1,40 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DirectionsApi, UserResponse } from '@api/hururaa-api';
-import { ButtonModule } from 'primeng/button';
+import { RouterLink } from '@angular/router';
+import { ApplicationsApi, DirectionsApi } from '@api/hururaa-api';
 import { TableModule } from 'primeng/table';
-import { of } from 'rxjs';
-import { DelegationsService } from '../../core/delegations.service';
+import { map, of } from 'rxjs';
+import {
+  ADMINS_GROUP,
+  DelegationsService,
+  HURURAA_CLIENT_PREFIX,
+} from '../../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
-import { injectNotifier, userLabel } from '../shared/labels';
+import { userLabel } from '../shared/labels';
 import { PermissionHistory } from '../shared/permission-history';
-import { UserPicker } from '../shared/user-picker';
 
 /**
  * What the applications area shows of a direction when none of its applications is selected: for
- * its administrators, the direction's own page (its administrators, designated by Hurura'a
- * administrators, and its permission history); for the managers of several of its applications,
- * an invitation to pick one.
+ * its delegates, its administrators (the members of its `hururaa.admins` group, one of Hurura'a's
+ * groups, designated there, which this page links to); for its administrators, its permission
+ * history too; for the managers of its applications, an invitation to pick one.
  */
 @Component({
   selector: 'app-direction-overview',
-  imports: [ButtonModule, TableModule, UserPicker, PermissionHistory],
+  imports: [RouterLink, TableModule, PermissionHistory],
   template: `
-    @if (administers()) {
+    @if (reads()) {
       <section class="mb-5">
         <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
           <h2 class="text-xl m-0" i18n="@@direction.admins">Administrateurs</h2>
-          @if (delegations.isAdmin()) {
-            <app-user-picker
-              [direction]="direction()"
-              inputId="admin-picker"
-              i18n-label="@@direction.admin.add"
-              label="Désigner administrateur"
-              (picked)="addAdmin($event)"
-            />
+          @if (hururaa.value(); as app) {
+            <a
+              [routerLink]="['/applications', direction(), app.id, 'groups', adminsGroup]"
+              class="flex align-items-center gap-2"
+            >
+              <i class="ri-group-line" aria-hidden="true"></i>
+              <span i18n="@@direction.admins.group">Gérer le groupe des administrateurs</span>
+            </a>
           }
         </div>
         <p-table [value]="admins.value() ?? []" [loading]="admins.isLoading()">
@@ -39,37 +42,23 @@ import { UserPicker } from '../shared/user-picker';
             <tr>
               <th i18n="@@user.name">Nom</th>
               <th i18n="@@user.email">Courriel</th>
-              @if (delegations.isAdmin()) {
-                <th><span class="sr-only" i18n="@@actions">Actions</span></th>
-              }
             </tr>
           </ng-template>
           <ng-template #body let-admin>
             <tr>
               <td>{{ labelOf(admin) }}</td>
               <td>{{ admin.email }}</td>
-              @if (delegations.isAdmin()) {
-                <td class="text-right">
-                  <p-button
-                    icon="ri-user-unfollow-line"
-                    severity="danger"
-                    [text]="true"
-                    i18n-ariaLabel="@@direction.admin.remove"
-                    ariaLabel="Retirer cet administrateur"
-                    (onClick)="removeAdmin(admin)"
-                  />
-                </td>
-              }
             </tr>
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="3" i18n="@@direction.admins.empty">Aucun administrateur</td>
+              <td colspan="2" i18n="@@direction.admins.empty">Aucun administrateur</td>
             </tr>
           </ng-template>
         </p-table>
       </section>
-
+    }
+    @if (administers()) {
       <section>
         <h2 class="text-xl mt-0 mb-3" i18n="@@direction.history">Historique des permissions</h2>
         <app-permission-history [direction]="direction()" />
@@ -86,9 +75,10 @@ import { UserPicker } from '../shared/user-picker';
 })
 export class DirectionOverview {
   private readonly api = inject(DirectionsApi);
-  private readonly notify = injectNotifier();
+  private readonly applicationsApi = inject(ApplicationsApi);
   protected readonly delegations = inject(DelegationsService);
   protected readonly labelOf = userLabel;
+  protected readonly adminsGroup = ADMINS_GROUP;
 
   /** Bound from the parent's `:direction` route parameter. */
   readonly direction = input.required<string>();
@@ -97,9 +87,23 @@ export class DirectionOverview {
     this.delegations.canEditApplicationsOf(this.direction()),
   );
 
+  /** Mirrors the access rule of the API's direction administrators endpoint. */
+  protected readonly reads = computed(() => this.delegations.canReadDirection(this.direction()));
+
   protected readonly admins = rxResource({
-    params: () => (this.administers() ? this.direction() : undefined),
+    params: () => (this.reads() ? this.direction() : undefined),
     stream: ({ params }) => (params ? this.api.getDirectionAdmins(params) : of([])),
+  });
+
+  /** Hurura'a, available in every direction: the administrators' group is one of its groups. */
+  protected readonly hururaa = rxResource({
+    params: () => (this.reads() ? this.direction() : undefined),
+    stream: ({ params }) =>
+      params
+        ? this.applicationsApi
+            .getApplications(params)
+            .pipe(map((apps) => apps.find((a) => a.clientPrefix === HURURAA_CLIENT_PREFIX)))
+        : of(undefined),
   });
 
   constructor() {
@@ -107,23 +111,5 @@ export class DirectionOverview {
       .of(ResourceTypes.DIRECTION)
       .pipe(takeUntilDestroyed())
       .subscribe((event) => event.tenant === this.direction() && this.admins.reload());
-  }
-
-  protected addAdmin(user: UserResponse): void {
-    this.api.addDirectionAdmin(this.direction(), user.id).subscribe(() => {
-      this.notify(
-        $localize`:@@direction.admin.added:${userLabel(user)}:user: désigné administrateur`,
-      );
-      this.admins.reload();
-    });
-  }
-
-  protected removeAdmin(user: UserResponse): void {
-    this.api.removeDirectionAdmin(this.direction(), user.id).subscribe(() => {
-      this.notify(
-        $localize`:@@direction.admin.removed:${userLabel(user)}:user: n'est plus administrateur`,
-      );
-      this.admins.reload();
-    });
   }
 }

@@ -8,6 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { confirm } from '../../core/confirm';
+import { DelegationsService, isReservedGroup } from '../../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
 import { injectNotifier, userLabel } from '../shared/labels';
 import { PermissionHistory } from '../shared/permission-history';
@@ -19,7 +20,8 @@ const PAGE_SIZE = 10;
 /**
  * A group of an application, in its groups tab: the application's roles it grants and its
  * members (who are granted those roles in the direction), managed by the application's managers
- * and the direction's administrators (who alone see the tab).
+ * and the direction's administrators. One of Hurura'a's groups carries a delegation: only its
+ * members change, also by the managers of the application whose managers it holds.
  */
 @Component({
   selector: 'app-group-detail',
@@ -49,15 +51,23 @@ const PAGE_SIZE = 10;
           <h3 class="text-xl m-0">
             <i class="ri-group-line mr-2" aria-hidden="true"></i>{{ group() }}
           </h3>
-          <p-button
-            severity="danger"
-            [outlined]="true"
-            icon="ri-delete-bin-line"
-            i18n-label="@@group.delete"
-            label="Supprimer le groupe"
-            (onClick)="deleteGroup()"
-          />
+          @if (canEditGroup()) {
+            <p-button
+              severity="danger"
+              [outlined]="true"
+              icon="ri-delete-bin-line"
+              i18n-label="@@group.delete"
+              label="Supprimer le groupe"
+              (onClick)="deleteGroup()"
+            />
+          }
         </div>
+        @if (reserved()) {
+          <p class="mt-0 mb-4 text-color-secondary" i18n="@@group.reserved">
+            Ce groupe de Hurura'a porte une délégation : seuls ses membres se modifient. Un
+            changement prend effet au renouvellement du jeton du délégué.
+          </p>
+        }
 
         <section class="mb-5">
           <h4 class="text-base font-semibold mt-0 mb-2" i18n="@@group.roles">Rôles attribués</h4>
@@ -67,15 +77,17 @@ const PAGE_SIZE = 10;
                 class="inline-flex align-items-center gap-1 pl-2 border-1 surface-border border-round"
               >
                 <code>{{ role.role }}</code>
-                <p-button
-                  icon="ri-close-line"
-                  severity="secondary"
-                  [text]="true"
-                  size="small"
-                  i18n-ariaLabel="@@group.role.remove"
-                  ariaLabel="Ne plus attribuer ce rôle"
-                  (onClick)="removeRole(role.role)"
-                />
+                @if (canEditGroup()) {
+                  <p-button
+                    icon="ri-close-line"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    i18n-ariaLabel="@@group.role.remove"
+                    ariaLabel="Ne plus attribuer ce rôle"
+                    (onClick)="removeRole(role.role)"
+                  />
+                }
               </span>
             } @empty {
               @if (!roles.isLoading()) {
@@ -85,7 +97,7 @@ const PAGE_SIZE = 10;
               }
             }
           </div>
-          @if (grantableRoles().length) {
+          @if (canEditGroup() && grantableRoles().length) {
             <div class="flex flex-wrap align-items-center gap-2 mt-3">
               <p-select
                 [options]="grantableRoles()"
@@ -114,7 +126,9 @@ const PAGE_SIZE = 10;
                 (onClick)="addRole()"
               />
             </div>
-          } @else if (!context.roles.isLoading() && !context.roles.value()?.length) {
+          } @else if (
+            canEditGroup() && !context.roles.isLoading() && !context.roles.value()?.length
+          ) {
             <p class="mt-3 mb-0 text-color-secondary">
               <span i18n="@@group.roles.noneDefined">L'application n'a aucun rôle :</span>&nbsp;
               <a
@@ -129,13 +143,15 @@ const PAGE_SIZE = 10;
         <section class="mb-5">
           <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
             <h4 class="text-base font-semibold m-0" i18n="@@group.members">Membres</h4>
-            <app-user-picker
-              [direction]="direction()"
-              inputId="member-picker"
-              i18n-label="@@group.member.add"
-              label="Ajouter au groupe"
-              (picked)="addMember($event)"
-            />
+            @if (canManageMembers()) {
+              <app-user-picker
+                [direction]="direction()"
+                inputId="member-picker"
+                i18n-label="@@group.member.add"
+                label="Ajouter au groupe"
+                (picked)="addMember($event)"
+              />
+            }
           </div>
           <p-table
             [value]="members.value()?.content ?? []"
@@ -150,23 +166,27 @@ const PAGE_SIZE = 10;
               <tr>
                 <th i18n="@@user.name">Nom</th>
                 <th i18n="@@user.email">Courriel</th>
-                <th><span class="sr-only" i18n="@@actions">Actions</span></th>
+                @if (canManageMembers()) {
+                  <th><span class="sr-only" i18n="@@actions">Actions</span></th>
+                }
               </tr>
             </ng-template>
             <ng-template #body let-member>
               <tr>
                 <td>{{ labelOf(member) }}</td>
                 <td>{{ member.email }}</td>
-                <td class="text-right">
-                  <p-button
-                    icon="ri-user-unfollow-line"
-                    severity="danger"
-                    [text]="true"
-                    i18n-ariaLabel="@@group.member.remove"
-                    ariaLabel="Retirer du groupe"
-                    (onClick)="removeMember(member)"
-                  />
-                </td>
+                @if (canManageMembers()) {
+                  <td class="text-right">
+                    <p-button
+                      icon="ri-user-unfollow-line"
+                      severity="danger"
+                      [text]="true"
+                      i18n-ariaLabel="@@group.member.remove"
+                      ariaLabel="Retirer du groupe"
+                      (onClick)="removeMember(member)"
+                    />
+                  </td>
+                }
               </tr>
             </ng-template>
             <ng-template #emptymessage>
@@ -198,6 +218,7 @@ export class GroupDetail {
   private readonly router = inject(Router);
   private readonly notify = injectNotifier();
   protected readonly context = inject(ApplicationContext);
+  private readonly delegations = inject(DelegationsService);
   protected readonly labelOf = userLabel;
   protected readonly pageSize = PAGE_SIZE;
 
@@ -218,6 +239,18 @@ export class GroupDetail {
     params: this.params,
     stream: ({ params }) => this.api.getGroupRoles(params.direction, params.group),
   });
+
+  /** Whether the group is one of Hurura'a's, carrying a delegation: only its members change. */
+  protected readonly reserved = computed(() => isReservedGroup(this.group()));
+
+  /** Mirrors the access rule of the API's group members endpoints. */
+  protected readonly canManageMembers = computed(() => {
+    const details = this.details.value();
+    return !!details && this.delegations.canManageGroup(details, this.direction());
+  });
+
+  /** Mirrors the access rule of the API's group roles and deletion endpoints. */
+  protected readonly canEditGroup = computed(() => this.canManageMembers() && !this.reserved());
 
   /** The application's roles the group does not grant yet. */
   protected readonly grantableRoles = computed(() => {
@@ -280,14 +313,34 @@ export class GroupDetail {
     this.api.addGroupMember(this.direction(), this.group(), user.id).subscribe(() => {
       this.notify($localize`:@@group.member.added:${userLabel(user)}:user: ajouté au groupe`);
       this.members.reload();
+      this.refreshDelegations();
     });
   }
 
   protected removeMember(user: UserResponse): void {
-    this.api.removeGroupMember(this.direction(), this.group(), user.id).subscribe(() => {
-      this.notify($localize`:@@group.member.removed:${userLabel(user)}:user: retiré du groupe`);
-      this.members.reload();
-    });
+    const remove = () =>
+      this.api.removeGroupMember(this.direction(), this.group(), user.id).subscribe(() => {
+        this.notify($localize`:@@group.member.removed:${userLabel(user)}:user: retiré du groupe`);
+        this.members.reload();
+        this.refreshDelegations();
+      });
+    if (!this.reserved()) {
+      remove();
+      return;
+    }
+    // revoking a delegation: the delegate loses it at their next token renewal
+    const group = this.group();
+    confirm(this.confirmation, {
+      header: $localize`:@@group.member.revoke:Retirer la délégation`,
+      message: $localize`:@@group.member.revoke.confirm:Retirer ${userLabel(user)}:user: du groupe ${group}:group: ? La délégation sera perdue au renouvellement de son jeton.`,
+    }).subscribe(remove);
+  }
+
+  /** A change to one of Hurura'a's groups may change the current user's own delegations. */
+  private refreshDelegations(): void {
+    if (this.reserved()) {
+      this.delegations.refresh();
+    }
   }
 
   protected deleteGroup(): void {

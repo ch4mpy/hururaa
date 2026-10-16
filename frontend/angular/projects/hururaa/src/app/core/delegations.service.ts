@@ -10,6 +10,22 @@ export const HururaaRoles = {
   ADMIN: 'hururaa.direction.admin',
 } as const;
 
+/** The client prefix of the Hurura'a application, available in every direction (decision 0008). */
+export const HURURAA_CLIENT_PREFIX = 'hururaa';
+
+/** The name of a direction's administrators' group, one of Hurura'a's groups. */
+export const ADMINS_GROUP = 'hururaa.admins';
+
+/** The group of an application's managers, one of Hurura'a's groups in the application's direction. */
+export function productOwnersGroup(clientPrefix: string): string {
+  return `hururaa.${clientPrefix}.product-owners`;
+}
+
+/** Whether a group is one of Hurura'a's, carrying a delegation (names starting with `hururaa.`). */
+export function isReservedGroup(name: string): boolean {
+  return name.startsWith(`${HURURAA_CLIENT_PREFIX}.`);
+}
+
 export const NO_DELEGATION: DelegationsResponse = {
   hururaaRoles: [],
   platformOrganization: '',
@@ -47,11 +63,19 @@ export class DelegationsService {
   readonly isAdmin = computed(() => this.delegations().hururaaRoles.includes(HururaaRoles.ADMIN));
 
   /**
+   * Whether the user manages Hurura'a: a delegate of every direction, managing the members of its
+   * groups (administrators and managers) everywhere.
+   */
+  readonly isHururaaManager = computed(() =>
+    this.delegations().managedApplications.some((a) => a.clientPrefix === HURURAA_CLIENT_PREFIX),
+  );
+
+  /**
    * The aliases of the directions the user has a say on, which they administer or manage
-   * applications of (`undefined`: all of them, for a Hurura'a administrator).
+   * applications of (`undefined`: all of them, for a Hurura'a administrator or manager).
    */
   readonly directions = computed(() => {
-    if (this.isAdmin()) {
+    if (this.isAdmin() || this.isHururaaManager()) {
       return undefined;
     }
     const { administeredDirections, managedApplications } = this.delegations();
@@ -134,6 +158,7 @@ export class DelegationsService {
   canReadDirection(direction: string): boolean {
     return (
       this.isAdmin() ||
+      this.isHururaaManager() ||
       this.isDirectionAdmin(direction) ||
       this.managedApplicationsIn(direction).length > 0
     );
@@ -147,10 +172,38 @@ export class DelegationsService {
     return this.isAdmin() || this.isDirectionAdmin(direction);
   }
 
-  /** Whether the user may read and define an application's roles, groups and managers. */
-  canManageApplication(application: { id: number; direction: string }): boolean {
+  /**
+   * Whether the user may read and define an application's roles, groups and managers. Hurura'a,
+   * whose groups live in every direction, is read by any delegate of the direction it is opened in.
+   */
+  canManageApplication(application: {
+    id: number;
+    direction: string;
+    clientPrefix?: string;
+  }): boolean {
+    if (application.clientPrefix === HURURAA_CLIENT_PREFIX) {
+      return this.canReadDirection(application.direction);
+    }
     return (
       this.canEditApplicationsOf(application.direction) || this.isApplicationManager(application.id)
+    );
+  }
+
+  /**
+   * Whether the user may change a group's members (and, for a group which is not one of
+   * Hurura'a's, its roles): mirrors the API's `DelegatedGroup.isManageableBy` — the direction's
+   * administrators, the managers of the group's application, and, for
+   * `hururaa.<prefix>.product-owners`, the managers of that application.
+   */
+  canManageGroup(group: { name: string; applicationId?: number }, direction: string): boolean {
+    if (this.canEditApplicationsOf(direction)) {
+      return true;
+    }
+    if (group.applicationId !== undefined && this.isApplicationManager(group.applicationId)) {
+      return true;
+    }
+    return this.managedApplicationsIn(direction).some(
+      (a) => productOwnersGroup(a.clientPrefix) === group.name,
     );
   }
 }
