@@ -182,3 +182,7 @@ Constats de lecture qui orientent le plan :
   le `product-owners` d'une application de la direction) refuse l'ajout ou le retrait de membres
   (`RESERVED_NAME`) — Hurura'a ne saurait ni le journaliser ni ce qu'il attribue (EX-7) — test
   `GroupControllerTest.givenReservedGroupOfNoKnownDelegation_whenAddMember_thenReservedName`.
+- 2026-10-15 — `ApplicationRepositoryTest` (fichier non listé) n'enregistre plus `hururaa` lui-même —
+  le changeset sans contexte l'insère déjà dans la base de test, et un second enregistrement viole
+  l'unicité du préfixe (risque prévu) — l'attendu ne change pas ; le test gagne un cas
+  `findAvailableIn`.
