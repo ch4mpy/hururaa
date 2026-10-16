@@ -186,3 +186,15 @@ Constats de lecture qui orientent le plan :
   le changeset sans contexte l'insère déjà dans la base de test, et un second enregistrement viole
   l'unicité du préfixe (risque prévu) — l'attendu ne change pas ; le test gagne un cas
   `findAvailableIn`.
+- 2026-10-15 — Étapes 5 et 6 en un seul commit — les clients générés ne sont pas versionnés, et
+  `npm run build` échoue aussi tant que les pages appellent les endpoints de désignation supprimés :
+  l'étape 5 seule ne compilerait pas — aucun fichier en plus.
+- 2026-10-15 — Les liens vers `hururaa.admins` et `hururaa.<préfixe>.product-owners` lisent l'id de
+  Hurura'a dans `GET /applications?direction=` plutôt que dans le groupe — un groupe absent
+  (direction créée hors de Hurura'a) répondrait `404` et afficherait la bannière d'erreur — aucun
+  fichier en plus.
+- 2026-10-15 — Vérification manuelle de CA-10 : la garde `skipApplicationChoice` mène `dpam.manager`,
+  gestionnaire d'une seule application de la DPAM, droit à Escales, sans la vue d'ensemble — la
+  vérification passe par Hurura'a > Groupes > `hururaa.admins` (administrateurs listés, aucune
+  action) ; la vue d'ensemble et son lien sont prouvés par `direction-overview.spec.ts` et vérifiés
+  avec `dpam.admin`.
