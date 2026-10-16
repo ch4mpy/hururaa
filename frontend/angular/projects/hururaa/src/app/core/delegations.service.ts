@@ -196,6 +196,14 @@ export class DelegationsService {
    * `hururaa.<prefix>.product-owners`, the managers of that application.
    */
   canManageGroup(group: { name: string; applicationId?: number }, direction: string): boolean {
+    // a group of Hurura'a which carries no delegation it knows of: the API refuses any change
+    if (
+      isReservedGroup(group.name) &&
+      group.name !== ADMINS_GROUP &&
+      !/^hururaa\.[^.]+\.product-owners$/.test(group.name)
+    ) {
+      return false;
+    }
     if (this.canEditApplicationsOf(direction)) {
       return true;
     }

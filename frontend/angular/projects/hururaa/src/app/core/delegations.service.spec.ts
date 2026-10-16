@@ -173,6 +173,10 @@ describe('DelegationsService', () => {
 
       expect(service.canManageGroup(dpamAdmins, 'dpam')).toBe(true);
       expect(service.canManageGroup(dpamAdmins, 'daf')).toBe(false);
+      // a group of Hurura'a carrying no delegation it knows of: the API refuses any change
+      expect(service.canManageGroup({ name: 'hururaa.legacy', applicationId: 1 }, 'dpam')).toBe(
+        false,
+      );
     });
 
     it('lets the managers of an application co-manage its managers group, nothing else', () => {

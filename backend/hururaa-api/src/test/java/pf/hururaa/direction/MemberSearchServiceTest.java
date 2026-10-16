@@ -40,6 +40,7 @@ class MemberSearchServiceTest {
   private static final User BOB = new User("2", "bob", "Bob", null, "bob@dpam.pf");
   private static final User CAROL = new User("3", "carol", null, null, null);
   private static final User DPAM_ADMIN = user(HururaaFixtures.DPAM_ADMIN, "dpam.admin");
+  private static final User DPAM_MANAGER = user(HururaaFixtures.DPAM_MANAGER, "dpam.manager");
 
   private final DirectionService directionService = mock(DirectionService.class);
   private final GroupService groupService = mock(GroupService.class);
@@ -59,6 +60,8 @@ class MemberSearchServiceTest {
         .thenReturn(List.of(escales(), hururaa(), otherApplication));
     when(keycloakProperties.apiClientId("hururaa")).thenReturn("hururaa-api");
     when(groupService.findAllMembers(DPAM, "hururaa.admins")).thenReturn(List.of(DPAM_ADMIN));
+    when(groupService.findAllMembers(DPAM, "hururaa.escales.product-owners"))
+        .thenReturn(List.of(DPAM_MANAGER));
     when(groupService.findClientRoles(DPAM, "hururaa.admins", "hururaa-api"))
         .thenReturn(List.of("hururaa.direction.admin"));
     when(groupService.findByName(DPAM, "hururaa.admins"))
@@ -67,6 +70,7 @@ class MemberSearchServiceTest {
     when(keycloakProperties.apiClientId("other")).thenReturn("other-api");
     when(groupService.findAll(DPAM)).thenReturn(List.of(
         new Group("g0", DPAM, "hururaa.admins"),
+        new Group("g4", DPAM, "hururaa.escales.product-owners"),
         new Group("g1", DPAM, "escales.agent"),
         new Group("g2", DPAM, "escales.chef"),
         new Group("g3", DPAM, "other.agent")));
@@ -155,8 +159,9 @@ class MemberSearchServiceTest {
 
   @Test
   void givenHururaa_whenSearchDpam_thenMembersOfItsGroupsInDpam() throws Exception {
+    // CA-11: the direction's administrators and the managers of its applications
     assertThat(service.search(DPAM, new MemberFilter("", null, hururaa(), null), FIRST_PAGE)
-        .getContent()).containsExactly(DPAM_ADMIN);
+        .getContent()).containsExactly(DPAM_ADMIN, DPAM_MANAGER);
   }
 
   @Test

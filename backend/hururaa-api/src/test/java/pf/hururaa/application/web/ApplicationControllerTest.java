@@ -386,6 +386,20 @@ class ApplicationControllerTest {
     verify(applicationRepository, never()).delete(any());
   }
 
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaWithoutGroups_whenDelete_thenReservedName() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    when(groupService.findAll(DSI)).thenReturn(List.of());
+
+    api
+        .delete(ApplicationController.DIRECTION_APPLICATION_PATH, DSI, HURURAA_ID)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    verify(delegationService, never()).deprovisionApplication(any());
+    verify(applicationRepository, never()).delete(any());
+  }
+
   // ---------- history ----------
 
   @Test

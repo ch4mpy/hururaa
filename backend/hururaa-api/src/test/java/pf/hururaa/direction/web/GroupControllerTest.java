@@ -580,11 +580,15 @@ class GroupControllerTest {
   @WithJwt("jwt/hururaa-admin.json")
   void givenHururaaAdmin_whenChangeReservedGroupItself_thenReservedName() throws Exception {
     when(applicationRepository.findAvailableIn(DSI)).thenReturn(List.of(hururaa(), teFenua()));
+    final var reservedName = ProblemType.RESERVED_NAME.uri().toString();
     api.put(Map.of(), GroupController.ROLE_PATH, DPAM, PRODUCT_OWNERS_GROUP,
-        "escales.stopovers.read").andExpect(status().isConflict());
+        "escales.stopovers.read").andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(reservedName));
     api.delete(GroupController.ROLE_PATH, DPAM, ADMINS_GROUP, "hururaa.direction.admin")
-        .andExpect(status().isConflict());
-    api.delete(GroupController.GROUP_PATH, DPAM, ADMINS_GROUP).andExpect(status().isConflict());
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(reservedName));
+    api.delete(GroupController.GROUP_PATH, DPAM, ADMINS_GROUP).andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(reservedName));
     api.post(new GroupRequest("auditors"), GroupController.APPLICATION_GROUPS_PATH, DSI,
         HURURAA_ID)
         .andExpect(status().isConflict())
