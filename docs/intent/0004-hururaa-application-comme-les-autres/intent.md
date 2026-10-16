@@ -4,9 +4,9 @@
 - Nature : évolution
 - Source : conversation
 - Spec nécessaire : oui
-- Statut : proposée
+- Statut : acceptée
 - Ouverte le : 2026-10-15
-- Décidée le : —
+- Décidée le : 2026-10-15
 - Remplace : —
 
 ## Problème
@@ -30,13 +30,16 @@ Ce que cela coûte :
 
 ## Résultat attendu
 
-- Hurura'a figure parmi les applications de la DSI, avec ses rôles et ses groupes, comme toute
-  application.
+- Hurura'a est une application enregistrée de la DSI, comme les autres, avec ses rôles et ses
+  groupes (décidé par le PO à l'acceptation).
 - Les groupes et rôles de Hurura'a apparaissent sur les utilisateurs (recherche de membres,
-  filtres par groupe, application et rôle), dans toutes les directions où ils existent
-  (`hururaa.admins` et `hururaa.<préfixe>.product-owners` de chaque direction).
+  filtres par groupe, application et rôle), dans toutes les directions où ils existent ; hors de
+  la DSI, `hururaa.admins` et `hururaa.<préfixe>.product-owners` apparaissent sous Hurura'a
+  (décidé par le PO à l'acceptation).
 - Ses groupes et leurs membres se gèrent par les mêmes écrans que ceux des autres applications,
-  avec les mêmes règles d'accès, sous les garde-fous listés ci-dessous.
+  avec les mêmes règles d'accès, sous les garde-fous listés ci-dessous. Les écrans de désignation
+  des administrateurs et des gestionnaires deviennent des liens vers les groupes correspondants :
+  la fonctionnalité ne vit qu'à un endroit (décidé par le PO à l'acceptation).
 - Réussite : un administrateur Hurura'a, un administrateur de direction et un gestionnaire
   retrouvent, chacun dans son périmètre, les administrateurs et gestionnaires par les écrans
   d'applications et d'utilisateurs, et peuvent les changer par les écrans de groupes, sans console
@@ -67,11 +70,3 @@ Ce que cela coûte :
 
 - Nouvelle rédaction de SEC-5 et DEL-5, et décision au registre (nouvelle décision, ou
   amendement de 0007) — spec, PO.
-- Dans les autres directions que la DSI, `hururaa.admins` et `hururaa.<préfixe>.product-owners`
-  apparaissent-ils sous Hurura'a (application de la DSI) ou sous l'application concernée de la
-  direction ? — spec, PO.
-- Les écrans de désignation des administrateurs et gestionnaires restent-ils, ou deviennent-ils
-  de simples liens vers les groupes correspondants (« une fonctionnalité vit à un seul endroit ») ?
-  — spec, PO.
-- Hurura'a doit-il devenir une application enregistrée (ligne en base, préfixe `hururaa`
-  aujourd'hui réservé) ou rester un cas particulier présenté comme une application ? — spec.
