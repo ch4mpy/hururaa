@@ -9,10 +9,11 @@
  * <li><b>Hurura'a administrators</b> are the administrators of the
  * {@link pf.hururaa.uaa.UaaProperties#getPlatformOrganization() DSI}, which runs Hurura'a
  * ({@code hururaa.direction.admin} held in the DSI, turned into an authority): they act in every
- * direction, and alone create directions and designate their administrators;</li>
+ * direction, and alone create directions;</li>
  * <li><b>direction administrators</b> (members of the direction's {@code hururaa.admins} group,
  * holding {@code hururaa.direction.admin} there) register, rename and unregister the applications
- * of their direction, define their roles and managers, and manage their groups;</li>
+ * of their direction, define their roles, manage their groups, and the members of Hurura'a's groups
+ * of their direction: its administrators and its applications' managers;</li>
  * <li><b>application managers</b> (members of the {@code hururaa.<prefix>.product-owners} group of
  * the application's direction, holding {@code hururaa.application.<prefix>.manage} there) define
  * the roles and the other managers of the applications they manage, create their groups (named
@@ -30,8 +31,13 @@
  * </p>
  *
  * <p>
- * Names starting with {@code hururaa.} are reserved, for roles as for groups: only Hurura'a
- * creates, changes or deletes those, and no endpoint lets a user do so.
+ * Hurura'a is an application of the DSI like the others, whose groups (the delegation groups) live
+ * in every direction (decision 0008): their members are designated and revoked through the groups
+ * API, by the administrators of their direction and the managers of Hurura'a (who may thus
+ * designate Hurura'a administrators), and the managers of an application co-manage its
+ * {@code hururaa.<prefix>.product-owners} group. Names starting with {@code hururaa.} are
+ * reserved, for roles as for groups: only Hurura'a creates or deletes those, and the roles its groups
+ * grant never change.
  * </p>
  */
 @NullMarked
