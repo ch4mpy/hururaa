@@ -198,3 +198,13 @@ Constats de lecture qui orientent le plan :
   vérification passe par Hurura'a > Groupes > `hururaa.admins` (administrateurs listés, aucune
   action) ; la vue d'ensemble et son lien sont prouvés par `direction-overview.spec.ts` et vérifiés
   avec `dpam.admin`.
+- 2026-10-15 — Le miroir frontend `canReadApplication` est fondu dans
+  `DelegationsService.canManageApplication` (Hurura'a : `canReadDirection` de la direction), qui
+  sert déjà de garde à la fiche d'application — une seule méthode à tenir en phase avec l'API.
+- 2026-10-15 — Suites du sous-agent `verifier` : `ApplicationService.delete` (fichier non listé)
+  refuse explicitement de désenregistrer Hurura'a (`RESERVED_NAME`) quand la DSI n'a plus aucun de
+  ses groupes, cas que `APPLICATION_HAS_GROUPS` ne couvrait pas (EX-1, test
+  `givenHururaaWithoutGroups_whenDelete_thenReservedName`) ; `MemberSearchServiceTest` prouve aussi
+  `dpam.manager` sous le filtre Hurura'a (CA-11) ; `GroupControllerTest` vérifie le type
+  `RESERVED_NAME` des trois premiers refus de CA-8 ; `canManageGroup` ne montre aucune action sur un
+  groupe `hururaa.*` sans délégation connue, que l'API refuse.
