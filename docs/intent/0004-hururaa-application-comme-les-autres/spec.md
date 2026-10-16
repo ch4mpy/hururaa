@@ -1,13 +1,13 @@
 # Spec : Hurura'a, une application comme les autres
 
 - Intention : [0004](intent.md)
-- Statut : brouillon
+- Statut : approuvée
 - Version : 1
 - Risque : élevé : le changement touche les règles d'accès, les noms réservés et le modèle de
   données (Liquibase)
 - Politiques appliquées : policy-delegation @229653c, policy-securite-api @229653c,
   policy-tracabilite @229653c, policy-ux-i18n @229653c
-- Approuvée : —
+- Approuvée : 2026-10-15, ch4mpy (PO) ; accord du tech lead le 2026-10-15, ch4mpy (PO et tech lead : consigné une fois)
 
 ## Résumé
 
@@ -206,7 +206,7 @@ L'interface ne promet pas d'effet immédiat.
 - Recommandation : A. La règle et le code qui l'applique changent ensemble, et la revue du tech
   lead couvre les deux.
 - Décide : responsable des politiques (ch4mpy)
-- Décision : à décider
+- Décision : A, réécriture dans cette PR avec une décision 0008 qui amende 0007 (ch4mpy, responsable des politiques, 2026-10-15)
 
 ### PA-2 Hurura'a dans les autres directions
 
@@ -226,7 +226,7 @@ L'interface ne promet pas d'effet immédiat.
   un administrateur de la DPAM y trouve où ses délégations se gèrent. Il faut alors amender DEL-4 et
   DEL-6 (PA-1) pour une application transverse, la seule.
 - Décide : PO
-- Décision : à décider
+- Décision : A, Hurura'a dans le navigateur d'applications de chaque direction, avec les seuls groupes et rôles de cette direction ; DEL-4 et DEL-6 amendés (ch4mpy, PO, 2026-10-15)
 
 ### PA-3 Écart avec la contrainte « pas d'élévation » de l'intention
 
@@ -248,7 +248,7 @@ L'interface ne promet pas d'effet immédiat.
   toujours. Conséquence à accepter : être gestionnaire de Hurura'a équivaut désormais à pouvoir
   devenir administrateur Hurura'a.
 - Décide : PO
-- Décision : à décider
+- Décision : A, écart accepté en connaissance de cause et consigné dans la décision 0008 ; l'intention reste telle quelle (ch4mpy, PO, 2026-10-15)
 
 ### PA-4 Dernier administrateur des autres directions
 
@@ -258,7 +258,7 @@ L'interface ne promet pas d'effet immédiat.
 - Recommandation : A. C'est le besoin exprimé, et B bloquerait le départ d'un administrateur
   qu'on n'a pas encore remplacé.
 - Décide : PO
-- Décision : à décider
+- Décision : A, garde-fou du dernier administrateur dans la DSI seulement (ch4mpy, PO, 2026-10-15)
 
 ### PA-5 Endpoints de désignation actuels
 
@@ -268,7 +268,7 @@ L'interface ne promet pas d'effet immédiat.
   client connu hors du frontend).
 - Recommandation : A. Moins de surface, et SEC-7 n'a qu'un jeu de règles à prouver.
 - Décide : tech lead
-- Décision : à décider
+- Décision : A, endpoints de désignation supprimés (ch4mpy, tech lead, 2026-10-15)
 
 ## Critères d'acceptation
 
@@ -312,4 +312,5 @@ L'interface ne promet pas d'effet immédiat.
 
 ## Historique
 
-- v1 — 2026-10-15 — première version
+- v1 — 2026-10-15 — première version ; EX-5 passée à la règle générale des groupes avec co-gestion, à la demande du PO, avant soumission
+- v1 — 2026-10-15 — approuvée : décisions sur PA-1 à PA-5
