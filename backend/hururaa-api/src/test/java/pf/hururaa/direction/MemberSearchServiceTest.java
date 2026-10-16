@@ -9,12 +9,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pf.hururaa.HururaaFixtures.DPAM;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.hururaa;
+import static pf.hururaa.HururaaFixtures.user;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import pf.hururaa.HururaaFixtures;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.application.jpa.ApplicationRepository;
 import pf.hururaa.direction.domain.Group;
@@ -26,8 +29,9 @@ import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 
 /**
- * Narrowed to groups, a member search reads the members of the matching groups (never Hurura'a's
- * reserved ones), then filters, deduplicates, sorts and pages them.
+ * Narrowed to groups, a member search reads the members of the matching groups (Hurura'a's
+ * delegation groups included, as groups of Hurura'a), then filters, deduplicates, sorts and pages
+ * them.
  */
 class MemberSearchServiceTest {
   private static final PageRequest FIRST_PAGE = PageRequest.of(0, 20);
@@ -35,6 +39,7 @@ class MemberSearchServiceTest {
   private static final User ALICE = new User("1", "alice", "Alice", "Teriierooiterai", null);
   private static final User BOB = new User("2", "bob", "Bob", null, "bob@dpam.pf");
   private static final User CAROL = new User("3", "carol", null, null, null);
+  private static final User DPAM_ADMIN = user(HururaaFixtures.DPAM_ADMIN, "dpam.admin");
 
   private final DirectionService directionService = mock(DirectionService.class);
   private final GroupService groupService = mock(GroupService.class);
@@ -50,8 +55,14 @@ class MemberSearchServiceTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    when(applicationRepository.findByDirectionOrderByNameAsc(DPAM))
-        .thenReturn(List.of(escales(), otherApplication));
+    when(applicationRepository.findAvailableIn(DPAM))
+        .thenReturn(List.of(escales(), hururaa(), otherApplication));
+    when(keycloakProperties.apiClientId("hururaa")).thenReturn("hururaa-api");
+    when(groupService.findAllMembers(DPAM, "hururaa.admins")).thenReturn(List.of(DPAM_ADMIN));
+    when(groupService.findClientRoles(DPAM, "hururaa.admins", "hururaa-api"))
+        .thenReturn(List.of("hururaa.direction.admin"));
+    when(groupService.findByName(DPAM, "hururaa.admins"))
+        .thenReturn(Optional.of(new Group("g0", DPAM, "hururaa.admins")));
     when(keycloakProperties.apiClientId("escales")).thenReturn("escales-api");
     when(keycloakProperties.apiClientId("other")).thenReturn("other-api");
     when(groupService.findAll(DPAM)).thenReturn(List.of(
@@ -129,11 +140,23 @@ class MemberSearchServiceTest {
   }
 
   @Test
-  void givenReservedGroup_whenSearch_thenRefused() {
-    assertThatThrownBy(() -> service
-        .search(DPAM, new MemberFilter("", "hururaa.admins", null, null), FIRST_PAGE))
-        .isInstanceOfSatisfying(HururaaProblemException.class,
-            e -> assertThat(e.getType()).isEqualTo(ProblemType.RESERVED_NAME));
+  void givenDirectionAdminRole_whenSearchDpam_thenDpamAdminFound() throws Exception {
+    assertThat(service
+        .search(DPAM, new MemberFilter("", null, null, "hururaa.direction.admin"), FIRST_PAGE)
+        .getContent()).containsExactly(DPAM_ADMIN);
+  }
+
+  @Test
+  void givenDelegationGroup_whenSearch_thenItsMembers() throws Exception {
+    assertThat(service
+        .search(DPAM, new MemberFilter("", "hururaa.admins", null, null), FIRST_PAGE)
+        .getContent()).containsExactly(DPAM_ADMIN);
+  }
+
+  @Test
+  void givenHururaa_whenSearchDpam_thenMembersOfItsGroupsInDpam() throws Exception {
+    assertThat(service.search(DPAM, new MemberFilter("", null, hururaa(), null), FIRST_PAGE)
+        .getContent()).containsExactly(DPAM_ADMIN);
   }
 
   @Test

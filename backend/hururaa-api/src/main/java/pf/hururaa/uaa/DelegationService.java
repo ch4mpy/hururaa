@@ -1,6 +1,7 @@
 package pf.hururaa.uaa;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pf.hururaa.application.domain.Application;
@@ -8,6 +9,7 @@ import pf.hururaa.direction.domain.User;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.problem.ProblemType;
 
 /**
  * Hurura'a's delegations in Keycloak: the {@link DelegationGroups delegation groups} and the
@@ -29,13 +31,16 @@ public class DelegationService {
 
   private final ClientRoleService clientRoleService;
 
+  private final UaaProperties uaaProperties;
+
   /** The ID of {@code hururaa-api}, the client carrying Hurura'a's roles. */
   private final String rolesNamespace;
 
   public DelegationService(GroupService groupService, ClientRoleService clientRoleService,
-      @Value("${roles-namespace}") String rolesNamespace) {
+      UaaProperties uaaProperties, @Value("${roles-namespace}") String rolesNamespace) {
     this.groupService = groupService;
     this.clientRoleService = clientRoleService;
+    this.uaaProperties = uaaProperties;
     this.rolesNamespace = rolesNamespace;
   }
 
@@ -86,10 +91,22 @@ public class DelegationService {
 
   /**
    * @return whether the user was revoked (false if not an administrator)
+   * @throws HururaaProblemException {@code LAST_HURURAA_ADMIN} when the user is the last
+   *         administrator of the DSI, hence the last Hurura'a administrator
    */
   public boolean removeAdmin(String direction, String userId) throws HururaaProblemException {
-    return groupService.findByName(direction, DelegationGroups.ADMINS).isPresent()
-        && groupService.removeMember(direction, DelegationGroups.ADMINS, userId);
+    if (groupService.findByName(direction, DelegationGroups.ADMINS).isEmpty()) {
+      return false;
+    }
+    if (direction.equals(uaaProperties.getPlatformOrganization())) {
+      final var admins = groupService.findAllMembers(direction, DelegationGroups.ADMINS);
+      if (admins.size() == 1 && admins.getFirst().id().equals(userId)) {
+        throw new HururaaProblemException(ProblemType.LAST_HURURAA_ADMIN,
+            "%s is the last Hurura'a administrator".formatted(userId),
+            Map.of("direction", direction, "userId", userId));
+      }
+    }
+    return groupService.removeMember(direction, DelegationGroups.ADMINS, userId);
   }
 
   /**

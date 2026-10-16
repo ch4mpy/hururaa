@@ -6,21 +6,17 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.web.PagedModel;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import io.micrometer.observation.annotation.Observed;
@@ -66,7 +62,6 @@ public class DirectionController {
   public static final String BASE_PATH = "/directions";
   public static final String DIRECTION_PATH = BASE_PATH + "/{" + DIRECTION_PLACEHOLDER + "}";
   public static final String ADMINS_PATH = DIRECTION_PATH + "/admins";
-  public static final String ADMIN_PATH = ADMINS_PATH + "/{" + USER_ID_PLACEHOLDER + "}";
   public static final String USERS_PATH = DIRECTION_PATH + "/users";
   public static final String USER_GROUPS_PATH =
       USERS_PATH + "/{" + USER_ID_PLACEHOLDER + "}/groups";
@@ -204,64 +199,6 @@ public class DirectionController {
   }
 
   /**
-   * Designates a member of a direction as one of its administrators (adds them to its
-   * {@value DelegationGroups#ADMINS} group): effective when their token is renewed. Idempotent.
-   *
-   * <h4>Access control</h4>
-   * <p>
-   * Requires the user to be a Hurura'a administrator.
-   * </p>
-   *
-   * @param direction the direction's alias
-   * @param userId the designated user's id; must be a member of the direction
-   */
-  @PutMapping(path = ADMIN_PATH)
-  @Transactional(rollbackFor = HururaaProblemException.class)
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMIN + "')")
-  public void addDirectionAdmin(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
-      @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
-      Authentication authentication) throws HururaaProblemException {
-    if (delegationService.addAdmin(direction.alias(), userId)) {
-      permissionJournal.directionAdminGranted(direction.alias(), userId);
-      log.info("{} designated {} as administrator of {}", authentication.getName(), userId,
-          direction.alias());
-      resourceEvents.publish(DirectionEvents.of(direction.alias(), DirectionEvents.DIRECTION,
-          direction.alias(), EventType.UPDATE));
-    }
-  }
-
-  /**
-   * Revokes an administrator of a direction (removes them from its
-   * {@value DelegationGroups#ADMINS} group): effective when their token is renewed. Idempotent.
-   *
-   * <h4>Access control</h4>
-   * <p>
-   * Requires the user to be a Hurura'a administrator.
-   * </p>
-   *
-   * @param direction the direction's alias
-   * @param userId the revoked administrator's id
-   */
-  @DeleteMapping(path = ADMIN_PATH)
-  @Transactional(rollbackFor = HururaaProblemException.class)
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  @PreAuthorize("hasAuthority('" + HururaaPermission.Names.DIRECTION_ADMIN + "')")
-  public void removeDirectionAdmin(
-      @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
-      @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
-      Authentication authentication) throws HururaaProblemException {
-    if (delegationService.removeAdmin(direction.alias(), userId)) {
-      permissionJournal.directionAdminRevoked(direction.alias(), userId);
-      log.info("{} revoked {} as administrator of {}", authentication.getName(), userId,
-          direction.alias());
-      resourceEvents.publish(DirectionEvents.of(direction.alias(), DirectionEvents.DIRECTION,
-          direction.alias(), EventType.UPDATE));
-    }
-  }
-
-  /**
    * Searches a direction's members by username, first name, last name, or e-mail, optionally
    * narrowed to the members of one of its groups, of the groups of one of its applications, or of
    * those granting a role.
@@ -274,8 +211,8 @@ public class DirectionController {
    * <h4>Access control</h4>
    * <p>
    * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
-   * direction, or manager of one of its applications. The application, if any, must be managed by
-   * {@code direction}.
+   * direction, or manager of one of its applications. The application, if any, must be available
+   * in {@code direction}: managed by it, or Hurura'a.
    * </p>
    *
    * @param direction the direction's alias
@@ -291,7 +228,7 @@ public class DirectionController {
   @GetMapping(path = USERS_PATH)
   @Transactional(readOnly = true)
   @PreAuthorize("#direction.hasDelegate(authentication)"
-      + " and (#application == null or #application.direction == #direction.alias)")
+      + " and (#application == null or #application.isAvailableIn(#direction.alias))")
   public PagedModel<UserResponse> getDirectionUsers(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @RequestParam(required = false, defaultValue = "") String search,
@@ -312,8 +249,8 @@ public class DirectionController {
   }
 
   /**
-   * Lists the groups of a direction a member belongs to, but the
-   * {@link DelegationGroups delegation groups} (their delegations are listed apart).
+   * Lists the groups of a direction a member belongs to, the
+   * {@link DelegationGroups delegation groups} included (groups of the Hurura'a application).
    *
    * <h4>Access control</h4>
    * <p>
@@ -331,11 +268,10 @@ public class DirectionController {
   public List<GroupResponse> getDirectionUserGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId) throws HururaaProblemException {
-    final var applications = applicationRepository.findByDirectionOrderByNameAsc(direction.alias());
+    final var applications = applicationRepository.findAvailableIn(direction.alias());
     return groupService
         .findByMember(direction.alias(), userId)
         .stream()
-        .filter(group -> !DelegationGroups.isReserved(group.name()))
         .map(group -> directoryMapper.toGroupResponse(group,
             Application.owningGroup(applications, group.name()).orElse(null)))
         .toList();

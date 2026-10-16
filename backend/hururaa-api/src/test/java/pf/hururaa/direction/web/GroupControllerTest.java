@@ -1,5 +1,6 @@
 package pf.hururaa.direction.web;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,12 +11,17 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static pf.hururaa.HururaaFixtures.DAF;
 import static pf.hururaa.HururaaFixtures.DPAM;
 import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
+import static pf.hururaa.HururaaFixtures.DSI;
+import static pf.hururaa.HururaaFixtures.DSI_ADMIN;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
+import static pf.hururaa.HururaaFixtures.HURURAA_ID;
 import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.hururaa;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
 import java.util.List;
@@ -44,14 +50,17 @@ import pf.hururaa.history.PermissionHistoryService;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.journal.PermissionJournal;
 import pf.hururaa.direction.domain.Group;
+import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.uaa.DelegationService;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 
 /**
  * Groups belong to an application of their direction: the direction's administrators manage all of
  * them, an application's managers manage those of their application only. The delegation groups
- * ({@code hururaa.*}) are neither listed nor changed through this API.
+ * ({@code hururaa.*}) are groups of Hurura'a in every direction: listed, and their members
+ * changed as designations (decision 0008); the groups themselves and their roles never change.
  */
 @WebMvcTest(controllers = GroupController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
@@ -109,18 +118,28 @@ class GroupControllerTest {
   @MockitoBean
   PermissionHistoryService permissionHistoryService;
 
+  @MockitoBean
+  DelegationService delegationService;
+
   @BeforeEach
   void setUp() throws Exception {
     stubDevDelegations(directionService, applicationRepository);
     when(applicationRepository.findById(ESCALES_ID)).thenReturn(Optional.of(escales()));
     when(applicationRepository.findById(TE_FENUA_ID)).thenReturn(Optional.of(teFenua()));
     when(applicationRepository.findById(PGC_ID)).thenReturn(Optional.of(pgc()));
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
     when(applicationRepository.findByDirectionOrderByNameAsc(DPAM))
         .thenReturn(List.of(escales(), pgc()));
+    when(applicationRepository.findAvailableIn(DPAM))
+        .thenReturn(List.of(escales(), hururaa(), pgc()));
     for (final var name : List.of(GROUP, PGC_GROUP, LEGACY_GROUP, ADMINS_GROUP,
         PRODUCT_OWNERS_GROUP)) {
       when(groupService.findByName(DPAM, name))
           .thenReturn(Optional.of(new Group("id-" + name, DPAM, name)));
+    }
+    for (final var direction : List.of(DSI, DAF)) {
+      when(groupService.findByName(direction, ADMINS_GROUP))
+          .thenReturn(Optional.of(new Group("id-admins-" + direction, direction, ADMINS_GROUP)));
     }
     when(groupService.findAll(DPAM)).thenReturn(List.of(new Group("id-" + GROUP, DPAM, GROUP),
         new Group("id-" + ADMINS_GROUP, DPAM, ADMINS_GROUP),
@@ -144,13 +163,37 @@ class GroupControllerTest {
     api
         .get(GroupController.BASE_PATH, DPAM)
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(3))
+        .andExpect(jsonPath("$.length()").value(5))
         .andExpect(jsonPath("$[0].name").value(GROUP))
         .andExpect(jsonPath("$[0].applicationId").value(ESCALES_ID))
         .andExpect(jsonPath("$[0].applicationName").value("Escales"))
-        .andExpect(jsonPath("$[1].name").value(LEGACY_GROUP))
-        .andExpect(jsonPath("$[1].applicationId").doesNotExist())
-        .andExpect(jsonPath("$[2].applicationId").value(PGC_ID));
+        .andExpect(jsonPath("$[3].name").value(LEGACY_GROUP))
+        .andExpect(jsonPath("$[3].applicationId").doesNotExist())
+        .andExpect(jsonPath("$[4].applicationId").value(PGC_ID));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDpamAdmin_whenGetGroups_thenHururaaGroupsAttachedToHururaa() throws Exception {
+    api
+        .get(GroupController.BASE_PATH, DPAM)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[1].name").value(ADMINS_GROUP))
+        .andExpect(jsonPath("$[1].applicationId").value(HURURAA_ID))
+        .andExpect(jsonPath("$[1].applicationName").value("Hurura'a"))
+        .andExpect(jsonPath("$[2].name").value(PRODUCT_OWNERS_GROUP))
+        .andExpect(jsonPath("$[2].applicationId").value(HURURAA_ID));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenDpamDelegate_whenGetHururaaGroupsInDpam_thenThoseOfDpam() throws Exception {
+    api
+        .get(GroupController.APPLICATION_GROUPS_PATH, DPAM, HURURAA_ID)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].name").value(ADMINS_GROUP))
+        .andExpect(jsonPath("$[1].name").value(PRODUCT_OWNERS_GROUP));
   }
 
   @Test
@@ -440,34 +483,135 @@ class GroupControllerTest {
 
   @Test
   @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenAddMemberToAdminsGroup_thenReservedName() throws Exception {
+  void givenDpamAdmin_whenAddMemberToEscalesProductOwnersOrDpamAdmins_thenJournaledAsDelegation()
+      throws Exception {
+    when(delegationService.addManager(any(Application.class), eq(DPAM_AGENT))).thenReturn(true);
+    when(delegationService.addAdmin(DPAM, DPAM_AGENT)).thenReturn(true);
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, PRODUCT_OWNERS_GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
     api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, ADMINS_GROUP, DPAM_AGENT)
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+        .andExpect(status().isNoContent());
+
+    verify(permissionJournal).applicationManagerGranted(
+        argThat(application -> ESCALES_ID == application.getId()), eq(DPAM_AGENT));
+    verify(permissionJournal).directionAdminGranted(DPAM, DPAM_AGENT);
+    verify(permissionJournal, never()).groupMemberAdded(any(), any(), any(), any());
     verify(groupService, never()).addMember(anyString(), anyString(), anyString());
+    verify(resourceEvents).publish(argThat(event -> "application".equals(event.resourceType())
+        && String.valueOf(ESCALES_ID).equals(event.resourceId())));
+    verify(resourceEvents).publish(argThat(event -> "direction".equals(event.resourceType())
+        && DPAM.equals(event.resourceId())));
+    verify(resourceEvents).publish(argThat(event -> "group".equals(event.resourceType())
+        && ADMINS_GROUP.equals(event.resourceId())));
   }
 
   @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenChangeDelegationGroup_thenReservedName() throws Exception {
-    api.put(Map.of(), GroupController.ROLE_PATH, DPAM, PRODUCT_OWNERS_GROUP,
-        "escales.stopovers.read").andExpect(status().isConflict());
-    api.delete(GroupController.ROLE_PATH, DPAM, ADMINS_GROUP, "hururaa.direction.admin")
-        .andExpect(status().isConflict());
-    api.delete(GroupController.MEMBER_PATH, DPAM, PRODUCT_OWNERS_GROUP, DPAM_MANAGER)
-        .andExpect(status().isConflict());
-    api.delete(GroupController.GROUP_PATH, DPAM, ADMINS_GROUP).andExpect(status().isConflict());
-    verify(groupService, never()).delete(anyString(), anyString());
-    verify(groupService, never()).removeMember(anyString(), anyString(), anyString());
-    verifyNoInteractions(permissionJournal);
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDpamAdmin_whenAddMemberToDafAdmins_thenForbidden() throws Exception {
+    api.put(Map.of(), GroupController.MEMBER_PATH, DAF, ADMINS_GROUP, DPAM_AGENT)
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(delegationService, permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/dsi-manager.json")
+  void givenHururaaManager_whenAddMemberToDsiOrDpamAdmins_thenAccepted() throws Exception {
+    // decision 0008: a manager of Hurura'a may designate administrators, of the DSI included
+    api.put(Map.of(), GroupController.MEMBER_PATH, DSI, ADMINS_GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, ADMINS_GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verify(delegationService).addAdmin(DSI, DPAM_AGENT);
+    verify(delegationService).addAdmin(DPAM, DPAM_AGENT);
   }
 
   @Test
   @WithJwt("jwt/dpam-manager.json")
-  void givenManagerOfAnApplication_whenChangeItsProductOwners_thenForbidden() throws Exception {
-    // managers designate their co-managers as such, not through the groups API
+  void givenEscalesManager_whenAddMemberToItsProductOwners_thenAccepted_andToDpamAdmins_thenForbidden()
+      throws Exception {
+    // the managers of an application co-manage its product-owners group
     api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, PRODUCT_OWNERS_GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verify(delegationService).addManager(
+        argThat(application -> ESCALES_ID == application.getId()), eq(DPAM_AGENT));
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, ADMINS_GROUP, DPAM_AGENT)
         .andExpect(status().isForbidden());
+    verify(delegationService, never()).addAdmin(anyString(), anyString());
+  }
+
+  @Test
+  @WithJwt("jwt/dsi-admin.json")
+  void givenLastHururaaAdmin_whenRemoved_thenLastHururaaAdmin() throws Exception {
+    when(delegationService.removeAdmin(DSI, DSI_ADMIN)).thenThrow(new HururaaProblemException(
+        ProblemType.LAST_HURURAA_ADMIN, "last", Map.of("direction", DSI, "userId", DSI_ADMIN)));
+
+    api.delete(GroupController.MEMBER_PATH, DSI, ADMINS_GROUP, DSI_ADMIN)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.LAST_HURURAA_ADMIN.uri().toString()));
+    verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenDpamAdmin_whenRemoveManagerFromProductOwners_thenRevokedAndJournaled()
+      throws Exception {
+    when(delegationService.removeManager(any(Application.class), eq(DPAM_MANAGER)))
+        .thenReturn(true);
+
+    api.delete(GroupController.MEMBER_PATH, DPAM, PRODUCT_OWNERS_GROUP, DPAM_MANAGER)
+        .andExpect(status().isNoContent());
+    verify(permissionJournal).applicationManagerRevoked(
+        argThat(application -> ESCALES_ID == application.getId()), eq(DPAM_MANAGER));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenAlreadyMember_whenAddToReservedGroup_thenNotJournaled() throws Exception {
+    when(delegationService.addAdmin(DPAM, DPAM_AGENT)).thenReturn(false);
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, ADMINS_GROUP, DPAM_AGENT)
+        .andExpect(status().isNoContent());
+    verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenChangeReservedGroupItself_thenReservedName() throws Exception {
+    when(applicationRepository.findAvailableIn(DSI)).thenReturn(List.of(hururaa(), teFenua()));
+    api.put(Map.of(), GroupController.ROLE_PATH, DPAM, PRODUCT_OWNERS_GROUP,
+        "escales.stopovers.read").andExpect(status().isConflict());
+    api.delete(GroupController.ROLE_PATH, DPAM, ADMINS_GROUP, "hururaa.direction.admin")
+        .andExpect(status().isConflict());
+    api.delete(GroupController.GROUP_PATH, DPAM, ADMINS_GROUP).andExpect(status().isConflict());
+    api.post(new GroupRequest("auditors"), GroupController.APPLICATION_GROUPS_PATH, DSI,
+        HURURAA_ID)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    // Hurura'a's roles are granted by its delegation groups only
+    api.put(Map.of(), GroupController.ROLE_PATH, DPAM, GROUP, "hururaa.direction.admin")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    verify(groupService, never()).delete(anyString(), anyString());
+    verify(groupService, never()).save(anyString(), anyString());
+    verify(groupService, never()).addClientRole(anyString(), anyString(), anyString(),
+        anyString());
+    verify(groupService, never()).removeClientRole(anyString(), anyString(), anyString(),
+        anyString());
+    verifyNoInteractions(permissionJournal);
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenReservedGroupOfNoKnownDelegation_whenAddMember_thenReservedName() throws Exception {
+    when(groupService.findByName(DPAM, "hururaa.pgc-legacy"))
+        .thenReturn(Optional.of(new Group("id-x", DPAM, "hururaa.pgc-legacy")));
+
+    api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, "hururaa.pgc-legacy", DPAM_AGENT)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    verifyNoInteractions(delegationService, permissionJournal);
   }
 
   @Test

@@ -75,6 +75,21 @@ class PermissionJournalTest {
   }
 
   @Test
+  void whenJournalingDelegations_thenWithTheirDelegationGroup() {
+    journal.directionAdminGranted(DPAM, DPAM_AGENT);
+    journal.applicationManagerRevoked(escales(), DPAM_AGENT);
+
+    assertThat(repository.findByDirectionOrderByIdDesc(DPAM, PageRequest.of(0, 10)).getContent())
+        .extracting(PermissionEvent::getType, PermissionEvent::getGroupName,
+            PermissionEvent::getApplicationName, PermissionEvent::getUserId)
+        .containsExactly(
+            tuple(PermissionEventType.APPLICATION_MANAGER_REVOKED,
+                "hururaa.escales.product-owners", "Escales", DPAM_AGENT),
+            tuple(PermissionEventType.DIRECTION_ADMIN_GRANTED, "hururaa.admins", null,
+                DPAM_AGENT));
+  }
+
+  @Test
   void whenJournalingAnotherDirection_thenNotListedForThisOne() {
     journal.directionCreated("dsp");
 

@@ -64,23 +64,23 @@ public class ApplicationRoleController {
 
   /**
    * Lists an application's roles (the client roles of its {@code <prefix>-api} Keycloak client).
+   * For Hurura'a, only the roles which mean something in {@code direction}: its administrators' and
+   * the managers' of its own applications.
    *
    * <h4>Access control</h4>
    * <p>
    * Requires the user to have a say on the application: Hurura'a administrator, administrator of
-   * its direction, or manager of the application. The application must be managed by {@code
-   * direction}.
+   * its direction, or manager of the application; for Hurura'a, any delegate of {@code direction}.
+   * The application must be available in {@code direction}.
    * </p>
    *
-   * @param direction the direction managing the application
+   * @param direction the direction managing the application (any direction for Hurura'a)
    * @param application the application resolved from the {@code applicationId} path variable
    * @return the application's roles, by name
    */
   @GetMapping(path = BASE_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
-      + " or #application.isManagedBy(authentication))"
-      + " and #application.direction == #direction.alias")
+  @PreAuthorize("#direction.canReadApplication(#application, authentication)")
   public List<ApplicationRoleResponse> getApplicationRoles(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
@@ -89,8 +89,17 @@ public class ApplicationRoleController {
     return clientRoleService
         .findAll(keycloakProperties.apiClientId(application.getClientPrefix()))
         .stream()
+        .filter(role -> !application.isHururaa() || meansSomethingIn(direction, role.name()))
         .map(applicationMapper::toApplicationRoleResponse)
         .toList();
+  }
+
+  /** Whether a role of Hurura'a is effective in that direction (see {@link HururaaPermission}). */
+  private static boolean meansSomethingIn(DelegatedDirection direction, String role) {
+    return HururaaPermission.Names.DIRECTION_ADMIN.equals(role) || direction
+        .applicationPrefixes()
+        .stream()
+        .anyMatch(prefix -> HururaaPermission.applicationManager(prefix).equals(role));
   }
 
   /**
@@ -120,7 +129,7 @@ public class ApplicationRoleController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @RequestBody @Valid ApplicationRoleRequest request,
       Authentication authentication) throws HururaaProblemException {
-    requireNotReserved(request.name());
+    requireNotReserved(application, request.name());
     if (clientRoleService.save(keycloakProperties.apiClientId(application.getClientPrefix()),
         request.name(), request.description())) {
       permissionJournal.applicationRoleCreated(application, request.name());
@@ -164,7 +173,7 @@ public class ApplicationRoleController {
       @PathVariable(name = APPLICATION_ID_PLACEHOLDER) Application application,
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
-    requireNotReserved(role);
+    requireNotReserved(application, role);
     if (clientRoleService.delete(keycloakProperties.apiClientId(application.getClientPrefix()),
         role)) {
       permissionJournal.applicationRoleDeleted(application, role);
@@ -177,10 +186,12 @@ public class ApplicationRoleController {
 
   /**
    * Hurura'a's own roles ({@code hururaa.direction.admin}, {@code hururaa.application.*.manage})
-   * are created and deleted along with the directions and applications, never through this API.
+   * are created and deleted along with the directions and applications, never through this API,
+   * and Hurura'a has no other role.
    */
-  private static void requireNotReserved(String role) throws HururaaProblemException {
-    if (HururaaPermission.isReserved(role)) {
+  private static void requireNotReserved(Application application, String role)
+      throws HururaaProblemException {
+    if (application.isHururaa() || HururaaPermission.isReserved(role)) {
       throw new HururaaProblemException(ProblemType.RESERVED_NAME,
           "Role %s is reserved to Hurura'a's delegations".formatted(role), Map.of("name", role));
     }

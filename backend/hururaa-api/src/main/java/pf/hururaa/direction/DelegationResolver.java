@@ -12,6 +12,7 @@ import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.uaa.DelegationGroups;
 import pf.hururaa.uaa.UaaProperties;
 
 /**
@@ -62,9 +63,16 @@ public class DelegationResolver {
         .orElseThrow(() -> new HururaaProblemException(ProblemType.GROUP_NOT_FOUND,
             "No group %s in direction %s".formatted(groupName, directionAlias),
             Map.of("direction", directionAlias, "group", groupName)));
-    return new DelegatedGroup(group.id(), group.name(), direction, Application
-        .owningGroup(applicationRepository.findByDirectionOrderByNameAsc(directionAlias),
-            group.name())
-        .orElse(null));
+    final var applications = applicationRepository.findAvailableIn(directionAlias);
+    final var coManaged = DelegationGroups
+        .productOwnersPrefix(group.name())
+        .flatMap(prefix -> applications
+            .stream()
+            .filter(application -> application.getClientPrefix().equals(prefix)
+                && application.getDirection().equals(directionAlias))
+            .findAny())
+        .orElse(null);
+    return new DelegatedGroup(group.id(), group.name(), direction,
+        Application.owningGroup(applications, group.name()).orElse(null), coManaged);
   }
 }

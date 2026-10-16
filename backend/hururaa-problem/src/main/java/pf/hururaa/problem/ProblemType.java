@@ -57,9 +57,17 @@ public enum ProblemType {
   /**
    * Parameters: {@code name}. The name (an application's client prefix, a group, a role) is
    * reserved to Hurura'a's delegations ({@code hururaa.admins}, {@code hururaa.direction.admin}...):
-   * only Hurura'a creates, changes or deletes those, along with the directions and applications.
+   * only Hurura'a creates or deletes those, along with the directions and applications, and the
+   * roles its groups grant never change (only their members do).
    */
   RESERVED_NAME(HttpStatus.CONFLICT, "reserved-name"),
+
+  /**
+   * Parameters: {@code direction}, {@code userId}. The user is the last Hurura'a administrator
+   * (the last member of {@code hururaa.admins} in the DSI): removing them would leave nobody to
+   * administer Hurura'a.
+   */
+  LAST_HURURAA_ADMIN(HttpStatus.CONFLICT, "last-hururaa-admin"),
 
   /**
    * Parameters: {@code entity} (simple class name) and {@code id} when known. Another request

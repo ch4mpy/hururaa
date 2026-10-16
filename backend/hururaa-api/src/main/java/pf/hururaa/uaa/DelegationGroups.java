@@ -1,5 +1,6 @@
 package pf.hururaa.uaa;
 
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -18,8 +19,10 @@ import java.util.Set;
  * </ul>
  *
  * <p>
- * Their members are only changed through the endpoints designating administrators and managers,
- * never through the groups API, which refuses every change to a reserved group.
+ * Their members are changed through the groups API, like those of any group of an application
+ * (decision 0008): by the administrators of their direction and the managers of Hurura'a, and, for
+ * {@code hururaa.<prefix>.product-owners}, by the managers of that application too. The groups
+ * themselves and the roles they grant are never changed through the API.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
@@ -28,6 +31,12 @@ public final class DelegationGroups {
 
   /** The group of a direction's administrators. */
   public static final String ADMINS = HururaaPermission.RESERVED_PREFIX + "admins";
+
+  /**
+   * The client prefix of the Hurura'a application, registered in the DSI and the only one
+   * available in every direction: the delegation groups of every direction are its groups.
+   */
+  public static final String HURURAA_CLIENT_PREFIX = "hururaa";
 
   private static final String PRODUCT_OWNERS_SUFFIX = ".product-owners";
 
@@ -49,8 +58,31 @@ public final class DelegationGroups {
     return HururaaPermission.RESERVED_PREFIX + clientPrefix + PRODUCT_OWNERS_SUFFIX;
   }
 
-  /** Whether the group is one of Hurura'a's, whose roles and members the groups API can't change. */
+  /**
+   * Whether the group is one of Hurura'a's: the groups API changes its members, never the group
+   * itself nor the roles it grants.
+   */
   public static boolean isReserved(String groupName) {
     return groupName.startsWith(HururaaPermission.RESERVED_PREFIX);
+  }
+
+  /** Whether the group is the one of a direction's administrators. */
+  public static boolean isAdmins(String groupName) {
+    return ADMINS.equals(groupName);
+  }
+
+  /**
+   * @param groupName a group's name
+   * @return the client prefix of the application whose managers the group holds
+   *         ({@code escales} for {@code hururaa.escales.product-owners}), empty for any other group
+   */
+  public static Optional<String> productOwnersPrefix(String groupName) {
+    if (!groupName.startsWith(HururaaPermission.RESERVED_PREFIX)
+        || !groupName.endsWith(PRODUCT_OWNERS_SUFFIX)) {
+      return Optional.empty();
+    }
+    final var prefix = groupName.substring(HururaaPermission.RESERVED_PREFIX.length(),
+        groupName.length() - PRODUCT_OWNERS_SUFFIX.length());
+    return prefix.isEmpty() || prefix.contains(".") ? Optional.empty() : Optional.of(prefix);
   }
 }

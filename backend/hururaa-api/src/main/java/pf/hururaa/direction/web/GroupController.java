@@ -50,6 +50,8 @@ import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 import pf.hururaa.uaa.DelegationGroups;
+import pf.hururaa.uaa.DelegationService;
+import pf.hururaa.uaa.HururaaPermission;
 
 /**
  * The groups of the directions. A group belongs to an application of its direction, whose client
@@ -59,9 +61,10 @@ import pf.hururaa.uaa.DelegationGroups;
  *
  * <p>
  * The {@link DelegationGroups delegation groups} ({@code hururaa.admins},
- * {@code hururaa.<prefix>.product-owners}) are not listed, and every change to them is refused with
- * {@code RESERVED_NAME}: their members are designated as direction administrators or application
- * managers.
+ * {@code hururaa.<prefix>.product-owners}) are groups of the Hurura'a application in every
+ * direction, listed like the others. Changing their members designates or revokes direction
+ * administrators and application managers; any other change to them is refused with
+ * {@code RESERVED_NAME}.
  * </p>
  */
 @Tag(name = "Groups")
@@ -104,6 +107,8 @@ public class GroupController {
 
   private final PermissionHistoryMapper permissionHistoryMapper;
 
+  private final DelegationService delegationService;
+
   /**
    * Lists a direction's groups, with the application each belongs to.
    *
@@ -122,11 +127,10 @@ public class GroupController {
   public List<GroupResponse> getGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction)
       throws HururaaProblemException {
-    final var applications = applicationRepository.findByDirectionOrderByNameAsc(direction.alias());
+    final var applications = applicationRepository.findAvailableIn(direction.alias());
     return groupService
         .findAll(direction.alias())
         .stream()
-        .filter(group -> !DelegationGroups.isReserved(group.name()))
         .map(group -> directoryMapper.toGroupResponse(group,
             Application.owningGroup(applications, group.name()).orElse(null)))
         .toList();
@@ -138,18 +142,18 @@ public class GroupController {
    * <h4>Access control</h4>
    * <p>
    * Requires the user to have a say on the direction: Hurura'a administrator, administrator of the
-   * direction, or manager of one of its applications. The application must be managed by {@code
-   * direction}.
+   * direction, or manager of one of its applications. The application must be available in {@code
+   * direction}: managed by it, or Hurura'a, whose groups live in every direction.
    * </p>
    *
    * @param direction the direction managing the application
    * @param application the application resolved from the {@code applicationId} path variable
-   * @return the application's groups, by name
+   * @return the application's groups in {@code direction}, by name
    */
   @GetMapping(path = APPLICATION_GROUPS_PATH)
   @Transactional(readOnly = true)
   @PreAuthorize("#direction.hasDelegate(authentication)"
-      + " and #application.direction == #direction.alias")
+      + " and #application.isAvailableIn(#direction.alias)")
   public List<GroupResponse> getApplicationGroups(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
@@ -159,7 +163,6 @@ public class GroupController {
         .findAll(direction.alias())
         .stream()
         .filter(group -> application.ownsGroup(group.name()))
-        .filter(group -> !DelegationGroups.isReserved(group.name()))
         .map(group -> directoryMapper.toGroupResponse(group, application))
         .toList();
   }
@@ -319,6 +322,12 @@ public class GroupController {
       @PathVariable(name = ROLE_PLACEHOLDER) String role,
       Authentication authentication) throws HururaaProblemException {
     requireNotReserved(group);
+    if (HururaaPermission.isReserved(role)) {
+      // Hurura'a's roles are granted by its delegation groups only
+      throw new HururaaProblemException(ProblemType.RESERVED_NAME,
+          "Role %s is granted by Hurura'a's delegation groups only".formatted(role),
+          Map.of("name", role));
+    }
     final var application = requireApplication(group);
     if (groupService.addClientRole(direction, group.name(),
         keycloakProperties.apiClientId(application.getClientPrefix()), role)) {
@@ -418,7 +427,10 @@ public class GroupController {
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    requireNotReserved(group);
+    if (group.isReserved()) {
+      designate(group, userId, authentication);
+      return;
+    }
     if (groupService.addMember(direction, group.name(), userId)) {
       permissionJournal.groupMemberAdded(direction, group.application(), group.name(), userId);
     }
@@ -450,7 +462,10 @@ public class GroupController {
       @PathVariable(name = GROUP_PLACEHOLDER) DelegatedGroup group,
       @PathVariable(name = USER_ID_PLACEHOLDER) String userId,
       Authentication authentication) throws HururaaProblemException {
-    requireNotReserved(group);
+    if (group.isReserved()) {
+      revoke(group, userId, authentication);
+      return;
+    }
     if (groupService.removeMember(direction, group.name(), userId)) {
       permissionJournal.groupMemberRemoved(direction, group.application(), group.name(), userId);
     }
@@ -489,6 +504,83 @@ public class GroupController {
         .find(new PermissionHistoryFilter(direction, null, group.name(),
             categories == null ? Set.of() : categories), pageParams.toPageable())
         .map(permissionHistoryMapper::toPermissionChangeResponse));
+  }
+
+  /**
+   * Adding a member to a delegation group designates a direction administrator
+   * ({@value DelegationGroups#ADMINS}) or an application manager
+   * ({@code hururaa.<prefix>.product-owners}): journaled and published as such.
+   */
+  private void designate(DelegatedGroup group, String userId, Authentication authentication)
+      throws HururaaProblemException {
+    final var direction = group.direction().alias();
+    if (DelegationGroups.isAdmins(group.name())) {
+      if (delegationService.addAdmin(direction, userId)) {
+        permissionJournal.directionAdminGranted(direction, userId);
+      }
+      log.info("{} designated {} as administrator of {}", authentication.getName(), userId,
+          direction);
+      publishDelegation(group, null);
+      return;
+    }
+    final var application = requireDelegatedApplication(group);
+    if (delegationService.addManager(application, userId)) {
+      permissionJournal.applicationManagerGranted(application, userId);
+    }
+    log.info("{} designated {} as manager of {}", authentication.getName(), userId,
+        application.getClientPrefix());
+    publishDelegation(group, application);
+  }
+
+  /**
+   * Removing a member from a delegation group revokes a direction administrator (never the last
+   * Hurura'a administrator) or an application manager: journaled and published as such.
+   */
+  private void revoke(DelegatedGroup group, String userId, Authentication authentication)
+      throws HururaaProblemException {
+    final var direction = group.direction().alias();
+    if (DelegationGroups.isAdmins(group.name())) {
+      if (delegationService.removeAdmin(direction, userId)) {
+        permissionJournal.directionAdminRevoked(direction, userId);
+      }
+      log.info("{} revoked {} as administrator of {}", authentication.getName(), userId,
+          direction);
+      publishDelegation(group, null);
+      return;
+    }
+    final var application = requireDelegatedApplication(group);
+    if (delegationService.removeManager(application, userId)) {
+      permissionJournal.applicationManagerRevoked(application, userId);
+    }
+    log.info("{} revoked {} as manager of {}", authentication.getName(), userId,
+        application.getClientPrefix());
+    publishDelegation(group, application);
+  }
+
+  /**
+   * The application whose managers a {@code hururaa.<prefix>.product-owners} group holds; any other
+   * reserved name carries no delegation Hurura'a knows of.
+   */
+  private static Application requireDelegatedApplication(DelegatedGroup group)
+      throws HururaaProblemException {
+    final var application = group.coManaged();
+    if (application == null) {
+      throw new HururaaProblemException(ProblemType.RESERVED_NAME,
+          "Group %s of %s carries no known delegation".formatted(group.name(),
+              group.direction().alias()),
+          Map.of("name", group.name()));
+    }
+    return application;
+  }
+
+  /** What a designation used to publish, and the group's own event for the screens open on it. */
+  private void publishDelegation(DelegatedGroup group, @Nullable Application application) {
+    final var direction = group.direction().alias();
+    resourceEvents.publish(application == null
+        ? DirectionEvents.of(direction, DirectionEvents.DIRECTION, direction, EventType.UPDATE)
+        : DirectionEvents.of(direction, DirectionEvents.APPLICATION,
+            String.valueOf(application.getId()), EventType.UPDATE));
+    publish(direction, group.name(), EventType.UPDATE);
   }
 
   /**

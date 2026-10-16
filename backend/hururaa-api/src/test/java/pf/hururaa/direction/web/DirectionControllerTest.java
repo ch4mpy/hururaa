@@ -17,8 +17,10 @@ import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
 import static pf.hururaa.HururaaFixtures.HURURAA_ADMIN;
+import static pf.hururaa.HururaaFixtures.HURURAA_ID;
 import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
 import static pf.hururaa.HururaaFixtures.escales;
+import static pf.hururaa.HururaaFixtures.hururaa;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
 import static pf.hururaa.HururaaFixtures.user;
@@ -55,6 +57,7 @@ import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.direction.MemberFilter;
 import pf.hururaa.direction.MemberSearchService;
 import pf.hururaa.direction.domain.Direction;
+import pf.hururaa.direction.domain.Group;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.ProblemType;
@@ -63,8 +66,8 @@ import pf.hururaa.uaa.DelegationService;
 
 /**
  * Level 1 of the delegation chain: Hurura'a administrators (administrators of the DSI) create
- * the directions and designate their administrators (members of their {@code hururaa.admins}
- * group).
+ * the directions, whose administrators (members of their {@code hururaa.admins} group) are
+ * designated through the groups API.
  */
 @WebMvcTest(controllers = DirectionController.class)
 @AutoConfigureAddonsWebmvcResourceServerSecurity
@@ -177,6 +180,44 @@ class DirectionControllerTest {
   }
 
   @Test
+  @WithJwt("jwt/dpam-admin.json")
+  void givenHururaa_whenSearchDpamUsers_thenFilterIsPassedOn() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    when(memberSearchService.search(any(), any(), any()))
+        .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+    api
+        .get(DirectionController.USERS_PATH + "?applicationId=" + HURURAA_ID, DPAM)
+        .andExpect(status().isOk());
+
+    verify(memberSearchService).search(eq(DPAM), argThat(filter -> filter.application() != null
+        && HURURAA_ID == filter.application().getId()), eq(PageRequest.of(0, 20)));
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenGetDpamManagerGroups_thenProductOwnersListed() throws Exception {
+    when(groupService.findByMember(DPAM, DPAM_MANAGER)).thenReturn(List.of(
+        new Group("g1", DPAM, "escales.agent"),
+        new Group("g2", DPAM, "hururaa.escales.product-owners")));
+
+    api
+        .get(DirectionController.USER_GROUPS_PATH, DPAM, DPAM_MANAGER)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[1].name").value("hururaa.escales.product-owners"))
+        .andExpect(jsonPath("$[1].applicationId").value(HURURAA_ID))
+        .andExpect(jsonPath("$[1].applicationName").value("Hurura'a"));
+  }
+
+  @Test
+  @WithJwt("jwt/dsi-manager.json")
+  void givenHururaaManager_whenGetAdminsOfAnyDirection_thenOk() throws Exception {
+    // a manager of Hurura'a is a delegate of every direction (decision 0008)
+    api.get(DirectionController.ADMINS_PATH, DAF).andExpect(status().isOk());
+  }
+
+  @Test
   @WithJwt("jwt/dpam-manager.json")
   void givenUnknownApplication_whenSearchUsers_thenNotFound() throws Exception {
     api
@@ -201,52 +242,6 @@ class DirectionControllerTest {
   void givenDirectionAdmin_whenGetAdminsOfAnotherDirection_thenForbidden() throws Exception {
     api.get(DirectionController.ADMINS_PATH, DAF).andExpect(status().isForbidden());
     verify(delegationService, never()).findAdmins(any());
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenDesignateAnotherAdmin_thenForbidden() throws Exception {
-
-    api
-        .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_AGENT)
-        .andExpect(status().isForbidden());
-    verify(delegationService, never()).addAdmin(any(), any());
-  }
-
-  @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenDesignateAdmin_thenAddedToAdminsGroupAndJournaled()
-      throws Exception {
-    when(delegationService.addAdmin(DPAM, DPAM_AGENT)).thenReturn(true);
-
-    api
-        .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_AGENT)
-        .andExpect(status().isNoContent());
-    verify(permissionJournal).directionAdminGranted(DPAM, DPAM_AGENT);
-    verify(resourceEvents).publish(any());
-  }
-
-  @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenAdminAlready_whenDesignateAdmin_thenNothingJournaled() throws Exception {
-    when(delegationService.addAdmin(DPAM, DPAM_ADMIN)).thenReturn(false);
-
-    api
-        .put(Map.of(), DirectionController.ADMIN_PATH, DPAM, DPAM_ADMIN)
-        .andExpect(status().isNoContent());
-    verifyNoInteractions(permissionJournal, resourceEvents);
-  }
-
-  @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenRevokeAdmin_thenRemovedFromAdminsGroupAndJournaled()
-      throws Exception {
-    when(delegationService.removeAdmin(DSI, "someone")).thenReturn(true);
-
-    api
-        .delete(DirectionController.ADMIN_PATH, DSI, "someone")
-        .andExpect(status().isNoContent());
-    verify(permissionJournal).directionAdminRevoked(DSI, "someone");
   }
 
   @Test
