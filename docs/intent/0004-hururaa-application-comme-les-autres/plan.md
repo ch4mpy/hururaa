@@ -208,3 +208,7 @@ Constats de lecture qui orientent le plan :
   `dpam.manager` sous le filtre Hurura'a (CA-11) ; `GroupControllerTest` vérifie le type
   `RESERVED_NAME` des trois premiers refus de CA-8 ; `canManageGroup` ne montre aucune action sur un
   groupe `hururaa.*` sans délégation connue, que l'API refuse.
+- 2026-10-17 — Revue (I-1) : DEL-2 réécrite aussi — `hururaa.application.hururaa.manage`, détenu
+  dans la DSI, vaut dans toutes les directions (EX-5, tableau des personas, décision 0008), ce que
+  DEL-2 interdisait et que la ligne DEL-2 du tableau des politiques de la spec omettait ; la spec
+  approuvée n'est pas modifiée, la politique suit la décision. Evals relancées (`.claude/**`).
