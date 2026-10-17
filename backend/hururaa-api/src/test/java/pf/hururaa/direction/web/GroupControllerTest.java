@@ -573,7 +573,8 @@ class GroupControllerTest {
 
     api.put(Map.of(), GroupController.MEMBER_PATH, DPAM, ADMINS_GROUP, DPAM_AGENT)
         .andExpect(status().isNoContent());
-    verifyNoInteractions(permissionJournal);
+    // like the designations it replaces: no journal, log nor event when nothing changed (TRA-3)
+    verifyNoInteractions(permissionJournal, resourceEvents);
   }
 
   @Test

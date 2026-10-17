@@ -509,7 +509,8 @@ public class GroupController {
   /**
    * Adding a member to a delegation group designates a direction administrator
    * ({@value DelegationGroups#ADMINS}) or an application manager
-   * ({@code hururaa.<prefix>.product-owners}): journaled and published as such.
+   * ({@code hururaa.<prefix>.product-owners}): journaled, logged and published as such, only when
+   * the user was not one already.
    */
   private void designate(DelegatedGroup group, String userId, Authentication authentication)
       throws HururaaProblemException {
@@ -517,24 +518,25 @@ public class GroupController {
     if (DelegationGroups.isAdmins(group.name())) {
       if (delegationService.addAdmin(direction, userId)) {
         permissionJournal.directionAdminGranted(direction, userId);
+        log.info("{} designated {} as administrator of {}", authentication.getName(), userId,
+            direction);
+        publishDelegation(group, null);
       }
-      log.info("{} designated {} as administrator of {}", authentication.getName(), userId,
-          direction);
-      publishDelegation(group, null);
       return;
     }
     final var application = requireDelegatedApplication(group);
     if (delegationService.addManager(application, userId)) {
       permissionJournal.applicationManagerGranted(application, userId);
+      log.info("{} designated {} as manager of {}", authentication.getName(), userId,
+          application.getClientPrefix());
+      publishDelegation(group, application);
     }
-    log.info("{} designated {} as manager of {}", authentication.getName(), userId,
-        application.getClientPrefix());
-    publishDelegation(group, application);
   }
 
   /**
    * Removing a member from a delegation group revokes a direction administrator (never the last
-   * Hurura'a administrator) or an application manager: journaled and published as such.
+   * Hurura'a administrator) or an application manager: journaled, logged and published as such,
+   * only when the user was one.
    */
   private void revoke(DelegatedGroup group, String userId, Authentication authentication)
       throws HururaaProblemException {
@@ -542,19 +544,19 @@ public class GroupController {
     if (DelegationGroups.isAdmins(group.name())) {
       if (delegationService.removeAdmin(direction, userId)) {
         permissionJournal.directionAdminRevoked(direction, userId);
+        log.info("{} revoked {} as administrator of {}", authentication.getName(), userId,
+            direction);
+        publishDelegation(group, null);
       }
-      log.info("{} revoked {} as administrator of {}", authentication.getName(), userId,
-          direction);
-      publishDelegation(group, null);
       return;
     }
     final var application = requireDelegatedApplication(group);
     if (delegationService.removeManager(application, userId)) {
       permissionJournal.applicationManagerRevoked(application, userId);
+      log.info("{} revoked {} as manager of {}", authentication.getName(), userId,
+          application.getClientPrefix());
+      publishDelegation(group, application);
     }
-    log.info("{} revoked {} as manager of {}", authentication.getName(), userId,
-        application.getClientPrefix());
-    publishDelegation(group, application);
   }
 
   /**
