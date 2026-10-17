@@ -1,14 +1,10 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { ApplicationsApi, DirectionsApi } from '@api/hururaa-api';
+import { DirectionsApi } from '@api/hururaa-api';
 import { TableModule } from 'primeng/table';
-import { map, of } from 'rxjs';
-import {
-  ADMINS_GROUP,
-  DelegationsService,
-  HURURAA_CLIENT_PREFIX,
-} from '../../core/delegations.service';
+import { of } from 'rxjs';
+import { ADMINS_GROUP, DelegationsService } from '../../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
 import { userLabel } from '../shared/labels';
 import { PermissionHistory } from '../shared/permission-history';
@@ -75,7 +71,6 @@ import { PermissionHistory } from '../shared/permission-history';
 })
 export class DirectionOverview {
   private readonly api = inject(DirectionsApi);
-  private readonly applicationsApi = inject(ApplicationsApi);
   protected readonly delegations = inject(DelegationsService);
   protected readonly labelOf = userLabel;
   protected readonly adminsGroup = ADMINS_GROUP;
@@ -97,13 +92,8 @@ export class DirectionOverview {
 
   /** Hurura'a, available in every direction: the administrators' group is one of its groups. */
   protected readonly hururaa = rxResource({
-    params: () => (this.reads() ? this.direction() : undefined),
-    stream: ({ params }) =>
-      params
-        ? this.applicationsApi
-            .getApplications(params)
-            .pipe(map((apps) => apps.find((a) => a.clientPrefix === HURURAA_CLIENT_PREFIX)))
-        : of(undefined),
+    params: () => this.reads() || undefined,
+    stream: () => this.delegations.hururaaApplication(),
   });
 
   constructor() {

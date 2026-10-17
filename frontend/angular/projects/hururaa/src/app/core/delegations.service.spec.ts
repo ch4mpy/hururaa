@@ -9,6 +9,7 @@ import {
   HururaaRoles,
   isReservedGroup,
   productOwnersGroup,
+  productOwnersPrefix,
 } from './delegations.service';
 
 const escales = {
@@ -198,6 +199,11 @@ describe('DelegationsService', () => {
       expect(isReservedGroup(ADMINS_GROUP)).toBe(true);
       expect(isReservedGroup(productOwnersGroup('escales'))).toBe(true);
       expect(isReservedGroup('escales.agent')).toBe(false);
+      // built and parsed in one place, like the API's DelegationGroups
+      expect(productOwnersPrefix(productOwnersGroup('te-fenua'))).toBe('te-fenua');
+      expect(productOwnersPrefix(ADMINS_GROUP)).toBeUndefined();
+      expect(productOwnersPrefix('hururaa.a.b.product-owners')).toBeUndefined();
+      expect(productOwnersPrefix('escales.product-owners')).toBeUndefined();
       http.expectOne('/gateway/me').flush({ directions: [] });
     });
   });

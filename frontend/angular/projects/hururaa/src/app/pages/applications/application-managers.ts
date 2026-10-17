@@ -1,10 +1,9 @@
 import { Component, computed, inject, input, numberAttribute } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { ApplicationManagersApi, ApplicationsApi } from '@api/hururaa-api';
+import { ApplicationManagersApi } from '@api/hururaa-api';
 import { TableModule } from 'primeng/table';
-import { map, of } from 'rxjs';
-import { HURURAA_CLIENT_PREFIX, productOwnersGroup } from '../../core/delegations.service';
+import { DelegationsService, productOwnersGroup } from '../../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
 import { userLabel } from '../shared/labels';
 import { ApplicationContext } from './application-context';
@@ -55,7 +54,7 @@ import { ApplicationContext } from './application-context';
 })
 export class ApplicationManagers {
   private readonly api = inject(ApplicationManagersApi);
-  private readonly applicationsApi = inject(ApplicationsApi);
+  private readonly delegations = inject(DelegationsService);
   private readonly context = inject(ApplicationContext);
   protected readonly labelOf = userLabel;
 
@@ -75,13 +74,8 @@ export class ApplicationManagers {
 
   /** Hurura'a, available in every direction, the application the managers' group belongs to. */
   protected readonly hururaa = rxResource({
-    params: () => (this.productOwners() ? this.direction() : undefined),
-    stream: ({ params }) =>
-      params
-        ? this.applicationsApi
-            .getApplications(params)
-            .pipe(map((apps) => apps.find((a) => a.clientPrefix === HURURAA_CLIENT_PREFIX)))
-        : of(undefined),
+    params: () => (this.productOwners() ? true : undefined),
+    stream: () => this.delegations.hururaaApplication(),
   });
 
   constructor() {
