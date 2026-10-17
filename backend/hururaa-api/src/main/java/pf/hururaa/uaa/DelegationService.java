@@ -8,6 +8,7 @@ import pf.hururaa.application.domain.Application;
 import pf.hururaa.direction.domain.User;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.keycloak.GroupService;
+import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 
@@ -36,8 +37,21 @@ public class DelegationService {
   /** The ID of {@code hururaa-api}, the client carrying Hurura'a's roles. */
   private final String rolesNamespace;
 
+  /**
+   * @throws IllegalStateException when {@code roles-namespace} is not the API client of the
+   *         Hurura'a application: the roles provisioned here are read, like any application's, on
+   *         that client ({@link KeycloakAdminApiProperties#apiClientId(String)})
+   */
   public DelegationService(GroupService groupService, ClientRoleService clientRoleService,
-      UaaProperties uaaProperties, @Value("${roles-namespace}") String rolesNamespace) {
+      UaaProperties uaaProperties, KeycloakAdminApiProperties keycloakProperties,
+      @Value("${roles-namespace}") String rolesNamespace) {
+    final var hururaaApiClient =
+        keycloakProperties.apiClientId(DelegationGroups.HURURAA_CLIENT_PREFIX);
+    if (!hururaaApiClient.equals(rolesNamespace)) {
+      throw new IllegalStateException(
+          "roles-namespace (%s) must be the API client of Hurura'a (%s)".formatted(rolesNamespace,
+              hururaaApiClient));
+    }
     this.groupService = groupService;
     this.clientRoleService = clientRoleService;
     this.uaaProperties = uaaProperties;

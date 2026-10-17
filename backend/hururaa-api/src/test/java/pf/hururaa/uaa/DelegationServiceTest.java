@@ -15,6 +15,7 @@ import pf.hururaa.HururaaFixtures;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.keycloak.GroupService;
+import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 
@@ -33,7 +34,20 @@ class DelegationServiceTest {
     groupService = mock(GroupService.class);
     clientRoleService = mock(ClientRoleService.class);
     service = new DelegationService(groupService, clientRoleService,
-        new UaaProperties(HururaaFixtures.DSI), ROLES_NAMESPACE);
+        new UaaProperties(HururaaFixtures.DSI), keycloakProperties("-api"), ROLES_NAMESPACE);
+  }
+
+  private static KeycloakAdminApiProperties keycloakProperties(String apiClientSuffix) {
+    return new KeycloakAdminApiProperties("public-facing", apiClientSuffix, "-bff", List.of());
+  }
+
+  @Test
+  void givenRolesNamespaceOtherThanHururaaApiClient_whenCreated_thenRefused() {
+    // Hurura'a's roles are written on roles-namespace and read on its API client: one client
+    assertThatThrownBy(() -> new DelegationService(groupService, clientRoleService,
+        new UaaProperties(HururaaFixtures.DSI), keycloakProperties("-backend"), ROLES_NAMESPACE))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("hururaa-backend");
   }
 
   @Test
