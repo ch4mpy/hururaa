@@ -212,3 +212,11 @@ Constats de lecture qui orientent le plan :
   dans la DSI, vaut dans toutes les directions (EX-5, tableau des personas, décision 0008), ce que
   DEL-2 interdisait et que la ligne DEL-2 du tableau des politiques de la spec omettait ; la spec
   approuvée n'est pas modifiée, la politique suit la décision. Evals relancées (`.claude/**`).
+- 2026-10-17 — Revue (I-2, I-3, D-1 à D-5), fichiers non listés : `application-settings.ts`
+  (+ nouvelle spec) masque le désenregistrement de Hurura'a (UX-6) ; `PermissionHistoryService.java`
+  (+ test) ne présente plus la première révision MOD d'une application enregistrée hors d'Envers
+  comme un enregistrement (TRA-5) ; `DelegationService` refuse au démarrage un `roles-namespace`
+  autre que le client API de Hurura'a, plutôt que de lire ses rôles ailleurs (D-4) — preuves
+  `application-settings.spec.ts`,
+  `PermissionHistoryServiceTest.givenApplicationRegisteredOutsideEnvers_whenRenamed_thenRenamedNotRegistered`,
+  `DelegationServiceTest.givenRolesNamespaceOtherThanHururaaApiClient_whenCreated_thenRefused`.
