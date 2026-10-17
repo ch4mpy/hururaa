@@ -1,5 +1,6 @@
 package pf.hururaa.direction;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
+import pf.hururaa.uaa.DelegationGroups;
 import pf.hururaa.uaa.UaaProperties;
 
 /**
@@ -37,13 +39,22 @@ public class DelegationResolver {
    * @throws HururaaProblemException {@code DIRECTION_NOT_FOUND} if the direction does not exist
    */
   public DelegatedDirection direction(String alias) throws HururaaProblemException {
+    return direction(alias, applicationRepository.findAvailableIn(alias));
+  }
+
+  /**
+   * @param available the applications available in the direction (its own and Hurura'a), read once
+   *        for a direction and its group
+   */
+  private DelegatedDirection direction(String alias, List<Application> available)
+      throws HururaaProblemException {
     final var direction = directionService
         .findByAlias(alias)
         .orElseThrow(() -> new HururaaProblemException(ProblemType.DIRECTION_NOT_FOUND,
             "No direction with alias %s".formatted(alias), Map.of("direction", alias)));
-    final var applicationPrefixes = applicationRepository
-        .findByDirectionOrderByNameAsc(alias)
+    final var applicationPrefixes = available
         .stream()
+        .filter(application -> application.getDirection().equals(alias))
         .map(Application::getClientPrefix)
         .collect(Collectors.toSet());
     return new DelegatedDirection(direction.alias(), direction.name(),
@@ -56,15 +67,22 @@ public class DelegationResolver {
    */
   public DelegatedGroup group(String directionAlias, String groupName)
       throws HururaaProblemException {
-    final var direction = direction(directionAlias);
+    final var applications = applicationRepository.findAvailableIn(directionAlias);
+    final var direction = direction(directionAlias, applications);
     final var group = groupService
         .findByName(directionAlias, groupName)
         .orElseThrow(() -> new HururaaProblemException(ProblemType.GROUP_NOT_FOUND,
             "No group %s in direction %s".formatted(groupName, directionAlias),
             Map.of("direction", directionAlias, "group", groupName)));
-    return new DelegatedGroup(group.id(), group.name(), direction, Application
-        .owningGroup(applicationRepository.findByDirectionOrderByNameAsc(directionAlias),
-            group.name())
-        .orElse(null));
+    final var coManaged = DelegationGroups
+        .productOwnersPrefix(group.name())
+        .flatMap(prefix -> applications
+            .stream()
+            .filter(application -> application.getClientPrefix().equals(prefix)
+                && application.getDirection().equals(directionAlias))
+            .findAny())
+        .orElse(null);
+    return new DelegatedGroup(group.id(), group.name(), direction,
+        Application.owningGroup(applications, group.name()).orElse(null), coManaged);
   }
 }

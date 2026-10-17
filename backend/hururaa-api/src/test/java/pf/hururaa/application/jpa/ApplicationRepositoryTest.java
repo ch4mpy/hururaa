@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import pf.hururaa.application.domain.Application;
 
+/**
+ * Hurura'a itself is registered by Liquibase in every context (1791000000000-1-register-hururaa.xml).
+ */
 @DataJpaTest
 class ApplicationRepositoryTest {
 
@@ -16,7 +19,6 @@ class ApplicationRepositoryTest {
   @BeforeEach
   void setUp() {
     repository.save(application("te-fenua", "Te Fenua", "dsi"));
-    repository.save(application("hururaa", "Hurura'a", "dsi"));
     repository.save(application("escales", "Escales", "dpam"));
   }
 
@@ -25,6 +27,13 @@ class ApplicationRepositoryTest {
     assertThat(repository.findByDirectionOrderByNameAsc("dsi"))
         .extracting(Application::getName)
         .containsExactly("Hurura'a", "Te Fenua");
+  }
+
+  @Test
+  void findAvailableInListsItsOwnApplicationsAndHururaa() {
+    assertThat(repository.findAvailableIn("dpam"))
+        .extracting(Application::getClientPrefix)
+        .containsExactly("escales", "hururaa");
   }
 
   @Test

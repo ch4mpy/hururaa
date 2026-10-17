@@ -2,7 +2,7 @@ import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApplicationRolesApi, ApplicationsApi } from '@api/hururaa-api';
 import { of } from 'rxjs';
-import { DelegationsService } from '../../core/delegations.service';
+import { DelegationsService, HURURAA_CLIENT_PREFIX } from '../../core/delegations.service';
 import { ResourceEventsService, ResourceTypes } from '../../core/resource-events.service';
 
 /**
@@ -30,14 +30,39 @@ export class ApplicationContext {
     stream: ({ params }) => this.applicationsApi.getApplication(params),
   });
 
+  /**
+   * Whether the application is Hurura'a, available in every direction: its groups are those of
+   * the direction it is opened in, and its roles and groups themselves never change.
+   */
+  readonly isHururaa = computed(
+    () => this.application.value()?.clientPrefix === HURURAA_CLIENT_PREFIX,
+  );
+
+  /** Whether the application is addressed under the direction of the URL. */
+  readonly isAvailableIn = computed(() => {
+    const app = this.application.value();
+    return !!app && (app.direction === this.direction() || this.isHururaa());
+  });
+
   /** Mirrors the access rule of the API's application roles, groups and managers endpoints. */
   readonly canManage = computed(() => {
     const id = this.id();
-    return !!id && this.delegations.canManageApplication({ id, direction: this.direction() });
+    return (
+      !!id &&
+      this.delegations.canManageApplication({
+        id,
+        direction: this.direction(),
+        clientPrefix: this.application.value()?.clientPrefix,
+      })
+    );
   });
 
   /** Mirrors the access rule of the API's application update and delete endpoints. */
-  readonly canEdit = computed(() => this.delegations.canEditApplicationsOf(this.direction()));
+  readonly canEdit = computed(
+    () =>
+      this.application.value()?.direction === this.direction() &&
+      this.delegations.canEditApplicationsOf(this.direction()),
+  );
 
   readonly roles = rxResource({
     params: () => (this.canManage() ? { direction: this.direction(), id: this.id() } : undefined),

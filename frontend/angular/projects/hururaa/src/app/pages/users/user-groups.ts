@@ -2,11 +2,15 @@ import { Component, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { DirectionsApi, GroupResponse } from '@api/hururaa-api';
-import { DelegationsService } from '../../core/delegations.service';
+import {
+  DelegationsService,
+  HURURAA_CLIENT_PREFIX,
+  isReservedGroup,
+} from '../../core/delegations.service';
 
 /**
- * The groups a member of a direction belongs to (their delegations aside), each linked to its
- * page in the applications area when the user manages its application.
+ * The groups a member of a direction belongs to, Hurura'a's (their delegations) included, each
+ * linked to its page in the applications area when the user may open its application.
  */
 @Component({
   selector: 'app-user-groups',
@@ -50,6 +54,8 @@ export class UserGroups {
       this.delegations.canManageApplication({
         id: group.applicationId,
         direction: this.direction(),
+        // the delegation groups are Hurura'a's, which any delegate of the direction opens
+        clientPrefix: isReservedGroup(group.name) ? HURURAA_CLIENT_PREFIX : undefined,
       })
     );
   }

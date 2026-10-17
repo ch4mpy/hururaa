@@ -84,10 +84,15 @@ public class ApplicationService {
    * are left untouched.
    *
    * @throws HururaaProblemException {@code APPLICATION_HAS_GROUPS} when the application still has
-   *         groups in its direction
+   *         groups in its direction, {@code RESERVED_NAME} for Hurura'a itself, which is never
+   *         unregistered (its groups are the delegation groups of every direction)
    */
   public void delete(Application application) throws HururaaProblemException {
     requireNoGroups(application);
+    if (application.isHururaa()) {
+      throw new HururaaProblemException(ProblemType.RESERVED_NAME,
+          "Hurura'a is never unregistered", Map.of("name", application.getClientPrefix()));
+    }
     delegationService.deprovisionApplication(application);
     applicationRepository.delete(application);
   }

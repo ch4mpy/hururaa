@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +56,9 @@ class PermissionHistoryServiceTest {
 
   @Autowired
   PlatformTransactionManager transactionManager;
+
+  @Autowired
+  JdbcTemplate jdbcTemplate;
 
   @MockitoBean
   DirectionService directionService;
@@ -138,6 +142,26 @@ class PermissionHistoryServiceTest {
             tuple(PermissionChangeType.APPLICATION_RENAMED, "dir-admin", "Hist App 2",
                 "Hist App"),
             tuple(PermissionChangeType.APPLICATION_REGISTERED, "dir-admin", "Hist App", null));
+  }
+
+  @Test
+  void givenApplicationRegisteredOutsideEnvers_whenRenamed_thenRenamedNotRegistered() {
+    // as Hurura'a is, by Liquibase (1791000000000-1-register-hururaa.xml): no ADD revision
+    jdbcTemplate.update("insert into applications (id, version, client_prefix, direction, name)"
+        + " values (next value for applications_seq, 0, 'hist-raw', 'hist-raw-dir', 'Raw App')");
+    final var registered = applicationRepository
+        .findByDirectionOrderByNameAsc("hist-raw-dir")
+        .getFirst();
+    commitAs("dsi-admin", () -> {
+      final var current = applicationRepository.findById(registered.getId()).orElseThrow();
+      current.setName("Raw App 2");
+      return applicationRepository.save(current);
+    });
+
+    assertThat(history("hist-raw-dir").getContent())
+        .extracting(PermissionChange::type, PermissionChange::applicationName,
+            PermissionChange::formerApplicationName)
+        .containsExactly(tuple(PermissionChangeType.APPLICATION_RENAMED, "Raw App 2", null));
   }
 
   @Test

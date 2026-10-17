@@ -40,6 +40,7 @@ public final class HururaaFixtures {
   public static final String DPAM_MANAGER = "b70c1bf6-e94f-439a-8f5d-50df5542e19f";
   public static final String DPAM_AGENT = "1f0644a3-d3e2-45fe-a153-a50491afe35c";
 
+  public static final long HURURAA_ID = 1L;
   public static final long ESCALES_ID = 3L;
   public static final long TE_FENUA_ID = 2L;
 
@@ -53,6 +54,20 @@ public final class HururaaFixtures {
         .clientPrefix("escales")
         .name("Escales")
         .direction(DPAM)
+        .build();
+  }
+
+  /**
+   * Hurura'a, in dsi, available in every direction: the delegation groups are its groups (managed
+   * by dsi.manager, see {@code jwt/dsi-manager.json}).
+   */
+  public static Application hururaa() {
+    return Application
+        .builder()
+        .id(HURURAA_ID)
+        .clientPrefix("hururaa")
+        .name("Hurura'a")
+        .direction(DSI)
         .build();
   }
 
@@ -70,7 +85,8 @@ public final class HururaaFixtures {
   /**
    * Stubs what the path variable converters read, as in the dev data: {@value #DSI},
    * {@value #DPAM} and {@value #DAF} exist in Keycloak (no other direction does), with
-   * {@link #teFenua()} in dsi and {@link #escales()} in dpam. A test stubbing one of these calls
+   * {@link #hururaa()} and {@link #teFenua()} in dsi, {@link #escales()} in dpam, and Hurura'a
+   * available in every direction. A test stubbing one of these calls
    * again overrides it. The delegations themselves are in the tokens ({@code jwt/*.json}).
    */
   public static void stubDevDelegations(DirectionService directionService,
@@ -80,8 +96,12 @@ public final class HururaaFixtures {
       return Set.of(DSI, DPAM, DAF).contains(alias) ? Optional.of(new Direction(alias, alias, null))
           : Optional.empty();
     });
-    when(applicationRepository.findByDirectionOrderByNameAsc(DSI)).thenReturn(List.of(teFenua()));
+    when(applicationRepository.findByDirectionOrderByNameAsc(DSI))
+        .thenReturn(List.of(hururaa(), teFenua()));
     when(applicationRepository.findByDirectionOrderByNameAsc(DPAM)).thenReturn(List.of(escales()));
+    when(applicationRepository.findAvailableIn(DSI)).thenReturn(List.of(hururaa(), teFenua()));
+    when(applicationRepository.findAvailableIn(DPAM)).thenReturn(List.of(escales(), hururaa()));
+    when(applicationRepository.findAvailableIn(DAF)).thenReturn(List.of(hururaa()));
   }
 
   public static User user(String id, String username) {

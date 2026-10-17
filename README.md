@@ -28,7 +28,7 @@ Une démonstration est en ligne sur https://hururaa.c4-soft.com, redéployée à
 | Clients Keycloak      | `<préfixe>-bff` (authorization code + PKCE, refresh token) et `<préfixe>-api` (client credentials, compte de service, porte les rôles) |
 | Rôle d'application    | Rôle client de `<préfixe>-api` (ex. `escales.stopovers.edit` sur `escales-api`)               |
 | Groupe                | Groupe d'organisation Keycloak propre à une application, nommé `<préfixe>.<nom>` (ex. `escales.agent`) : ses membres reçoivent, dans cette direction, les rôles de l'application qu'il porte |
-| Administrateurs et gestionnaires | Rôles réservés de `hururaa-api` (`hururaa.direction.admin`, `hururaa.application.<préfixe>.manage`), attribués par les groupes réservés que Hurura'a crée dans chaque direction (`hururaa.admins`) et pour chaque application (`hururaa.<préfixe>.product-owners`) |
+| Administrateurs et gestionnaires | Rôles réservés de `hururaa-api` (`hururaa.direction.admin`, `hururaa.application.<préfixe>.manage`), attribués par les groupes de Hurura'a, qu'il crée dans chaque direction (`hururaa.admins`) et pour chaque application (`hururaa.<préfixe>.product-owners`) : Hurura'a est une application de la DSI dont les groupes vivent dans toutes les directions |
 
 Dans les jetons, les rôles sont rangés par direction, grâce au mapper « organization group
 membership » du scope `organization` :
@@ -51,18 +51,24 @@ avec le même `TenantPermissionsExtractor` que Hurura'a (`common-security-starte
 ```
 Administrateur Hurura'a = administrateur de la DSI (hururaa.direction.admin dans l'organisation dsi)
  ├─ agit à tous les niveaux ci-dessous, dans toutes les directions
- └─ crée les directions et désigne leurs administrateurs
+ └─ crée les directions
      Administrateur de direction (groupe hururaa.admins de la direction : hururaa.direction.admin)
       ├─ enregistre, renomme et désenregistre les applications de sa direction
-      ├─ définit leurs rôles et désigne, parmi les membres, leurs gestionnaires
-      └─ gère les groupes de ces applications : rôles attribués et membres
+      ├─ définit leurs rôles
+      ├─ gère les groupes de ces applications : rôles attribués et membres
+      └─ gère les membres des groupes de Hurura'a de sa direction : ses administrateurs et les
+         gestionnaires de ses applications
           Gestionnaire d'application (groupe hururaa.<préfixe>.product-owners de la direction :
           hururaa.application.<préfixe>.manage)
            ├─ définit les rôles de l'application (rôles client de <préfixe>-api)
-           ├─ désigne les autres gestionnaires de l'application
+           ├─ désigne les autres gestionnaires de l'application (membres de son groupe product-owners)
            ├─ crée les groupes de l'application (<préfixe>.<nom>) et leur fait attribuer ses rôles
            └─ affecte les membres de la direction à ces groupes
 ```
+
+Les gestionnaires de Hurura'a (groupe `hururaa.hururaa.product-owners` de la DSI) gèrent les
+membres des groupes de Hurura'a de toutes les directions, `hururaa.admins` de la DSI compris : ils
+peuvent désigner des administrateurs Hurura'a (écart accepté, décision 0008).
 
 Règles appliquées par l'API, écrites dans les `@PreAuthorize` des endpoints. Les variables de
 chemin `{direction}`, `{group}` et `{applicationId}` y sont résolues en objets dont les méthodes lisent
@@ -76,12 +82,16 @@ toute règle d'accès), par exemple `#direction.isAdministeredBy(authentication)
   direction (ailleurs, il ne donne rien) ;
 - comme tout rôle, ils prennent effet, donnés ou retirés, au renouvellement du jeton de
   l'utilisateur (au plus tard à l'expiration de son jeton d'accès) ;
-- les noms commençant par `hururaa.` sont réservés, pour les groupes comme pour les rôles
-  (`RESERVED_NAME`) : Hurura'a crée le groupe `hururaa.admins` avec chaque direction, le groupe
+- les noms commençant par `hururaa.` sont ceux de Hurura'a, pour les groupes comme pour les rôles :
+  Hurura'a crée le groupe `hururaa.admins` avec chaque direction, le groupe
   `hururaa.<préfixe>.product-owners` et son rôle avec chaque application (et les supprime avec
-  elle), et leurs membres ne changent que par la désignation des administrateurs et des
-  gestionnaires ; l'API des groupes ne les liste pas et refuse de les modifier, même aux
-  administrateurs Hurura'a. Les préfixes d'application `hururaa`, `admin`, `direction`,
+  elle). Ces groupes appartiennent à Hurura'a dans toutes les directions et sont listés comme les
+  autres ; leurs membres se changent par l'API des groupes, avec la règle de tout groupe
+  (administrateurs de la direction, gestionnaires de Hurura'a), et un
+  `hururaa.<préfixe>.product-owners` l'est aussi par les gestionnaires de l'application ; le dernier
+  administrateur Hurura'a ne peut être retiré (`LAST_HURURAA_ADMIN`). Les groupes eux-mêmes, les
+  rôles qu'ils attribuent et les rôles de Hurura'a ne changent jamais (`RESERVED_NAME`, même pour
+  un administrateur Hurura'a). Les préfixes d'application `hururaa`, `admin`, `direction`,
   `product-owners` et `manage` sont réservés aussi ;
 - un groupe appartient à l'application dont son nom porte le préfixe (`escales.agent` à Escales),
   dans la direction de celle-ci, et n'attribue que ses rôles : c'est Hurura'a qui l'impose,
@@ -117,11 +127,13 @@ Les journaux applicatifs (Loki) en gardent aussi la trace.
 Les administrateurs Hurura'a créent les directions depuis Hurura'a (`POST /directions`, une
 organisation Keycloak sans domaine).
 
-Hurura'a est lui-même une application de la DSI, dont les rôles et les groupes sont tous réservés :
-ce sont ceux des administrateurs et des gestionnaires, présents dans toutes les directions.
+Hurura'a est lui-même une application de la DSI, enregistrée dans tout environnement (changeset
+Liquibase sans contexte), et la seule application transverse : ses groupes sont ceux des
+administrateurs et des gestionnaires, présents dans toutes les directions, et elle se consulte
+depuis chacune, avec les seuls groupes et rôles de celle-ci (décision 0008).
 
 Hypothèses de départ, susceptibles d'évoluer avec l'exploration (voir
-[docs/decisions](docs/decisions/README.md), en particulier les décisions 0005 et 0007) :
+[docs/decisions](docs/decisions/README.md), en particulier les décisions 0005, 0007 et 0008) :
 
 - l'association application ↔ direction est conservée dans la base PostgreSQL de Hurura'a ;
 - un groupe est un groupe de l'organisation de son application, qui se lit dans son nom

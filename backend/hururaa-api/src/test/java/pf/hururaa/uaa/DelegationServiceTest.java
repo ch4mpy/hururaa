@@ -1,6 +1,7 @@
 package pf.hururaa.uaa;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -14,6 +15,9 @@ import pf.hururaa.HururaaFixtures;
 import pf.hururaa.direction.domain.Group;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.keycloak.GroupService;
+import pf.hururaa.keycloak.KeycloakAdminApiProperties;
+import pf.hururaa.problem.HururaaProblemException;
+import pf.hururaa.problem.ProblemType;
 
 class DelegationServiceTest {
 
@@ -29,7 +33,21 @@ class DelegationServiceTest {
   void setUp() {
     groupService = mock(GroupService.class);
     clientRoleService = mock(ClientRoleService.class);
-    service = new DelegationService(groupService, clientRoleService, ROLES_NAMESPACE);
+    service = new DelegationService(groupService, clientRoleService,
+        new UaaProperties(HururaaFixtures.DSI), keycloakProperties("-api"), ROLES_NAMESPACE);
+  }
+
+  private static KeycloakAdminApiProperties keycloakProperties(String apiClientSuffix) {
+    return new KeycloakAdminApiProperties("public-facing", apiClientSuffix, "-bff", List.of());
+  }
+
+  @Test
+  void givenRolesNamespaceOtherThanHururaaApiClient_whenCreated_thenRefused() {
+    // Hurura'a's roles are written on roles-namespace and read on its API client: one client
+    assertThatThrownBy(() -> new DelegationService(groupService, clientRoleService,
+        new UaaProperties(HururaaFixtures.DSI), keycloakProperties("-backend"), ROLES_NAMESPACE))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("hururaa-backend");
   }
 
   @Test
@@ -96,5 +114,41 @@ class DelegationServiceTest {
 
     assertThat(service.findAdmins("dpam")).extracting(user -> user.username())
         .containsExactly("dpam.admin");
+  }
+
+  @Test
+  void givenLastDsiAdmin_whenRemoveAdmin_thenLastHururaaAdmin() throws Exception {
+    when(groupService.findByName("dsi", "hururaa.admins"))
+        .thenReturn(Optional.of(new Group("id", "dsi", "hururaa.admins")));
+    when(groupService.findAllMembers("dsi", "hururaa.admins"))
+        .thenReturn(List.of(HururaaFixtures.user(HururaaFixtures.DSI_ADMIN, "dsi.admin")));
+
+    assertThatThrownBy(() -> service.removeAdmin("dsi", HururaaFixtures.DSI_ADMIN))
+        .isInstanceOfSatisfying(HururaaProblemException.class,
+            e -> assertThat(e.getType()).isEqualTo(ProblemType.LAST_HURURAA_ADMIN));
+    verify(groupService, never()).removeMember(anyString(), anyString(), anyString());
+  }
+
+  @Test
+  void givenAnotherDsiAdmin_whenRemoveAdmin_thenRemoved() throws Exception {
+    when(groupService.findByName("dsi", "hururaa.admins"))
+        .thenReturn(Optional.of(new Group("id", "dsi", "hururaa.admins")));
+    when(groupService.findAllMembers("dsi", "hururaa.admins"))
+        .thenReturn(List.of(HururaaFixtures.user(HururaaFixtures.DSI_ADMIN, "dsi.admin"),
+            HururaaFixtures.user(HururaaFixtures.HURURAA_ADMIN, "hururaa.admin")));
+    when(groupService.removeMember("dsi", "hururaa.admins", HururaaFixtures.DSI_ADMIN))
+        .thenReturn(true);
+
+    assertThat(service.removeAdmin("dsi", HururaaFixtures.DSI_ADMIN)).isTrue();
+  }
+
+  @Test
+  void givenLastAdminOfAnotherDirection_whenRemoveAdmin_thenRemoved() throws Exception {
+    when(groupService.findByName("dpam", "hururaa.admins"))
+        .thenReturn(Optional.of(new Group("id", "dpam", "hururaa.admins")));
+    when(groupService.removeMember("dpam", "hururaa.admins", HururaaFixtures.DPAM_ADMIN))
+        .thenReturn(true);
+
+    assertThat(service.removeAdmin("dpam", HururaaFixtures.DPAM_ADMIN)).isTrue();
   }
 }

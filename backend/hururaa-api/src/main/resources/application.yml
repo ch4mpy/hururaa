@@ -56,6 +56,9 @@ spring:
     # "dev" loads the applications and delegations matching the dev realm's users
     # (1790700000001-1-dev-data.xml): set LIQUIBASE_CONTEXTS to anything else outside dev
     contexts: ${LIQUIBASE_CONTEXTS:dev}
+    parameters:
+      # the direction Hurura'a is registered in, in every context (1791000000000-1-register-hururaa.xml)
+      platformOrganization: ${uaa.platform-organization}
   data:
     web:
       pageable:

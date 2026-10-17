@@ -12,16 +12,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pf.hururaa.HururaaFixtures.DPAM;
 import static pf.hururaa.HururaaFixtures.DSI;
-import static pf.hururaa.HururaaFixtures.DPAM_AGENT;
 import static pf.hururaa.HururaaFixtures.DPAM_MANAGER;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
-import static pf.hururaa.HururaaFixtures.TE_FENUA_ID;
+import static pf.hururaa.HururaaFixtures.HURURAA_ID;
+import static pf.hururaa.HururaaFixtures.hururaa;
 import static pf.hururaa.HururaaFixtures.escales;
-import static pf.hururaa.HururaaFixtures.teFenua;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.user;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,13 +42,12 @@ import pf.hururaa.direction.web.DirectoryMapperImpl;
 import pf.hururaa.keycloak.ClientRoleService;
 import pf.hururaa.keycloak.DirectionService;
 import pf.hururaa.keycloak.GroupService;
-import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
 
 /**
- * Levels 2 and 3 of the delegation chain on an application: its direction's administrators
- * designate its managers (members of its {@code hururaa.<prefix>.product-owners} group), who define
- * its roles.
+ * Levels 2 and 3 of the delegation chain on an application: its direction's administrators and
+ * its managers (members of its {@code hururaa.<prefix>.product-owners} group, designated through
+ * the groups API) define its roles. Hurura'a's roles never change.
  */
 @WebMvcTest(controllers = {ApplicationRoleController.class, ApplicationManagerController.class})
 @AutoConfigureAddonsWebmvcResourceServerSecurity
@@ -182,6 +179,51 @@ class ApplicationRoleAndManagerControllersTest {
     verifyNoInteractions(clientRoleService);
   }
 
+  // ---------- Hurura'a's roles ----------
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenDelegateOfDpam_whenGetHururaaRolesInDpam_thenOnlyThoseEffectiveInDpam()
+      throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    when(clientRoleService.findAll("hururaa-api")).thenReturn(List.of(
+        new ApplicationRole("hururaa.direction.admin", null),
+        new ApplicationRole("hururaa.application.anahei.manage", null),
+        new ApplicationRole("hururaa.application.escales.manage", null),
+        new ApplicationRole("hururaa.application.te-fenua.manage", null)));
+
+    api
+        .get(ApplicationRoleController.BASE_PATH, DPAM, HURURAA_ID)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].name").value("hururaa.direction.admin"))
+        .andExpect(jsonPath("$[1].name").value("hururaa.application.escales.manage"));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenMemberWithoutDelegation_whenGetHururaaRoles_thenForbidden() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    api.get(ApplicationRoleController.BASE_PATH, DPAM, HURURAA_ID)
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaAdmin_whenCreateOrDeleteHururaaRole_thenReservedName() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    api
+        .post(new ApplicationRoleRequest("audit.read", null), ApplicationRoleController.BASE_PATH,
+            DSI, HURURAA_ID)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    api
+        .delete(ApplicationRoleController.ROLE_PATH, DSI, HURURAA_ID, "hururaa.direction.admin")
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    verifyNoInteractions(clientRoleService, permissionJournal);
+  }
+
   // ---------- managers ----------
 
   @Test
@@ -194,98 +236,6 @@ class ApplicationRoleAndManagerControllersTest {
         .get(ApplicationManagerController.BASE_PATH, DPAM, ESCALES_ID)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].username").value("dpam.manager"));
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-manager.json")
-  void givenApplicationManager_whenAddCoManager_thenAddedAndJournaled() throws Exception {
-    when(delegationService.addManager(any(Application.class), eq(DPAM_AGENT))).thenReturn(true);
-
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
-        .andExpect(status().isNoContent());
-    verify(permissionJournal).applicationManagerGranted(any(Application.class), eq(DPAM_AGENT));
-    verify(resourceEvents).publish(any());
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-manager.json")
-  void givenManagerAlready_whenAddManager_thenNothingJournaled() throws Exception {
-    when(delegationService.addManager(any(Application.class), eq(DPAM_MANAGER)))
-        .thenReturn(false);
-
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_MANAGER)
-        .andExpect(status().isNoContent());
-    verifyNoInteractions(permissionJournal, resourceEvents);
-  }
-
-  @Test
-  @WithJwt("jwt/dsi-manager.json")
-  void givenManagerOfAnotherApplication_whenAddManager_thenForbidden() throws Exception {
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
-        .andExpect(status().isForbidden());
-    verify(delegationService, never()).addManager(any(), any());
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-hururaa-admin-lookalike.json")
-  void givenManagerRoleHeldOutsideTheApplicationDirection_whenAddManager_thenForbidden()
-      throws Exception {
-    // hururaa.application.te-fenua.manage held in dpam: Te Fenua belongs to dsi, it grants nothing
-    when(applicationRepository.findById(TE_FENUA_ID)).thenReturn(Optional.of(teFenua()));
-
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DSI, TE_FENUA_ID, DPAM_AGENT)
-        .andExpect(status().isForbidden());
-    verify(delegationService, never()).addManager(any(), any());
-  }
-
-  @Test
-  @WithJwt("jwt/hururaa-admin.json")
-  void givenHururaaAdmin_whenAddManager_thenNoContent() throws Exception {
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_AGENT)
-        .andExpect(status().isNoContent());
-    verify(delegationService).addManager(any(Application.class), eq(DPAM_AGENT));
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenAddNonMemberAsManager_thenNotFound() throws Exception {
-    when(delegationService.addManager(any(Application.class), eq("outsider")))
-        .thenThrow(new HururaaProblemException(ProblemType.NOT_A_MEMBER, "not a member",
-            Map.of("userId", "outsider")));
-
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, "outsider")
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.type").value(ProblemType.NOT_A_MEMBER.uri().toString()));
-    verifyNoInteractions(permissionJournal);
-  }
-
-  @Test
-  @WithJwt("jwt/dpam-admin.json")
-  void givenDirectionAdmin_whenRemoveManager_thenRemovedAndJournaled() throws Exception {
-    when(delegationService.removeManager(any(Application.class), eq(DPAM_MANAGER)))
-        .thenReturn(true);
-
-    api
-        .delete(ApplicationManagerController.MANAGER_PATH, DPAM, ESCALES_ID, DPAM_MANAGER)
-        .andExpect(status().isNoContent());
-    verify(permissionJournal).applicationManagerRevoked(any(Application.class), eq(DPAM_MANAGER));
-  }
-
-  @Test
-  @WithJwt("jwt/dsi-admin.json")
-  void givenApplicationAddressedUnderAnotherDirection_whenAddManager_thenForbidden()
-      throws Exception {
-    // Escales is managed by dpam: it is addressed under dpam, even by the Hurura'a administrators
-    api
-        .put(Map.of(), ApplicationManagerController.MANAGER_PATH, DSI, ESCALES_ID, DPAM_AGENT)
-        .andExpect(status().isForbidden());
-    verify(delegationService, never()).addManager(any(), any());
   }
 
   @Test

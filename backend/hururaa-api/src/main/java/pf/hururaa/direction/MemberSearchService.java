@@ -23,7 +23,6 @@ import pf.hururaa.keycloak.GroupService;
 import pf.hururaa.keycloak.KeycloakAdminApiProperties;
 import pf.hururaa.problem.HururaaProblemException;
 import pf.hururaa.problem.ProblemType;
-import pf.hururaa.uaa.DelegationGroups;
 
 /**
  * Searches a direction's members, optionally narrowed to the members of some of its groups: one
@@ -32,7 +31,7 @@ import pf.hururaa.uaa.DelegationGroups;
  * <p>
  * Keycloak can't search the members of several groups at once: when narrowed, the members of the
  * matching groups are read whole, then filtered, sorted by username and paged here. Hurura'a's
- * reserved groups ({@code hururaa.*}) are never searched.
+ * delegation groups ({@code hururaa.*}) are searched like the others, as groups of Hurura'a.
  * </p>
  *
  * @author Jerome Wacongne ch4mp&#64;c4-soft.com
@@ -55,7 +54,7 @@ public class MemberSearchService {
    * @param pageable page index and size; sort is ignored
    * @return the direction's members matching {@code filter}
    * @throws HururaaProblemException {@code GROUP_NOT_FOUND} when {@code filter.group()} is not a
-   *         group of the direction, {@code RESERVED_NAME} when it is one of Hurura'a's
+   *         group of the direction
    */
   public Page<User> search(String direction, MemberFilter filter, Pageable pageable)
       throws HururaaProblemException {
@@ -80,7 +79,7 @@ public class MemberSearchService {
   /** The names of the direction's groups matching the group, application and role criteria. */
   private List<String> matchingGroups(String direction, MemberFilter filter)
       throws HururaaProblemException {
-    final var applications = applicationRepository.findByDirectionOrderByNameAsc(direction);
+    final var applications = applicationRepository.findAvailableIn(direction);
     final var matching = new ArrayList<String>();
     for (final var group : candidateGroups(direction, filter.group())) {
       final var owner = Application.owningGroup(applications, group);
@@ -107,12 +106,7 @@ public class MemberSearchService {
           .findAll(direction)
           .stream()
           .map(Group::name)
-          .filter(name -> !DelegationGroups.isReserved(name))
           .toList();
-    }
-    if (DelegationGroups.isReserved(group)) {
-      throw new HururaaProblemException(ProblemType.RESERVED_NAME,
-          "Group %s is reserved to Hurura'a".formatted(group), Map.of("name", group));
     }
     if (groupService.findByName(direction, group).isEmpty()) {
       throw new HururaaProblemException(ProblemType.GROUP_NOT_FOUND,

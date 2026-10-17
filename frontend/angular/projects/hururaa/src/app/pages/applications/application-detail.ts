@@ -23,7 +23,7 @@ interface ApplicationTab {
   providers: [ApplicationContext],
   template: `
     @if (context.application.value(); as app) {
-      @if (app.direction !== direction()) {
+      @if (!context.isAvailableIn()) {
         <p i18n="@@application.otherDirection">
           Cette application n'est pas rattachée à cette direction.
         </p>
@@ -78,11 +78,16 @@ export class ApplicationDetail {
       label: $localize`:@@application.tab.roles:Rôles`,
       icon: 'ri-shield-keyhole-line',
     },
-    {
-      path: 'managers',
-      label: $localize`:@@application.tab.managers:Gestionnaires`,
-      icon: 'ri-user-star-line',
-    },
+    // Hurura'a's managers are the members of one of its groups, listed in the groups tab
+    ...(this.context.isHururaa()
+      ? []
+      : [
+          {
+            path: 'managers',
+            label: $localize`:@@application.tab.managers:Gestionnaires`,
+            icon: 'ri-user-star-line',
+          },
+        ]),
     {
       path: 'history',
       label: $localize`:@@application.tab.history:Historique`,

@@ -87,7 +87,7 @@ interface DevLink {
                   </ng-template>
                   <p class="m-0" i18n="@@home.level.hururaaAdmin.directions">
                     Les administrateurs de la DSI, qui exploite Hurura'a, agissent à tous les
-                    niveaux. Eux seuls créent les directions et désignent leurs administrateurs.
+                    niveaux. Eux seuls créent les directions.
                   </p>
                 </p-card>
               </div>
@@ -99,8 +99,9 @@ interface DevLink {
                   </ng-template>
                   <p class="m-0" i18n="@@home.level.direction.applicationGroups">
                     Les administrateurs d'une direction enregistrent ses applications, les renomment
-                    ou les désenregistrent, définissent leurs rôles, désignent parmi ses membres
-                    leurs gestionnaires et gèrent les groupes de ces applications.
+                    ou les désenregistrent, définissent leurs rôles et gèrent les groupes de ces
+                    applications et ceux de Hurura'a dans la direction : ses administrateurs et les
+                    gestionnaires de ses applications.
                   </p>
                 </p-card>
               </div>
@@ -129,12 +130,16 @@ interface DevLink {
                 application et par les administrateurs de sa direction.
               </li>
               <li i18n="@@home.rules.reserved">
-                Les groupes et les rôles dont le nom commence par « hururaa. » sont réservés : seul
-                Hurura'a les crée, les modifie ou les supprime.
+                Les groupes et les rôles dont le nom commence par « hururaa. » sont ceux de
+                Hurura'a, une application comme les autres, présente dans toutes les directions :
+                ses groupes désignent les administrateurs et les gestionnaires. Seuls leurs membres
+                se modifient, par les administrateurs de la direction et les gestionnaires de
+                Hurura'a ; les gestionnaires d'une application gèrent aussi le groupe de ses
+                gestionnaires.
               </li>
               <li i18n="@@home.rules.tokenRenewal">
-                Un rôle, y compris ceux de Hurura'a, prend effet quand le jeton de l'utilisateur
-                est renouvelé (au plus tard à l'expiration de son jeton d'accès).
+                Un rôle, y compris ceux de Hurura'a, prend effet quand le jeton de l'utilisateur est
+                renouvelé (au plus tard à l'expiration de son jeton d'accès).
               </li>
             </ul>
           </p-accordion-content>

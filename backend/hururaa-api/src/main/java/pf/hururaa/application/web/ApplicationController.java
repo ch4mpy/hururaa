@@ -1,5 +1,6 @@
 package pf.hururaa.application.web;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedModel;
 import org.springdoc.core.annotations.ParameterObject;
 import java.util.Set;
@@ -110,15 +111,20 @@ public class ApplicationController {
       Authentication authentication) {
     final var applications = direction == null || direction.isBlank()
         ? applicationRepository.findAllByOrderByNameAsc()
-        : applicationRepository.findByDirectionOrderByNameAsc(direction);
+        : applicationRepository.findAvailableIn(direction);
     if (!manageable || hasAuthority(authentication, HururaaPermission.Names.DIRECTION_ADMIN)) {
       return applications.stream().map(applicationMapper::toApplicationResponse).toList();
     }
     final var administeredDirections = HururaaPermission.administeredDirections(authentication);
+    // Hurura'a, available in every direction, is listed under a direction to all its delegates
+    final var delegateOfDirection = direction != null && !direction.isBlank()
+        && (administeredDirections.contains(direction)
+            || applications.stream().anyMatch(application -> application.isManagedBy(authentication)));
     return applications
         .stream()
         .filter(application -> administeredDirections.contains(application.getDirection())
-            || application.isManagedBy(authentication))
+            || application.isManagedBy(authentication)
+            || (application.isHururaa() && delegateOfDirection))
         .map(applicationMapper::toApplicationResponse)
         .toList();
   }
@@ -239,11 +245,16 @@ public class ApplicationController {
    * <h4>Access control</h4>
    * <p>
    * Requires the user to have a say on the application: Hurura'a administrator, administrator of
-   * its direction, or manager of the application. The application must be managed by {@code
-   * direction}.
+   * its direction, or manager of the application; for Hurura'a, any delegate of {@code direction}.
+   * The application must be available in {@code direction}.
    * </p>
    *
-   * @param direction the direction managing the application
+   * <p>
+   * For Hurura'a, whose groups are the delegation groups of every direction, the history is that
+   * of the delegations in {@code direction} (administrators and managers designated or revoked).
+   * </p>
+   *
+   * @param direction the direction managing the application (any direction for Hurura'a)
    * @param application the application resolved from the {@code applicationId} path variable
    * @param categories only the changes of these categories; all of them when absent
    * @param pageParams the requested page index and size
@@ -251,9 +262,7 @@ public class ApplicationController {
    */
   @GetMapping(path = HISTORY_PATH)
   @Transactional(readOnly = true)
-  @PreAuthorize("(#direction.isAdministeredBy(authentication)"
-      + " or #application.isManagedBy(authentication))"
-      + " and #application.direction == #direction.alias")
+  @PreAuthorize("#direction.canReadApplication(#application, authentication)")
   public PagedModel<PermissionChangeResponse> getApplicationHistory(
       @PathVariable(name = DIRECTION_PLACEHOLDER) DelegatedDirection direction,
       @Parameter(schema = @Schema(type = "integer"), description = "The ID of the application")
@@ -261,9 +270,17 @@ public class ApplicationController {
       @RequestParam(name = DirectionController.CATEGORIES_PARAM, required = false)
       @Nullable Set<PermissionChangeCategory> categories,
       @ParameterObject @Valid PageParams pageParams) throws HururaaProblemException {
+    final var requested = categories == null ? Set.<PermissionChangeCategory>of() : categories;
+    final var filter = application.isHururaa()
+        ? new PermissionHistoryFilter(direction.alias(), null, null,
+            Set.of(PermissionChangeCategory.DELEGATION))
+        : new PermissionHistoryFilter(direction.alias(), application.getId(), null, requested);
+    if (application.isHururaa() && !requested.isEmpty()
+        && !requested.contains(PermissionChangeCategory.DELEGATION)) {
+      return new PagedModel<>(Page.empty(pageParams.toPageable()));
+    }
     return new PagedModel<>(permissionHistoryService
-        .find(new PermissionHistoryFilter(direction.alias(), application.getId(), null,
-            categories == null ? Set.of() : categories), pageParams.toPageable())
+        .find(filter, pageParams.toPageable())
         .map(permissionHistoryMapper::toPermissionChangeResponse));
   }
 

@@ -23,6 +23,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import pf.hururaa.uaa.DelegationGroups;
 import pf.hururaa.uaa.HururaaPermission;
 
 /**
@@ -118,6 +119,19 @@ public class Application implements Serializable {
         .contains(HururaaPermission.applicationManager(clientPrefix));
   }
 
+  /** Whether this is the Hurura'a application, whose groups are the delegation groups. */
+  public boolean isHururaa() {
+    return DelegationGroups.HURURAA_CLIENT_PREFIX.equals(clientPrefix);
+  }
+
+  /**
+   * Whether the application is addressed under that direction: its own, or any direction for
+   * Hurura'a, whose delegation groups live in every direction.
+   */
+  public boolean isAvailableIn(String direction) {
+    return this.direction.equals(direction) || isHururaa();
+  }
+
   /** The full name of the application's group named {@code name}: {@code escales.agent}. */
   public String groupName(String name) {
     return clientPrefix + GROUP_NAME_SEPARATOR + name;
@@ -129,7 +143,8 @@ public class Application implements Serializable {
   }
 
   /**
-   * @param applications the applications of the group's direction
+   * @param applications the applications available in the group's direction (see
+   *        {@link #isAvailableIn(String)})
    * @return the one the group belongs to, empty for a group created outside of Hurura'a
    */
   public static Optional<Application> owningGroup(Collection<Application> applications,

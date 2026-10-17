@@ -15,6 +15,8 @@ import static pf.hururaa.HururaaFixtures.DAF;
 import static pf.hururaa.HururaaFixtures.DPAM;
 import static pf.hururaa.HururaaFixtures.DSI;
 import static pf.hururaa.HururaaFixtures.ESCALES_ID;
+import static pf.hururaa.HururaaFixtures.HURURAA_ID;
+import static pf.hururaa.HururaaFixtures.hururaa;
 import static pf.hururaa.HururaaFixtures.escales;
 import static pf.hururaa.HururaaFixtures.stubDevDelegations;
 import static pf.hururaa.HururaaFixtures.teFenua;
@@ -44,6 +46,7 @@ import pf.hururaa.commons.events.ResourceEvent.EventType;
 import pf.hururaa.commons.events.ResourceEventPublisher;
 import pf.hururaa.history.PermissionHistoryMapperImpl;
 import pf.hururaa.history.PermissionHistoryService;
+import pf.hururaa.history.domain.PermissionChangeCategory;
 import pf.hururaa.history.domain.PermissionHistoryFilter;
 import pf.hururaa.uaa.DelegationService;
 import pf.hururaa.direction.domain.Group;
@@ -168,11 +171,11 @@ class ApplicationControllerTest {
 
   @Test
   @WithJwt("jwt/dpam-agent.json")
-  void givenDirectionParam_whenGetApplications_thenFilteredByDirection() throws Exception {
-    when(applicationRepository.findByDirectionOrderByNameAsc(DPAM)).thenReturn(List.of(escales()));
-
+  void givenDirectionParam_whenGetApplications_thenItsOwnAndHururaa() throws Exception {
     api.get(ApplicationController.BASE_PATH + "?direction=" + DPAM).andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(1));
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].clientPrefix").value("escales"))
+        .andExpect(jsonPath("$[1].clientPrefix").value("hururaa"));
     verify(applicationRepository, never()).findAllByOrderByNameAsc();
   }
 
@@ -368,6 +371,35 @@ class ApplicationControllerTest {
     verify(applicationRepository).delete(any(Application.class));
   }
 
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaa_whenDelete_thenApplicationHasGroups() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    when(groupService.findAll(DSI)).thenReturn(List.of(new Group("g0", DSI, "hururaa.admins"),
+        new Group("g1", DSI, "hururaa.hururaa.product-owners")));
+
+    api
+        .delete(ApplicationController.DIRECTION_APPLICATION_PATH, DSI, HURURAA_ID)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type")
+            .value(ProblemType.APPLICATION_HAS_GROUPS.uri().toString()));
+    verify(applicationRepository, never()).delete(any());
+  }
+
+  @Test
+  @WithJwt("jwt/hururaa-admin.json")
+  void givenHururaaWithoutGroups_whenDelete_thenReservedName() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    when(groupService.findAll(DSI)).thenReturn(List.of());
+
+    api
+        .delete(ApplicationController.DIRECTION_APPLICATION_PATH, DSI, HURURAA_ID)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(ProblemType.RESERVED_NAME.uri().toString()));
+    verify(delegationService, never()).deprovisionApplication(any());
+    verify(applicationRepository, never()).delete(any());
+  }
+
   // ---------- history ----------
 
   @Test
@@ -399,5 +431,37 @@ class ApplicationControllerTest {
     api
         .get(ApplicationController.HISTORY_PATH, DSI, ESCALES_ID)
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenDpamManager_whenGetManageableApplicationsOfDpam_thenEscalesAndHururaa()
+      throws Exception {
+    api.get(ApplicationController.BASE_PATH + "?manageable=true&direction=" + DPAM)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[1].clientPrefix").value("hururaa"));
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-agent.json")
+  void givenMemberWithoutDelegation_whenGetManageableApplicationsOfDpam_thenNone()
+      throws Exception {
+    api.get(ApplicationController.BASE_PATH + "?manageable=true&direction=" + DPAM)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  @WithJwt("jwt/dpam-manager.json")
+  void givenDpamDelegate_whenGetHururaaHistoryInDpam_thenDelegationsOfDpam() throws Exception {
+    when(applicationRepository.findById(HURURAA_ID)).thenReturn(Optional.of(hururaa()));
+    final var filter = new PermissionHistoryFilter(DPAM, null, null,
+        Set.of(PermissionChangeCategory.DELEGATION));
+    when(permissionHistoryService.find(filter, PageRequest.of(0, 20)))
+        .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+    api.get(ApplicationController.HISTORY_PATH, DPAM, HURURAA_ID).andExpect(status().isOk());
+    verify(permissionHistoryService).find(filter, PageRequest.of(0, 20));
   }
 }

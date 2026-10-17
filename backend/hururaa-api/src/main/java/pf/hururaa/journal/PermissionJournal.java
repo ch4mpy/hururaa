@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import pf.hururaa.application.domain.Application;
 import pf.hururaa.journal.domain.PermissionEvent;
 import pf.hururaa.journal.domain.PermissionEventType;
+import pf.hururaa.uaa.DelegationGroups;
 import pf.hururaa.journal.jpa.PermissionEventRepository;
 
 /**
@@ -38,11 +39,15 @@ public class PermissionJournal {
    *        {@code hururaa.admins} group)
    */
   public void directionAdminGranted(String direction, String userId) {
-    save(event(direction, PermissionEventType.DIRECTION_ADMIN_GRANTED).userId(userId));
+    save(event(direction, PermissionEventType.DIRECTION_ADMIN_GRANTED)
+        .groupName(DelegationGroups.ADMINS)
+        .userId(userId));
   }
 
   public void directionAdminRevoked(String direction, String userId) {
-    save(event(direction, PermissionEventType.DIRECTION_ADMIN_REVOKED).userId(userId));
+    save(event(direction, PermissionEventType.DIRECTION_ADMIN_REVOKED)
+        .groupName(DelegationGroups.ADMINS)
+        .userId(userId));
   }
 
   /**
@@ -51,11 +56,13 @@ public class PermissionJournal {
    */
   public void applicationManagerGranted(Application application, String userId) {
     save(applicationEvent(PermissionEventType.APPLICATION_MANAGER_GRANTED, application)
+        .groupName(DelegationGroups.productOwners(application.getClientPrefix()))
         .userId(userId));
   }
 
   public void applicationManagerRevoked(Application application, String userId) {
     save(applicationEvent(PermissionEventType.APPLICATION_MANAGER_REVOKED, application)
+        .groupName(DelegationGroups.productOwners(application.getClientPrefix()))
         .userId(userId));
   }
 

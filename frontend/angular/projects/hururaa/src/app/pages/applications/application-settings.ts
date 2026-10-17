@@ -36,20 +36,23 @@ import { ApplicationContext } from './application-context';
         </form>
       </section>
 
-      <section class="p-3 border-1 border-round border-red-300">
-        <h3 class="text-lg mt-0 mb-2" i18n="@@application.unregister">Désenregistrer</h3>
-        <p class="mt-0" i18n="@@application.unregister.groupsHint">
-          Une application ne peut être désenregistrée tant qu'elle a des groupes.
-        </p>
-        <p-button
-          severity="danger"
-          [outlined]="true"
-          icon="ri-delete-bin-line"
-          i18n-label="@@application.unregister"
-          label="Désenregistrer"
-          (onClick)="unregister()"
-        />
-      </section>
+      <!-- Hurura'a is never unregistered: its groups are the delegation groups of every direction -->
+      @if (!context.isHururaa()) {
+        <section class="p-3 border-1 border-round border-red-300">
+          <h3 class="text-lg mt-0 mb-2" i18n="@@application.unregister">Désenregistrer</h3>
+          <p class="mt-0" i18n="@@application.unregister.groupsHint">
+            Une application ne peut être désenregistrée tant qu'elle a des groupes.
+          </p>
+          <p-button
+            severity="danger"
+            [outlined]="true"
+            icon="ri-delete-bin-line"
+            i18n-label="@@application.unregister"
+            label="Désenregistrer"
+            (onClick)="unregister()"
+          />
+        </section>
+      }
     } @else {
       <p i18n="@@application.settings.noSay">
         Seuls les administrateurs de la direction modifient ses applications.

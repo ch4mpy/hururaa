@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hurura'a is an application of the DSI like the others, in every environment (decision 0008): its
+  groups are the delegation groups of every direction (hururaa.admins,
+  hururaa.<prefix>.product-owners). Its client prefix is reserved, so the API never registers it:
+  this changeset does, in the direction given by uaa.platform-organization (changelog parameter
+  platformOrganization, see spring.liquibase.parameters), unless it is already registered (by the
+  dev data, for instance).
+-->
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-5.0.xsd"
+        objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+    <changeSet id="1791000000000-1" author="ch4mp">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                select count(*) from applications where client_prefix = 'hururaa'
+            </sqlCheck>
+        </preConditions>
+        <insert tableName="applications">
+            <column name="id" valueSequenceNext="applications_seq"/>
+            <column name="version" valueNumeric="0"/>
+            <column name="client_prefix" value="hururaa"/>
+            <column name="direction" value="${platformOrganization}"/>
+            <column name="name" value="Hurura'a"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
