@@ -153,9 +153,16 @@ public class PermissionHistoryService {
       final var applicationId = entry.getKey();
       @Nullable String previousDirection = null;
       @Nullable String previousName = null;
+      var first = true;
       for (final var revision : entry.getValue()) {
         final var current = revision.isDeletion() ? null : revision.entity();
         final var currentDirection = current == null ? null : current.getDirection();
+        if (first && revision.type() == RevisionType.MOD) {
+          // registered outside of Envers (Hurura'a, by Liquibase): its first revision is a
+          // change, not its registration, and its former name is unknown
+          previousDirection = currentDirection;
+        }
+        first = false;
         final var name = current == null ? previousName : current.getName();
         final var wasHere = direction.equals(previousDirection);
         final var isHere = direction.equals(currentDirection);
